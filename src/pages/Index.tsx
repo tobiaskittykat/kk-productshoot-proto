@@ -38,7 +38,6 @@ const navItems = [
 ];
 
 const quickActions = [
-  { id: "brand", label: "Set up brand", icon: Palette, color: "from-primary to-purple-400" },
   { id: "campaign", label: "Create campaign", icon: Megaphone, color: "from-violet-500 to-purple-400" },
   { id: "image", label: "Generate image", icon: Image, color: "from-pink-500 to-rose-500" },
   { id: "edit", label: "Edit image", icon: Wand2, color: "from-blue-500 to-cyan-400" },
@@ -57,17 +56,10 @@ const Index = () => {
   const [activeNav, setActiveNav] = useState("home");
   
   // Section refs for scrolling
-  const brandRef = useRef<HTMLDivElement>(null);
   const campaignRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
 
-  // Brand state
-  const [brandName, setBrandName] = useState("");
-  const [brandTagline, setBrandTagline] = useState("");
-  const [brandIndustry, setBrandIndustry] = useState("");
-
   // Campaign state
-  const [campaignName, setCampaignName] = useState("");
   const [selectedMoodboard, setSelectedMoodboard] = useState<string | null>(null);
 
   // Image generation state
@@ -77,7 +69,6 @@ const Index = () => {
 
   const scrollToSection = (sectionId: string) => {
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {
-      brand: brandRef,
       campaign: campaignRef,
       image: imageRef,
       edit: imageRef,
@@ -214,65 +205,6 @@ const Index = () => {
 
             <div className="flex justify-center mt-12 animate-bounce">
               <ChevronDown className="w-6 h-6 text-muted-foreground" />
-            </div>
-          </section>
-
-          {/* Brand Setup Section */}
-          <section ref={brandRef} className="px-8 py-16 border-t border-border bg-secondary/20">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-400 flex items-center justify-center">
-                  <Palette className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-display text-2xl font-bold">Brand Setup</h2>
-                  <p className="text-sm text-muted-foreground">Define your brand identity</p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="glass-card p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Brand Name</label>
-                    <input
-                      type="text"
-                      value={brandName}
-                      onChange={(e) => setBrandName(e.target.value)}
-                      placeholder="Enter your brand name"
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Tagline</label>
-                    <input
-                      type="text"
-                      value={brandTagline}
-                      onChange={(e) => setBrandTagline(e.target.value)}
-                      placeholder="Your brand's tagline"
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Industry</label>
-                    <input
-                      type="text"
-                      value={brandIndustry}
-                      onChange={(e) => setBrandIndustry(e.target.value)}
-                      placeholder="e.g., Fashion, Jewelry, Beauty"
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-
-                <div className="glass-card p-6">
-                  <label className="block text-sm font-medium mb-4">Brand Logo</label>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/30 transition-colors cursor-pointer">
-                    <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                    <p className="font-medium mb-1">Upload your logo</p>
-                    <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </section>
 
