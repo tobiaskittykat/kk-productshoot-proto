@@ -7,6 +7,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import BrandSetup from "./pages/BrandSetup";
 import CreateCampaign from "./pages/CreateCampaign";
+import CreateImage from "./pages/CreateImage";
+import EditImage from "./pages/EditImage";
+import BatchGenerate from "./pages/BatchGenerate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,10 +25,9 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/brand-setup" element={<BrandSetup />} />
           <Route path="/create-campaign" element={<CreateCampaign />} />
-          <Route path="/create-campaign" element={<CreateCampaign />} />
-          <Route path="/create-image" element={<CreateCampaign />} />
-          <Route path="/edit-image" element={<CreateCampaign />} />
-          <Route path="/batch-generate" element={<CreateCampaign />} />
+          <Route path="/create-image" element={<CreateImage />} />
+          <Route path="/edit-image" element={<EditImage />} />
+          <Route path="/batch-generate" element={<BatchGenerate />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
