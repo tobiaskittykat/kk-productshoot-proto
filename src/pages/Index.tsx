@@ -331,7 +331,7 @@ const Index = () => {
       </header>
 
       {/* Main Layout: Content + Chat Sidebar */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         {/* Main Content Area */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto">
           {/* Hero Section */}
@@ -852,7 +852,7 @@ const Index = () => {
         </main>
 
         {/* Right Chat Sidebar - Context Aware */}
-        <aside className="w-[400px] border-l border-border bg-card flex flex-col">
+        <aside className="w-[400px] border-l border-border bg-card flex flex-col h-full overflow-hidden">
           {/* Context Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-2">
