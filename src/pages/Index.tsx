@@ -882,7 +882,7 @@ const Index = () => {
         </main>
 
         {/* Right Chat Sidebar - Context Aware */}
-        <aside className="fixed right-0 top-0 w-[400px] h-screen border-l border-border bg-card flex flex-col overflow-hidden z-40">
+        <aside className="fixed right-0 top-[73px] w-[400px] h-[calc(100vh-73px)] border-l border-border bg-card flex flex-col overflow-hidden z-40">
           {/* Context Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-2">
