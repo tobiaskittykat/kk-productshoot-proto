@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import kittykatLogo from "@/assets/kittykat-logo-transparent.png";
 import { useNavigate } from "react-router-dom";
 import { useChat } from "@/hooks/useChat";
 import { 
@@ -325,9 +326,8 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold text-foreground">KittyKat</span>
-            <span className="text-primary text-2xl">.</span>
+          <div className="flex items-center">
+            <img src={kittykatLogo} alt="KittyKat" className="h-8" />
           </div>
 
           {/* Nav Items */}
