@@ -228,9 +228,11 @@ const Index = () => {
   // Track scroll position to update active section and back to top button
   const updateActiveSection = useCallback(() => {
     const mainContent = mainContentRef.current;
-    if (!mainContent) return;
 
-    const scrollTop = mainContent.scrollTop;
+    const isMainScrollable =
+      !!mainContent && mainContent.scrollHeight > mainContent.clientHeight + 1;
+
+    const scrollTop = isMainScrollable ? mainContent!.scrollTop : window.scrollY;
     const offset = 200; // Offset to trigger section change earlier
 
     // Show back to top button when scrolled down at all
@@ -246,25 +248,33 @@ const Index = () => {
     for (const section of sections) {
       if (section.ref.current) {
         const rect = section.ref.current.getBoundingClientRect();
-        const mainRect = mainContent.getBoundingClientRect();
-        const relativeTop = rect.top - mainRect.top;
-        
+        const mainRectTop = isMainScrollable && mainContent ? mainContent.getBoundingClientRect().top : 0;
+        const relativeTop = rect.top - mainRectTop;
+
         if (relativeTop <= offset) {
           setActiveSection(section.id);
           return;
         }
       }
     }
-    
+
     setActiveSection("hero");
   }, []);
 
   useEffect(() => {
     const mainContent = mainContentRef.current;
-    if (!mainContent) return;
 
-    mainContent.addEventListener("scroll", updateActiveSection);
-    return () => mainContent.removeEventListener("scroll", updateActiveSection);
+    // Initial state (so it updates even if user lands mid-scroll)
+    updateActiveSection();
+
+    // Listen to whichever scroll container is actually used
+    mainContent?.addEventListener("scroll", updateActiveSection, { passive: true } as AddEventListenerOptions);
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+
+    return () => {
+      mainContent?.removeEventListener("scroll", updateActiveSection as EventListener);
+      window.removeEventListener("scroll", updateActiveSection as EventListener);
+    };
   }, [updateActiveSection]);
 
   const scrollToSection = useCallback((sectionId: string) => {
@@ -445,7 +455,17 @@ const Index = () => {
           {/* Back to top button */}
           {showBackToTop && (
             <button
-              onClick={() => mainContentRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={() => {
+                const mainContent = mainContentRef.current;
+                const isMainScrollable =
+                  !!mainContent && mainContent.scrollHeight > mainContent.clientHeight + 1;
+
+                if (isMainScrollable) {
+                  mainContent!.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
               className="p-3 rounded-full bg-secondary border border-border text-foreground shadow-lg hover:bg-secondary/80 transition-all hover:scale-105"
               title="Back to top"
             >
