@@ -37,7 +37,7 @@ const Login = () => {
 
       {/* Header - Absolutely positioned so it doesn't affect form layout */}
       <header className="absolute top-0 left-0 px-4 py-3 z-10">
-        <img src={kittykatLogo} alt="KittyKat" className="h-36" />
+        <img src={kittykatLogo} alt="KittyKat" className="h-28" />
       </header>
 
       {/* Main Content - Centered Form */}
