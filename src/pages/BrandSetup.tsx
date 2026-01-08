@@ -6,7 +6,6 @@ import BrandBasicsScreen from "@/components/brand-brain/screens/BrandBasicsScree
 import UploadAssetsScreen from "@/components/brand-brain/screens/UploadAssetsScreen";
 import DigitalFootprintScreen from "@/components/brand-brain/screens/DigitalFootprintScreen";
 import SummaryScreen from "@/components/brand-brain/screens/SummaryScreen";
-import NextActionsScreen from "@/components/brand-brain/screens/NextActionsScreen";
 
 
 interface SocialConnection {
@@ -32,17 +31,17 @@ const BrandSetup = () => {
     } as Record<string, SocialConnection>,
   });
 
-  const totalSteps = 5;
+  const totalSteps = 4;
 
-  const handleNext = () => setCurrentStep((s) => Math.min(s + 1, totalSteps));
+  const handleNext = () => {
+    if (currentStep === totalSteps) {
+      navigate("/");
+    } else {
+      setCurrentStep((s) => Math.min(s + 1, totalSteps));
+    }
+  };
   const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
   const handleSkip = () => handleNext();
-
-  const handleAction = (action: string) => {
-    if (action === "campaign") navigate("/create-campaign");
-    else if (action === "moodboard") navigate("/create-image");
-    else navigate("/");
-  };
 
   // Handle social links found from website crawl
   const handleSocialLinksFound = useCallback((links: Record<string, string>) => {
@@ -111,7 +110,6 @@ const BrandSetup = () => {
       />
     ),
     4: <SummaryScreen brandData={brandData} />,
-    5: <NextActionsScreen onAction={handleAction} />,
   };
 
   return (
