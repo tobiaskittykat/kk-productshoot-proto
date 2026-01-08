@@ -157,7 +157,7 @@ const sidebarContextConfig: Record<ActiveSection, {
 }> = {
   hero: {
     title: "KittyKat",
-    description: "Describe your vision and let us bring it to life.",
+    description: "I can help you create stunning visuals, manage your brand, and run campaigns.",
     starterPrompts: [
       { label: "🎨 Generate a new image", prompt: "Help me generate a new product image" },
       { label: "📢 Plan a campaign", prompt: "I want to create a new marketing campaign" },
@@ -454,7 +454,7 @@ const Index = () => {
                   How can <span className="text-gradient">KittyKat</span> help you today?
                 </h1>
                 <p className="text-muted-foreground text-lg">
-                  Describe your vision and let AI bring it to life
+                  Describe your vision and let us bring it to life
                 </p>
               </div>
 
