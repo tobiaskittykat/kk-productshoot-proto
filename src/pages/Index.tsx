@@ -156,7 +156,7 @@ const sidebarContextConfig: Record<ActiveSection, {
   starterPrompts: { label: string; prompt: string }[];
 }> = {
   hero: {
-    title: "Creative Assistant",
+    title: "KittyKat",
     description: "I can help you create stunning visuals, manage your brand, and run campaigns.",
     starterPrompts: [
       { label: "🎨 Generate a new image", prompt: "Help me generate a new product image" },
