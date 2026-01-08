@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Globe, Instagram, Youtube, ShoppingBag, Image, Play, Check, ExternalLink, Pencil, X, Facebook, Twitter } from "lucide-react";
 
 interface SocialLink {
@@ -35,6 +35,12 @@ const DigitalFootprintScreen = ({ connections, onChange }: DigitalFootprintScree
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  
+  // Keep a ref to always have the latest connections for async operations
+  const connectionsRef = useRef(connections);
+  useEffect(() => {
+    connectionsRef.current = connections;
+  }, [connections]);
 
   const handleConnect = (id: string) => {
     const connection = connections[id as keyof typeof connections];
@@ -43,9 +49,12 @@ const DigitalFootprintScreen = ({ connections, onChange }: DigitalFootprintScree
       // If there's a URL, simulate connecting
       setConnectingId(id);
       setTimeout(() => {
+        // Use ref to get the latest connections state
+        const currentConnections = connectionsRef.current;
+        const currentConnection = currentConnections[id as keyof typeof currentConnections];
         onChange({
-          ...connections,
-          [id]: { ...connection, connected: true }
+          ...currentConnections,
+          [id]: { ...currentConnection, connected: true }
         });
         setConnectingId(null);
       }, 1000);
