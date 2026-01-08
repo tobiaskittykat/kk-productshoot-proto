@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Globe, Instagram, Youtube, ShoppingBag, Image, Play, Check, ExternalLink, Pencil, X, Facebook, Twitter } from "lucide-react";
+import { Globe, Instagram, Youtube, Image, Play, Check, ExternalLink, Pencil, X, Facebook, Twitter } from "lucide-react";
 
 interface SocialLink {
   url: string;
@@ -15,7 +15,6 @@ interface DigitalFootprintScreenProps {
     youtube: SocialLink;
     facebook: SocialLink;
     twitter: SocialLink;
-    paidAds: SocialLink;
   };
   onChange: (connections: DigitalFootprintScreenProps["connections"]) => void;
 }
@@ -28,7 +27,6 @@ const sources = [
   { id: "tiktok", label: "TikTok", description: "Video content & trends", icon: Play },
   { id: "pinterest", label: "Pinterest", description: "Boards & pins", icon: Image },
   { id: "youtube", label: "YouTube", description: "Videos & thumbnails", icon: Youtube },
-  { id: "paidAds", label: "Paid Ads Library", description: "Meta & Google ads", icon: ShoppingBag },
 ];
 
 const DigitalFootprintScreen = ({ connections, onChange }: DigitalFootprintScreenProps) => {

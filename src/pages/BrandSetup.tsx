@@ -37,7 +37,6 @@ const BrandSetup = () => {
       tiktok: { url: "", connected: false },
       pinterest: { url: "", connected: false },
       youtube: { url: "", connected: false },
-      paidAds: { url: "", connected: false },
     } as Record<string, SocialConnection>,
   });
 
