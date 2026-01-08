@@ -16,7 +16,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="h-screen flex flex-col relative overflow-hidden">
       {/* Dreamy gradient background matching KittyKat branding */}
       <div className="absolute inset-0 -z-10">
         {/* Base white/cream */}
@@ -41,7 +41,7 @@ const Login = () => {
       </header>
 
       {/* Main Content - Centered Form */}
-      <main className="min-h-screen flex items-center justify-center px-8 pt-20 pb-12">
+      <main className="flex-1 flex items-center justify-center px-8">
         <div className="w-full max-w-md">
           {/* Glass Card */}
           <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-3xl p-8 shadow-2xl shadow-accent/5">
@@ -182,7 +182,7 @@ const Login = () => {
       </main>
 
       {/* Footer */}
-      <footer className="px-8 py-6 text-center text-sm text-muted-foreground">
+      <footer className="px-8 py-4 text-center text-sm text-muted-foreground">
         © 2026 KittyKat. All rights reserved.
       </footer>
     </div>
