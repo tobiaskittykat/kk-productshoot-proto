@@ -155,7 +155,7 @@ const BrandBasicsScreen = ({ data, onChange, onSocialLinksFound }: BrandBasicsSc
               className="input-field pl-12"
             />
             {isCrawling ? (
-              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             ) : data.website ? (
               <a 
                 href={data.website} 
