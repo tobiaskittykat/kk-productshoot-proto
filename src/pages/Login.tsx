@@ -135,30 +135,43 @@ const Login = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              {isSignUp && (
+              {isSignUp ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full px-4 py-3.5 rounded-xl border border-border/50 bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-3.5 rounded-xl border border-border/50 bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Name</label>
+                  <label className="text-sm font-medium text-foreground">Email</label>
                   <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    placeholder="you@example.com"
                     className="w-full px-4 py-3.5 rounded-xl border border-border/50 bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                    required
                   />
                 </div>
               )}
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(null); }}
-                  placeholder="you@example.com"
-                  className="w-full px-4 py-3.5 rounded-xl border border-border/50 bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-                  required
-                />
-              </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
