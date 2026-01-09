@@ -103,25 +103,28 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
       <div className="max-w-5xl mx-auto">
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Brand Header */}
-          <div className="flex items-center justify-between mb-8">
-            <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-3 group cursor-pointer">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center text-white font-bold text-lg">
-                  {currentBrand?.name?.charAt(0).toUpperCase() || "H"}
-                </div>
-                <div className="text-left">
-                  <p className="text-sm text-muted-foreground">Brand</p>
-                  <h2 className="font-display text-2xl font-bold flex items-center gap-2">
-                    {currentBrand?.name || brandData.name}
-                    {isOpen ? (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    )}
-                  </h2>
-                </div>
-              </button>
-            </CollapsibleTrigger>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <CollapsibleTrigger asChild>
+                <button 
+                  className="w-8 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center transition-colors"
+                  title={isOpen ? "Collapse section" : "Expand section"}
+                >
+                  {isOpen ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center text-white font-bold text-lg">
+                {currentBrand?.name?.charAt(0).toUpperCase() || "H"}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Brand</p>
+                <h2 className="font-display text-2xl font-bold">{currentBrand?.name || brandData.name}</h2>
+              </div>
+            </div>
             <div className="flex items-center gap-3">
               <BrandSelector />
               <button 
