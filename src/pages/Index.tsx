@@ -262,11 +262,27 @@ const Index = () => {
   const currentContext = sidebarContextConfig[activeSection];
 
   const handleQuickAction = (actionId: string) => {
-    // Actions that require chat continuation should open sidebar
-    const chatActions = ["ideas", "discover-audience", "define-audience", "brand", "campaign", "moodboard"];
-    if (chatActions.includes(actionId)) {
+    // Actions that require chat interaction - open sidebar with contextual message
+    const chatActionMessages: Record<string, string> = {
+      "ideas": "Let's brainstorm some creative ideas! What kind of content or campaign are you thinking about?",
+      "discover-audience": "I can help you discover your target audience. Tell me about your product or service, and I'll help identify who would be most interested.",
+      "define-audience": "Let's define your ideal audience together. Do you have any existing customer data or personas we should start from?",
+      "brand": "I see you want to work on your brand. Would you like to update your brand colors, refine your messaging, or create new brand assets?",
+      "campaign": "Great choice! Let's create a campaign. What's the goal - awareness, engagement, or conversions? And what platforms are you targeting?",
+      "moodboard": "Time to get creative with a moodboard! What's the vibe you're going for - minimal, bold, playful, or something else?",
+    };
+
+    if (actionId in chatActionMessages) {
+      if (chatMessages.length === 0) {
+        addWelcomeMessage();
+      }
       setIsSidebarOpen(true);
+      // Add the contextual assistant message after a brief delay
+      setTimeout(() => {
+        sendMessage(`I want to ${actionId.replace("-", " ")}`, activeSection);
+      }, 100);
     }
+    
     scrollToSection(actionId);
   };
 
