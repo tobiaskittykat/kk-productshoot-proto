@@ -8,7 +8,7 @@ import UploadAssetsScreen from "@/components/brand-brain/screens/UploadAssetsScr
 import DigitalFootprintScreen from "@/components/brand-brain/screens/DigitalFootprintScreen";
 import SummaryScreen from "@/components/brand-brain/screens/SummaryScreen";
 import { useBrands } from "@/hooks/useBrands";
-import { useBrandDrafts, generateDraftId, type BrandDraft, type SocialConnection } from "@/hooks/useBrandDrafts";
+import { useBrandDrafts, type SocialConnection } from "@/hooks/useBrandDrafts";
 
 const getDefaultConnections = (): Record<string, SocialConnection> => ({
   website: { url: "", connected: false },
@@ -23,10 +23,11 @@ const getDefaultConnections = (): Record<string, SocialConnection> => ({
 const BrandSetup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { createBrand } = useBrands();
+  const { brands, createBrand, updateBrand } = useBrands();
   const { drafts, createDraft, updateDraft, deleteDraft, getDraft } = useBrandDrafts();
   
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -36,10 +37,36 @@ const BrandSetup = () => {
     connections: getDefaultConnections(),
   });
 
-  // Initialize draft on mount - only run once
+  // Initialize on mount - check for edit mode or draft
   useEffect(() => {
+    const editId = searchParams.get("edit");
     const existingDraftId = searchParams.get("draft");
     
+    // Edit mode - load existing brand
+    if (editId) {
+      const brandToEdit = brands.find(b => b.id === editId);
+      if (brandToEdit) {
+        setEditingBrandId(editId);
+        setCurrentStep(1); // Skip welcome screen
+        setBrandData({
+          basics: {
+            name: brandToEdit.name,
+            website: brandToEdit.website || "",
+            industry: brandToEdit.industry || "",
+            markets: brandToEdit.markets || [],
+            personality: brandToEdit.personality || "",
+          },
+          files: [],
+          connections: brandToEdit.social_connections || getDefaultConnections(),
+        });
+      } else {
+        // Brand not found - redirect
+        navigate("/brand-setup");
+      }
+      return;
+    }
+    
+    // Draft mode - load existing draft
     if (existingDraftId) {
       const existingDraft = getDraft(existingDraftId);
       if (existingDraft) {
@@ -50,14 +77,13 @@ const BrandSetup = () => {
           files: [],
           connections: existingDraft.connections,
         });
-      }
-      // Draft not found - clear invalid param from URL
-      else {
+      } else {
+        // Draft not found - clear invalid param from URL
         window.history.replaceState(null, "", "/brand-setup");
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [brands]);
 
   // Save draft whenever data changes (after welcome screen)
   useEffect(() => {
@@ -88,6 +114,30 @@ const BrandSetup = () => {
 
     setIsSaving(true);
     
+    // Edit mode - update existing brand
+    if (editingBrandId) {
+      const { error } = await updateBrand(editingBrandId, {
+        name: brandData.basics.name,
+        website: brandData.basics.website || null,
+        industry: brandData.basics.industry || null,
+        markets: brandData.basics.markets,
+        personality: brandData.basics.personality || null,
+        social_connections: brandData.connections,
+      });
+
+      setIsSaving(false);
+
+      if (error) {
+        toast.error("Failed to update brand: " + error.message);
+        return;
+      }
+
+      toast.success("Brand updated successfully!");
+      navigate("/");
+      return;
+    }
+
+    // Create mode - create new brand
     const { data, error } = await createBrand({
       name: brandData.basics.name,
       website: brandData.basics.website || null,
@@ -166,7 +216,8 @@ const BrandSetup = () => {
     });
   }, []);
 
-  if (currentStep === 0) {
+  // Skip welcome screen in edit mode
+  if (currentStep === 0 && !editingBrandId) {
     return <WelcomeScreen onStart={handleStart} />;
   }
 
