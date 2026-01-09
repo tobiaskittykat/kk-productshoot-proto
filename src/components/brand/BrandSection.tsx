@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { 
   Plus, 
   Sparkles, 
@@ -20,6 +21,7 @@ import { useBrands } from "@/hooks/useBrands";
 import BrandSelector from "@/components/BrandSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { EditableText, EditableTags } from "@/components/ui/editable-text";
 
 // Mock brand data - will be replaced with real data from useBrands
 const brandData = {
@@ -94,9 +96,20 @@ interface BrandSectionProps {
 
 const BrandSection = ({ brandRef }: BrandSectionProps) => {
   const navigate = useNavigate();
-  const { currentBrand } = useBrands();
+  const { currentBrand, updateBrand } = useBrands();
   const [activeTab, setActiveTab] = useState("overview");
   const [isOpen, setIsOpen] = useState(true);
+
+  const handleUpdateField = async (field: string, value: any) => {
+    if (!currentBrand) return;
+    
+    const { error } = await updateBrand(currentBrand.id, { [field]: value });
+    if (error) {
+      toast.error("Failed to update: " + error.message);
+    } else {
+      toast.success("Updated successfully");
+    }
+  };
 
   return (
     <section ref={brandRef as React.RefObject<HTMLElement>} className="px-8 py-12 border-t border-border">
@@ -161,27 +174,40 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
 
               {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Tagline & Values */}
+            {/* Brand Overview Header */}
             <div className="glass-card p-6">
-              <p className="text-lg text-foreground mb-4">{brandData.tagline}</p>
-              <div className="flex flex-wrap gap-2">
-                {brandData.values.map((value) => (
-                  <span key={value} className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    {value}
-                  </span>
-                ))}
-              </div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-3">Brand Overview</h4>
+              <EditableText
+                value={currentBrand?.personality || brandData.tagline}
+                onSave={(value) => handleUpdateField("personality", value)}
+                className="text-lg text-foreground mb-4"
+                placeholder="Add a brand tagline..."
+              />
+              <EditableTags
+                values={currentBrand?.markets || brandData.values}
+                onSave={(values) => handleUpdateField("markets", values)}
+              />
             </div>
 
-            {/* Mission & Vision */}
+            {/* Mission & Vision - using personality field for now, could be extended */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="glass-card p-5">
-                <h4 className="text-sm font-semibold text-primary mb-2">Mission</h4>
-                <p className="text-muted-foreground">{brandData.mission}</p>
+                <h4 className="text-sm font-semibold text-primary mb-2">Industry</h4>
+                <EditableText
+                  value={currentBrand?.industry || ""}
+                  onSave={(value) => handleUpdateField("industry", value)}
+                  className="text-muted-foreground"
+                  placeholder="Add industry..."
+                />
               </div>
               <div className="glass-card p-5">
-                <h4 className="text-sm font-semibold text-primary mb-2">Vision</h4>
-                <p className="text-muted-foreground">{brandData.vision}</p>
+                <h4 className="text-sm font-semibold text-primary mb-2">Website</h4>
+                <EditableText
+                  value={currentBrand?.website || ""}
+                  onSave={(value) => handleUpdateField("website", value)}
+                  className="text-muted-foreground"
+                  placeholder="Add website URL..."
+                />
               </div>
             </div>
 
