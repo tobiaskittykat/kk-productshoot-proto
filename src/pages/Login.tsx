@@ -109,7 +109,7 @@ const Login = () => {
       </header>
 
       {/* Main Content - Centered Form */}
-      <main className="flex-1 flex items-center justify-center px-8">
+      <main className="flex-1 flex items-center justify-center px-8 pt-16 pb-8">
         <div className="w-full max-w-md">
           {/* Glass Card */}
           <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-3xl p-8 shadow-2xl shadow-primary/5">
