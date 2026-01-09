@@ -34,11 +34,17 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
 
   const fetchBrands = useCallback(async () => {
+    // IMPORTANT: Avoid a redirect race condition.
+    // When a user logs in, routes may render before this effect runs.
+    // We mark "loading" synchronously via derived loading in the provider value.
+
     if (!user) {
       setBrands([]);
       setCurrentBrand(null);
+      setLoadedUserId(null);
       setIsLoading(false);
       return;
     }
@@ -52,6 +58,7 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) {
       console.error("Error fetching brands:", error);
+      setLoadedUserId(user.id);
       setIsLoading(false);
       return;
     }
@@ -64,12 +71,13 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
     })) as Brand[];
 
     setBrands(typedBrands);
-    
+
     // Set current brand to first one if not set
     if (!currentBrand && typedBrands.length > 0) {
       setCurrentBrand(typedBrands[0]);
     }
-    
+
+    setLoadedUserId(user.id);
     setIsLoading(false);
   }, [user, currentBrand]);
 
@@ -147,7 +155,7 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
     <BrandsContext.Provider value={{
       brands,
       currentBrand,
-      isLoading,
+      isLoading: isLoading || (!!user && loadedUserId !== user.id),
       setCurrentBrand,
       createBrand,
       updateBrand,
