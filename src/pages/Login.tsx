@@ -27,7 +27,10 @@ const Login = () => {
   useEffect(() => {
     if (user && !authLoading && !brandsLoading) {
       const from = (location.state as any)?.from?.pathname;
-      if (from) {
+
+      // If we were sent here from brand setup, but the user already has brands,
+      // go to the main landing page instead.
+      if (from && from !== "/brand-setup") {
         navigate(from, { replace: true });
       } else if (brands && brands.length > 0) {
         navigate("/", { replace: true });
