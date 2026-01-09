@@ -30,7 +30,8 @@ const ProtectedRoute = ({ children, requireBrand = true }: ProtectedRouteProps) 
   }
 
   // Logged in but no brands and on a page that requires a brand
-  if (requireBrand && brands.length === 0 && location.pathname !== "/brand-setup") {
+  // Only redirect if we're certain there are no brands (not still loading)
+  if (requireBrand && !brandsLoading && brands.length === 0 && location.pathname !== "/brand-setup") {
     return <Navigate to="/brand-setup" replace />;
   }
 
