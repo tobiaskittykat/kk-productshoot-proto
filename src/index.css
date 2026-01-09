@@ -30,8 +30,8 @@
     --accent: 232 100% 71%;
     --accent-foreground: 0 0% 100%;
     
-    /* Secondary gradient color - lighter periwinkle */
-    --accent-light: 232 100% 80%;
+    /* Coral for gradients #E38B6D */
+    --coral: 12 76% 67%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
