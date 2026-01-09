@@ -1,4 +1,4 @@
-import { ChevronDown, Check, Pencil } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBrands } from "@/hooks/useBrands";
 import {
@@ -22,11 +22,6 @@ const BrandSelector = () => {
     );
   }
 
-  const handleEdit = (e: React.MouseEvent, brandId: string) => {
-    e.stopPropagation();
-    navigate(`/brand-setup?edit=${brandId}`);
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -42,20 +37,13 @@ const BrandSelector = () => {
         {brands.map((brand) => (
           <DropdownMenuItem
             key={brand.id}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer"
             onClick={() => setCurrentBrand(brand)}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-sm font-semibold shrink-0">
               {brand.name.charAt(0).toUpperCase()}
             </div>
             <span className="flex-1 truncate">{brand.name}</span>
-            <button
-              onClick={(e) => handleEdit(e, brand.id)}
-              className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
-              title="Edit brand"
-            >
-              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
             {currentBrand?.id === brand.id && (
               <Check className="w-4 h-4 text-primary shrink-0" />
             )}
