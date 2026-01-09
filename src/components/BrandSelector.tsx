@@ -1,16 +1,13 @@
-import { Plus, ChevronDown, Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useBrands, Brand } from "@/hooks/useBrands";
+import { ChevronDown, Check } from "lucide-react";
+import { useBrands } from "@/hooks/useBrands";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const BrandSelector = () => {
-  const navigate = useNavigate();
   const { brands, currentBrand, setCurrentBrand, isLoading } = useBrands();
 
   if (isLoading) {
@@ -49,18 +46,6 @@ const BrandSelector = () => {
             )}
           </DropdownMenuItem>
         ))}
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem
-          className="flex items-center gap-3 cursor-pointer text-primary"
-          onClick={() => navigate("/brand-setup")}
-        >
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <Plus className="w-4 h-4" />
-          </div>
-          <span>Create new brand</span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
