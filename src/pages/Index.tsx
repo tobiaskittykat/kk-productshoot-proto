@@ -40,7 +40,8 @@ import {
   PanelRightOpen,
   PanelRightClose,
   MessageSquare,
-  ChevronUp
+  ChevronUp,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -507,11 +508,11 @@ const Index = () => {
                       {drafts.map((draft) => (
                         <DropdownMenuItem
                           key={draft.id}
-                          className="flex items-center justify-between gap-3 p-3 cursor-pointer"
+                          className="flex items-center justify-between gap-3 p-3 cursor-pointer focus:bg-secondary hover:bg-secondary"
                           onClick={() => navigate(`/brand-setup?draft=${draft.id}`)}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{draft.basics.name || "Untitled Brand"}</p>
+                            <p className="font-medium text-foreground truncate">{draft.basics.name || "Untitled Brand"}</p>
                             <p className="text-xs text-muted-foreground">Step {draft.currentStep} of 4</p>
                           </div>
                           <button
@@ -519,9 +520,10 @@ const Index = () => {
                               e.stopPropagation();
                               deleteDraft(draft.id);
                             }}
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            title="Delete draft"
                           >
-                            Dismiss
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </DropdownMenuItem>
                       ))}
