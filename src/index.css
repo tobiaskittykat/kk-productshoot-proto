@@ -26,9 +26,12 @@
     --muted: 230 20% 96%;
     --muted-foreground: 230 15% 45%;
 
-    /* Coral accent for gradients #E38B6D */
-    --accent: 12 76% 67%;
+    /* Periwinkle blue accent #6B7CFF */
+    --accent: 232 100% 71%;
     --accent-foreground: 0 0% 100%;
+    
+    /* Secondary gradient color - lighter periwinkle */
+    --accent-light: 232 100% 80%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
