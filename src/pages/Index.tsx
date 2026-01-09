@@ -62,17 +62,17 @@ const navItems = [
 ];
 
 const quickActions = [
-  { id: "brand", label: "View brand", icon: Palette, color: "from-primary to-purple-400" },
-  { id: "campaign", label: "Create campaign", icon: Megaphone, color: "from-violet-500 to-purple-400" },
-  { id: "moodboard", label: "Create moodboard", icon: Layers, color: "from-amber-500 to-orange-400" },
-  { id: "image", label: "Generate image", icon: Image, color: "from-pink-500 to-rose-500" },
-  { id: "video", label: "Generate video", icon: Play, color: "from-emerald-500 to-teal-400" },
-  { id: "edit-video", label: "Edit video", icon: RefreshCw, color: "from-cyan-500 to-blue-400" },
-  { id: "edit", label: "Edit image", icon: Wand2, color: "from-blue-500 to-cyan-400" },
-  { id: "gallery", label: "View gallery", icon: GalleryHorizontal, color: "from-purple-500 to-pink-400" },
-  { id: "ideas", label: "Get ideas", icon: Sparkles, color: "from-yellow-500 to-amber-400" },
-  { id: "discover-audience", label: "Discover your audience", icon: Users, color: "from-indigo-500 to-violet-400" },
-  { id: "define-audience", label: "Define your audience", icon: UserCircle2, color: "from-rose-500 to-pink-400" },
+  { id: "brand", label: "View brand", icon: Palette },
+  { id: "campaign", label: "Create campaign", icon: Megaphone },
+  { id: "moodboard", label: "Create moodboard", icon: Layers },
+  { id: "image", label: "Generate image", icon: Image },
+  { id: "video", label: "Generate video", icon: Play },
+  { id: "edit-video", label: "Edit video", icon: RefreshCw },
+  { id: "edit", label: "Edit image", icon: Wand2 },
+  { id: "gallery", label: "View gallery", icon: GalleryHorizontal },
+  { id: "ideas", label: "Get ideas", icon: Sparkles },
+  { id: "discover-audience", label: "Discover your audience", icon: Users },
+  { id: "define-audience", label: "Define your audience", icon: UserCircle2 },
 ];
 
 // Mock brand data
@@ -540,8 +540,8 @@ const Index = () => {
                       onClick={() => handleQuickAction(action.id)}
                       className="action-chip group hover:scale-105 transition-all"
                     >
-                      <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center`}>
-                        <Icon className="w-3.5 h-3.5 text-white" />
+                      <div className="w-6 h-6 rounded-lg bg-primary flex items-center justify-center">
+                        <Icon className="w-3.5 h-3.5 text-primary-foreground" />
                       </div>
                       {action.label}
                     </button>
