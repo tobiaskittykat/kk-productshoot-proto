@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 import kittykatLogo from "@/assets/kittykat-logo-transparent.png";
 import { useAuth } from "@/hooks/useAuth";
+import { useBrands } from "@/hooks/useBrands";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -12,6 +13,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, user, isLoading: authLoading } = useAuth();
+  const { brands, isLoading: brandsLoading } = useBrands();
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -23,11 +25,17 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && !authLoading) {
-      const from = (location.state as any)?.from?.pathname || "/";
-      navigate(from, { replace: true });
+    if (user && !authLoading && !brandsLoading) {
+      const from = (location.state as any)?.from?.pathname;
+      if (from) {
+        navigate(from, { replace: true });
+      } else if (brands && brands.length > 0) {
+        navigate("/", { replace: true });
+      } else {
+        navigate("/brand-setup", { replace: true });
+      }
     }
-  }, [user, authLoading, navigate, location]);
+  }, [user, authLoading, brandsLoading, brands, navigate, location]);
 
   const validateForm = () => {
     try {
@@ -77,7 +85,7 @@ const Login = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (user && brandsLoading)) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
