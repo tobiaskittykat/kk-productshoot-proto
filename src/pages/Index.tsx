@@ -438,13 +438,12 @@ const Index = () => {
             <div className="flex-1 flex flex-col justify-center">
               <div className="text-center mb-10 animate-fade-in">
                 <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
-                  How can <span className="text-gradient">KittyKat</span> help you with{" "}
-                  <BrandSelector variant="inline" />
-                  {" "}today?
+                  How can <span className="text-gradient">KittyKat</span> help you today?
                 </h1>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-muted-foreground text-lg mb-4">
                   Describe your vision and let us bring it to life
                 </p>
+                <BrandSelector variant="chip" />
               </div>
 
               {/* Resume Draft Dropdown */}
