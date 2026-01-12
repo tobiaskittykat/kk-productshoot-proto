@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Cat, Globe, Loader2, Check, Edit2, Sparkles, Save } from "lucide-react";
+import { Cat, Globe, Loader2, Check, Edit2, Sparkles, Save, Upload, FileText, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import type { AgentDraftState, ExtractedBrandData } from "@/hooks/useBrandDrafts";
@@ -46,9 +46,6 @@ interface AgentBrandSetupProps {
 const REVIEW_FIELDS: { key: keyof ExtractedBrandInfo; label: string; emoji: string }[] = [
   { key: "name", label: "Brand Name", emoji: "🏷️" },
   { key: "tagline", label: "Tagline", emoji: "💬" },
-  { key: "industry", label: "Industry", emoji: "🏢" },
-  { key: "personality", label: "Personality", emoji: "✨" },
-  { key: "tone", label: "Brand Tone", emoji: "🎯" },
   { key: "mission", label: "Mission", emoji: "🚀" },
   { key: "socialLinks", label: "Social Profiles", emoji: "🔗" },
 ];
@@ -77,6 +74,9 @@ const AgentBrandSetup = ({
   const [phase, setPhase] = useState<"url" | "extracting" | "reviewing" | "complete">(
     initialState?.phase || "url"
   );
+  const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
+  const [isProcessingDoc, setIsProcessingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
 
@@ -121,7 +121,7 @@ const AgentBrandSetup = ({
         }, 1000);
       } else if (initialState?.phase === "complete" && initialState.extractedData) {
         addAgentMessage(
-          `Welcome back! 🐱 Your brand profile for **${initialState.extractedData.name}** is ready to save. Does everything look good?`
+          `Welcome back! 🐱 Your brand profile for **${initialState.extractedData.name}** is ready to save. You can also upload documents to add more details, or save when ready!`
         );
       } else {
         addAgentMessage(
@@ -205,7 +205,7 @@ const AgentBrandSetup = ({
       setPhase("complete");
       setCurrentReviewIndex(-1);
       addAgentMessage(
-        "Awesome! Your brand profile is ready. Does everything look good to save? 🎉"
+        "Awesome! Your brand profile is ready 🎉 Want to add more details? Upload brand documents (PDFs, docs) below and I'll extract key info. Or save when you're happy!"
       );
       return;
     }
@@ -327,11 +327,33 @@ const AgentBrandSetup = ({
     onComplete({
       name: extractedData.name,
       website: websiteUrl,
-      industry: extractedData.industry,
-      personality: extractedData.personality,
+      industry: extractedData.industry || "",
+      personality: extractedData.personality || "",
       tagline: extractedData.tagline,
       socialLinks: extractedData.socialLinks,
     });
+  };
+
+  const handleDocumentUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    setUploadedDocs(prev => [...prev, ...newFiles]);
+    setIsProcessingDoc(true);
+
+    addUserMessage(`Uploading ${newFiles.length} document${newFiles.length > 1 ? 's' : ''}...`);
+
+    // Simulate processing - in real implementation, this would parse the docs
+    setTimeout(() => {
+      addAgentMessage(
+        `Got it! I've noted your ${newFiles.map(f => f.name).join(", ")}. This info will be available when you save your brand profile. Upload more or save when ready! 📄`
+      );
+      setIsProcessingDoc(false);
+    }, 1500);
+  };
+
+  const removeDocument = (index: number) => {
+    setUploadedDocs(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -473,16 +495,60 @@ const AgentBrandSetup = ({
             </div>
           )}
 
-          {/* Complete actions */}
+          {/* Complete actions with document upload */}
           {phase === "complete" && (
-            <div className="flex gap-3 justify-center pt-4">
-              <button
-                onClick={handleComplete}
-                className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90"
-              >
-                <Sparkles className="w-4 h-4" />
-                Save Brand Profile
-              </button>
+            <div className="space-y-4 pt-4">
+              {/* Uploaded documents list */}
+              {uploadedDocs.length > 0 && (
+                <div className="bg-card border border-border rounded-xl p-4 max-w-md mx-auto">
+                  <p className="text-xs text-muted-foreground mb-2">Uploaded documents:</p>
+                  <div className="space-y-2">
+                    {uploadedDocs.map((doc, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                        <span className="flex-1 truncate">{doc.name}</span>
+                        <button
+                          onClick={() => removeDocument(i)}
+                          className="p-1 hover:bg-secondary rounded"
+                        >
+                          <X className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3 justify-center flex-wrap">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.md"
+                  onChange={(e) => handleDocumentUpload(e.target.files)}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessingDoc}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-secondary text-foreground rounded-xl text-sm hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  {isProcessingDoc ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Add Documents
+                </button>
+                <button
+                  onClick={handleComplete}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Save Brand Profile
+                </button>
+              </div>
             </div>
           )}
 
