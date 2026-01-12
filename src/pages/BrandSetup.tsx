@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import WelcomeScreen from "@/components/brand-brain/screens/WelcomeScreen";
@@ -34,6 +34,7 @@ const BrandSetup = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [agentInitialState, setAgentInitialState] = useState<AgentDraftState | undefined>();
+  const isCancelledRef = useRef(false);
   
   const [brandData, setBrandData] = useState({
     basics: { name: "", website: "", industry: "", markets: [] as string[], personality: "" },
@@ -73,7 +74,7 @@ const BrandSetup = () => {
 
   // Save draft whenever data changes (manual mode only)
   useEffect(() => {
-    if (draftId && currentStep > 0 && mode === "manual") {
+    if (draftId && currentStep > 0 && mode === "manual" && !isCancelledRef.current) {
       updateDraft(draftId, {
         currentStep,
         basics: brandData.basics,
@@ -210,6 +211,7 @@ const BrandSetup = () => {
   const handleSkip = () => handleNext();
   
   const handleManualCancel = () => {
+    isCancelledRef.current = true;
     if (draftId) {
       deleteDraft(draftId);
     }
