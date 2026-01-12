@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
     console.log('Extracting brand info from:', formattedUrl);
 
-    // Step 1: Scrape with branding + markdown + links formats
+    // Step 1: Scrape with branding + markdown + links formats (with timeout)
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
         url: formattedUrl,
         formats: ['branding', 'markdown', 'links'],
         onlyMainContent: false,
+        timeout: 45000, // 45 second timeout
+        waitFor: 3000, // Wait 3s for dynamic content
       }),
     });
 
@@ -70,6 +72,18 @@ Deno.serve(async (req) => {
 
     if (!scrapeResponse.ok) {
       console.error('Firecrawl scrape error:', scrapeData);
+      
+      // Handle timeout specifically with a user-friendly message
+      if (scrapeData.code === 'SCRAPE_TIMEOUT' || scrapeData.error?.includes('timed out')) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Website took too long to respond. This can happen with complex sites. Please try again or enter brand details manually.' 
+          }),
+          { status: 408, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ success: false, error: scrapeData.error || 'Failed to scrape website' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
