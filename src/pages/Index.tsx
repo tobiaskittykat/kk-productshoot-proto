@@ -469,8 +469,16 @@ const Index = () => {
                           onClick={() => navigate(`/brand-setup?draft=${draft.id}`)}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">{draft.basics.name || "Untitled Brand"}</p>
-                            <p className="text-xs text-muted-foreground">Step {draft.currentStep} of 4</p>
+                            <p className="font-medium text-foreground truncate">
+                              {draft.mode === "agent" 
+                                ? (draft.agentState?.extractedData?.name || "Untitled Brand")
+                                : (draft.basics.name || "Untitled Brand")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {draft.mode === "agent" 
+                                ? (draft.agentState?.phase === "complete" ? "Ready to save" : "In progress")
+                                : `Step ${draft.currentStep} of 4`}
+                            </p>
                           </div>
                           <button
                             onClick={(e) => {
