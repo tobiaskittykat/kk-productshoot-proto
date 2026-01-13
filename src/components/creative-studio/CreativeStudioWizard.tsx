@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Image, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CreativeStudioHeader } from "./CreativeStudioHeader";
 import { StepOnePrompt } from "./StepOnePrompt";
 import { StepTwoCustomize } from "./StepTwoCustomize";
 import { CreativeStudioState, initialCreativeStudioState, Concept } from "./types";
@@ -115,6 +116,15 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
 
           <CollapsibleContent>
             <div className="glass-card p-6">
+              {/* Persistent Header - Always visible */}
+              <CreativeStudioHeader
+                state={state}
+                onUpdate={handleUpdate}
+                onRegenerate={handleContinue}
+                showRegenerate={state.step === 2}
+              />
+
+              {/* Step-specific content */}
               {state.step === 1 ? (
                 <StepOnePrompt 
                   state={state} 
