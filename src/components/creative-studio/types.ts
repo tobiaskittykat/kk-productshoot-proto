@@ -11,6 +11,7 @@ export interface CreativeStudioState {
   selectedBrand: string | null;
   selectedCampaign: string | null;
   mediaType: 'image' | 'video';
+  targetPersona: string | null;
   useCase: 'ad' | 'lifestyle' | 'newsletter' | 'social' | 'product';
   prompt: string;
   selectedTypeCard: string | null;
@@ -49,6 +50,7 @@ export const initialCreativeStudioState: CreativeStudioState = {
   selectedBrand: null,
   selectedCampaign: null,
   mediaType: 'image',
+  targetPersona: null,
   useCase: 'product',
   prompt: '',
   selectedTypeCard: null,
@@ -61,7 +63,7 @@ export const initialCreativeStudioState: CreativeStudioState = {
   textOnImage: '',
   extraKeywords: [],
   negativePrompt: '',
-  imageCount: 4,
+  imageCount: 3,
   resolution: '1024',
   aspectRatio: '1:1',
   imageStyle: [],
@@ -153,4 +155,15 @@ export const aiModels = [
   { value: 'auto', label: 'Auto (Recommended)' },
   { value: 'gemini', label: 'Gemini Image' },
   { value: 'flux', label: 'Flux' },
+];
+
+export const targetPersonas = [
+  { value: 'gen-z', label: 'Gen Z (18-24)' },
+  { value: 'millennials', label: 'Millennials (25-40)' },
+  { value: 'gen-x', label: 'Gen X (41-56)' },
+  { value: 'professionals', label: 'Professionals' },
+  { value: 'parents', label: 'Parents' },
+  { value: 'luxury', label: 'Luxury Consumers' },
+  { value: 'eco-conscious', label: 'Eco-Conscious' },
+  { value: 'fitness', label: 'Fitness Enthusiasts' },
 ];

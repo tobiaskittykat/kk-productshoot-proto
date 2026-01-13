@@ -1,4 +1,4 @@
-import { Sparkles, Image, Video, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -7,7 +7,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useBrands } from "@/hooks/useBrands";
-import { CreativeStudioState, typeCards } from "./types";
+import { CreativeStudioState, typeCards, targetPersonas } from "./types";
 
 interface CreativeStudioHeaderProps {
   state: CreativeStudioState;
@@ -100,45 +100,34 @@ export const CreativeStudioHeader = ({
           </SelectContent>
         </Select>
 
-        {/* Media Type Toggle Pill */}
-        <div className="flex items-center rounded-full bg-secondary/50 overflow-hidden shrink-0">
-          <button
-            onClick={() => onUpdate({ mediaType: 'image' })}
-            className={`flex items-center gap-1.5 px-4 h-9 text-sm font-medium transition-colors ${
-              state.mediaType === 'image' 
-                ? 'bg-accent text-accent-foreground rounded-full' 
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Image className="w-4 h-4" />
-            Image
-          </button>
-          <button
-            onClick={() => onUpdate({ mediaType: 'video' })}
-            className={`flex items-center gap-1.5 px-4 h-9 text-sm font-medium transition-colors ${
-              state.mediaType === 'video' 
-                ? 'bg-accent text-accent-foreground rounded-full' 
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Video className="w-4 h-4" />
-            Video
-          </button>
-        </div>
-
-        {/* Number of Concepts Pill */}
+        {/* Media Type Dropdown */}
         <Select 
-          value={state.imageCount.toString()} 
-          onValueChange={(value) => onUpdate({ imageCount: parseInt(value) })}
+          value={state.mediaType} 
+          onValueChange={(value) => onUpdate({ mediaType: value as 'image' | 'video' })}
         >
           <SelectTrigger className="h-9 px-4 rounded-full bg-secondary/50 border-0 text-sm font-medium hover:bg-secondary transition-colors w-auto">
-            <SelectValue placeholder="# Concepts" />
+            <SelectValue placeholder="Media Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2">2 Concepts</SelectItem>
-            <SelectItem value="3">3 Concepts</SelectItem>
-            <SelectItem value="4">4 Concepts</SelectItem>
-            <SelectItem value="6">6 Concepts</SelectItem>
+            <SelectItem value="image">🖼️ Image</SelectItem>
+            <SelectItem value="video">🎬 Video</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Target Persona Dropdown */}
+        <Select 
+          value={state.targetPersona || ''} 
+          onValueChange={(value) => onUpdate({ targetPersona: value })}
+        >
+          <SelectTrigger className="h-9 px-4 rounded-full bg-secondary/50 border-0 text-sm font-medium hover:bg-secondary transition-colors w-auto">
+            <SelectValue placeholder="Target Persona" />
+          </SelectTrigger>
+          <SelectContent>
+            {targetPersonas.map((persona) => (
+              <SelectItem key={persona.value} value={persona.value}>
+                {persona.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
