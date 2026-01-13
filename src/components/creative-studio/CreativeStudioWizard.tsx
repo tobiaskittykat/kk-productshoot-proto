@@ -115,7 +115,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
           </div>
 
           <CollapsibleContent>
-            <div className="glass-card p-6 pb-24">
+            <div className="glass-card p-6">
               {/* Persistent Header - Always visible */}
               <CreativeStudioHeader
                 state={state}
@@ -126,62 +126,63 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
 
               {/* Step-specific content */}
               {state.step === 1 ? (
-                <StepOnePrompt 
-                  state={state} 
-                  onUpdate={handleUpdate}
-                />
-              ) : (
-                <StepTwoCustomize
-                  state={state}
-                  onUpdate={handleUpdate}
-                />
-              )}
-            </div>
-
-            {/* Sticky Footer - KittyKat styled */}
-            <div className="sticky bottom-0 left-0 right-0 p-5 bg-card/95 backdrop-blur-sm border-t border-border flex items-center justify-between z-10 rounded-b-2xl">
-              {state.step === 1 ? (
                 <>
-                  <div className="text-sm text-muted-foreground">
-                    {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
+                  <StepOnePrompt 
+                    state={state} 
+                    onUpdate={handleUpdate}
+                  />
+                  
+                  {/* Step 1 Footer - Inside the card */}
+                  <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
+                    </div>
+                    <button
+                      onClick={handleContinue}
+                      disabled={!state.prompt.trim()}
+                      className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                      style={{
+                        boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                      }}
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Create Concepts
+                    </button>
                   </div>
-                  <button
-                    onClick={handleContinue}
-                    disabled={!state.prompt.trim()}
-                    className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
-                    style={{
-                      boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-                    }}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Create Concepts
-                  </button>
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={handleBack}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                  </button>
+                  <StepTwoCustomize
+                    state={state}
+                    onUpdate={handleUpdate}
+                  />
 
-                  <span className="text-sm text-muted-foreground">
-                    {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
-                  </span>
+                  {/* Step 2 Footer - Inside the card */}
+                  <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
+                    <button
+                      onClick={handleBack}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back
+                    </button>
 
-                  <button
-                    onClick={handleGenerate}
-                    disabled={state.isGenerating}
-                    className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
-                    style={{
-                      boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-                    }}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
-                  </button>
+                    <span className="text-sm text-muted-foreground">
+                      {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
+                    </span>
+
+                    <button
+                      onClick={handleGenerate}
+                      disabled={state.isGenerating}
+                      className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                      style={{
+                        boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                      }}
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
+                    </button>
+                  </div>
                 </>
               )}
             </div>
