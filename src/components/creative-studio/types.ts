@@ -20,7 +20,7 @@ export interface CreativeStudioState {
   selectedConcept: string | null;
   moodboard: string | null;
   productReference: string | null;
-  masterReference: string | null;
+  styleReference: string | null;
   textOnImage: string;
   extraKeywords: string[];
   negativePrompt: string;
@@ -57,7 +57,7 @@ export const initialCreativeStudioState: CreativeStudioState = {
   selectedConcept: null,
   moodboard: null,
   productReference: null,
-  masterReference: null,
+  styleReference: null,
   textOnImage: '',
   extraKeywords: [],
   negativePrompt: '',
@@ -71,8 +71,8 @@ export const initialCreativeStudioState: CreativeStudioState = {
   saveToFolder: null,
 
   colorPalette: [],
-  lightingStyle: 'natural',
-  cameraAngle: 'eye-level',
+  lightingStyle: 'auto',
+  cameraAngle: 'auto',
 
   isGenerating: false,
   isLoadingConcepts: false,
@@ -132,6 +132,7 @@ export const imageStyles = [
 ];
 
 export const lightingStyles = [
+  { value: 'auto', label: 'Auto' },
   { value: 'natural', label: 'Natural Light' },
   { value: 'studio', label: 'Studio' },
   { value: 'dramatic', label: 'Dramatic' },
@@ -140,6 +141,7 @@ export const lightingStyles = [
 ];
 
 export const cameraAngles = [
+  { value: 'auto', label: 'Auto' },
   { value: 'eye-level', label: 'Eye Level' },
   { value: 'overhead', label: 'Overhead/Flat Lay' },
   { value: 'close-up', label: 'Close-Up' },
