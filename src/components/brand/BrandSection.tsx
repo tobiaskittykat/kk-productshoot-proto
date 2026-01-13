@@ -23,7 +23,9 @@ import {
   Instagram,
   Youtube,
   Check,
-  X
+  X,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import {
   Select,
@@ -133,6 +135,8 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
   const [imageCount, setImageCount] = useState("10");
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null);
   const [newPlatformUrl, setNewPlatformUrl] = useState("");
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
+  const [editPlatformUrl, setEditPlatformUrl] = useState("");
 
   // All available platforms
   const allPlatforms = ["website", "instagram", "pinterest", "youtube", "facebook", "linkedin", "twitter", "tiktok"];
@@ -199,6 +203,48 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
       return;
     }
     toast.success(`Scraping ${imageCount} images from ${scrapeUrl}...`);
+  };
+
+  const handleEditPlatform = async (platformId: string) => {
+    if (!editPlatformUrl || !currentBrand) return;
+    
+    const connections = (currentBrand.social_connections as Record<string, any>) || {};
+    const updatedConnections = {
+      ...connections,
+      [platformId]: { url: editPlatformUrl, connected: true }
+    };
+    
+    const { error } = await updateBrand(currentBrand.id, { social_connections: updatedConnections });
+    if (error) {
+      toast.error("Failed to update: " + error.message);
+    } else {
+      toast.success(`${platformId.charAt(0).toUpperCase() + platformId.slice(1)} updated!`);
+      setEditingPlatform(null);
+      setEditPlatformUrl("");
+    }
+  };
+
+  const handleRemovePlatform = async (platformId: string) => {
+    if (!currentBrand) return;
+    
+    const connections = (currentBrand.social_connections as Record<string, any>) || {};
+    const { [platformId]: removed, ...remainingConnections } = connections;
+    
+    const { error } = await updateBrand(currentBrand.id, { social_connections: remainingConnections });
+    if (error) {
+      toast.error("Failed to remove: " + error.message);
+    } else {
+      toast.success(`${platformId.charAt(0).toUpperCase() + platformId.slice(1)} removed`);
+      if (selectedSource === platformId) {
+        setSelectedSource(null);
+        setScrapeUrl("");
+      }
+    }
+  };
+
+  const startEditPlatform = (platformId: string, currentUrl: string) => {
+    setEditingPlatform(platformId);
+    setEditPlatformUrl(currentUrl);
   };
 
   const handleUpdateField = async (field: string, value: any) => {
@@ -514,24 +560,91 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
                 {/* Connected Sources Chips */}
                 {connectedSources.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Quick select from connected sources:</p>
+                    <p className="text-sm text-muted-foreground">Connected sources:</p>
                     <div className="flex flex-wrap gap-2">
                       {connectedSources.map((source) => (
-                        <button
-                          key={source.id}
-                          onClick={() => handleSourceSelect(source.id, source.url)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-sm ${
-                            selectedSource === source.id
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-secondary/50 border-border hover:bg-secondary text-foreground"
-                          }`}
-                        >
-                          {source.icon}
-                          <span>{source.label}</span>
-                          {selectedSource === source.id && (
-                            <Check className="w-3.5 h-3.5" />
-                          )}
-                        </button>
+                        editingPlatform === source.id ? (
+                          <div key={source.id} className="flex items-center gap-2 p-2 rounded-lg border border-primary bg-secondary/50">
+                            {source.icon}
+                            <input
+                              type="url"
+                              value={editPlatformUrl}
+                              onChange={(e) => setEditPlatformUrl(e.target.value)}
+                              placeholder={`Enter ${source.label} URL...`}
+                              className="flex-1 min-w-48 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleEditPlatform(source.id);
+                                if (e.key === "Escape") {
+                                  setEditingPlatform(null);
+                                  setEditPlatformUrl("");
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => handleEditPlatform(source.id)}
+                              disabled={!editPlatformUrl}
+                              className="p-1 rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
+                            >
+                              <Check className="w-4 h-4 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingPlatform(null);
+                                setEditPlatformUrl("");
+                              }}
+                              className="p-1 rounded hover:bg-secondary transition-colors"
+                            >
+                              <X className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            key={source.id}
+                            className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-sm ${
+                              selectedSource === source.id
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-secondary/50 border-border hover:bg-secondary text-foreground"
+                            }`}
+                          >
+                            <button
+                              onClick={() => handleSourceSelect(source.id, source.url)}
+                              className="flex items-center gap-2"
+                            >
+                              {source.icon}
+                              <span>{source.label}</span>
+                              {selectedSource === source.id && (
+                                <Check className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <div className={`flex items-center gap-1 ml-1 ${
+                              selectedSource === source.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            } transition-opacity`}>
+                              <button
+                                onClick={() => startEditPlatform(source.id, source.url)}
+                                className={`p-1 rounded transition-colors ${
+                                  selectedSource === source.id 
+                                    ? "hover:bg-primary-foreground/20" 
+                                    : "hover:bg-secondary"
+                                }`}
+                                title="Edit URL"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => handleRemovePlatform(source.id)}
+                                className={`p-1 rounded transition-colors ${
+                                  selectedSource === source.id 
+                                    ? "hover:bg-primary-foreground/20" 
+                                    : "hover:bg-destructive/20 text-destructive"
+                                }`}
+                                title="Remove"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        )
                       ))}
                     </div>
                   </div>
