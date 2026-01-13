@@ -154,7 +154,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                     }}
                   >
                     <Sparkles className="w-5 h-5" />
-                    Generate visual ideas
+                    Create Concepts
                   </button>
                 </>
               ) : (
