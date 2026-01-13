@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Image, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { useState, useCallback, useRef, useLayoutEffect } from "react";
+import { Image, ChevronDown, ChevronRight, ArrowLeft, Sparkles } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CreativeStudioHeader } from "./CreativeStudioHeader";
 import { StepOnePrompt } from "./StepOnePrompt";
@@ -38,18 +38,22 @@ interface CreativeStudioWizardProps {
 
 export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWizardProps) => {
   const [state, setState] = useState<CreativeStudioState>(initialCreativeStudioState);
+  
+  // Refs for floating footer positioning
+  const step2CardRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  
+  // State for floating footer
+  const [floating, setFloating] = useState({ active: false, left: 0, width: 0 });
+  const [footerHeight, setFooterHeight] = useState(80);
 
   const handleUpdate = useCallback((updates: Partial<CreativeStudioState>) => {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
   const handleContinue = useCallback(async () => {
-    // Simulate loading concepts
     handleUpdate({ isLoadingConcepts: true, step: 2 });
-    
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     const concepts = generateMockConcepts(state.prompt);
     handleUpdate({ 
       concepts, 
@@ -64,14 +68,48 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
 
   const handleGenerate = useCallback(async () => {
     handleUpdate({ isGenerating: true });
-    
-    // TODO: Implement actual generation
     console.log('Generating with state:', state);
-    
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
     handleUpdate({ isGenerating: false });
   }, [state, handleUpdate]);
+
+  // Track card position for floating footer
+  useLayoutEffect(() => {
+    const updateFloating = () => {
+      if (!step2CardRef.current || state.step !== 2 || !isOpen) {
+        setFloating({ active: false, left: 0, width: 0 });
+        return;
+      }
+      
+      const rect = step2CardRef.current.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight && rect.bottom > 100;
+      
+      setFloating({
+        active: inView,
+        left: rect.left,
+        width: rect.width
+      });
+    };
+
+    const handleScroll = () => requestAnimationFrame(updateFloating);
+    const handleResize = () => requestAnimationFrame(updateFloating);
+
+    // Measure footer height
+    if (footerRef.current) {
+      setFooterHeight(footerRef.current.offsetHeight);
+    }
+
+    // Initial calculation
+    updateFloating();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [state.step, isOpen]);
 
   return (
     <section className="px-8 py-16 border-t border-border bg-secondary/20">
@@ -147,7 +185,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 </div>
               </div>
             ) : (
-              <div className="glass-card p-6 relative">
+              <div ref={step2CardRef} className="glass-card p-6">
                 <CreativeStudioHeader
                   state={state}
                   onUpdate={handleUpdate}
@@ -155,46 +193,55 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                   showRegenerate={true}
                 />
                 
-                {/* Content with bottom padding for sticky footer */}
-                <div className="pb-24">
+                {/* Content with dynamic bottom padding for floating footer */}
+                <div style={{ paddingBottom: footerHeight + 24 }}>
                   <StepTwoCustomize
                     state={state}
                     onUpdate={handleUpdate}
                   />
                 </div>
-
-                {/* Sticky Footer - sticks within card boundaries */}
-                <div className="sticky bottom-0 -mx-6 px-6 py-4 bg-card/95 backdrop-blur-sm border-t border-border rounded-b-2xl z-10">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={handleBack}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      Back
-                    </button>
-                    
-                    <span className="text-sm text-muted-foreground">
-                      {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
-                    </span>
-                    
-                    <button
-                      onClick={handleGenerate}
-                      disabled={state.isGenerating}
-                      className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
-                      style={{
-                        boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-                      }}
-                    >
-                      <Sparkles className="w-5 h-5" />
-                      Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </CollapsibleContent>
         </Collapsible>
+        
+        {/* Floating Footer - Fixed to viewport but sized/positioned to match card */}
+        {floating.active && state.step === 2 && (
+          <div
+            ref={footerRef}
+            className="fixed bottom-4 z-50 bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-xl px-6 py-4"
+            style={{
+              left: floating.left,
+              width: floating.width,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              
+              <span className="text-sm text-muted-foreground">
+                {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
+              </span>
+              
+              <button
+                onClick={handleGenerate}
+                disabled={state.isGenerating}
+                className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                style={{
+                  boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                }}
+              >
+                <Sparkles className="w-5 h-5" />
+                Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
