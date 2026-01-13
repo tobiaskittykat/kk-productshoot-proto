@@ -74,92 +74,95 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   }, [state, handleUpdate]);
 
   return (
-    <>
-      <section className={`px-8 py-16 border-t border-border bg-secondary/20 ${state.step === 2 && isOpen ? 'pb-28' : ''}`}>
-        <div className="max-w-5xl mx-auto">
-          <Collapsible open={isOpen} onOpenChange={onOpenChange}>
-            <div className="flex items-center gap-3 mb-6">
-              <CollapsibleTrigger asChild>
-                <button 
-                  className="w-8 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center transition-colors"
-                  title={isOpen ? "Collapse section" : "Expand section"}
-                >
-                  {isOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </button>
-              </CollapsibleTrigger>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-coral to-primary flex items-center justify-center">
-                <Image className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Visual Media</p>
-                <h2 className="font-display text-2xl font-bold">Creative Studio</h2>
-              </div>
-
-              {/* Step Indicator */}
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  state.step === 1 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground'
-                }`}>
-                  1
-                </div>
-                <div className="w-8 h-0.5 bg-border" />
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  state.step === 2 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground'
-                }`}>
-                  2
-                </div>
-              </div>
+    <section className="px-8 py-16 border-t border-border bg-secondary/20">
+      <div className="max-w-5xl mx-auto">
+        <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+          <div className="flex items-center gap-3 mb-6">
+            <CollapsibleTrigger asChild>
+              <button 
+                className="w-8 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center transition-colors"
+                title={isOpen ? "Collapse section" : "Expand section"}
+              >
+                {isOpen ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-coral to-primary flex items-center justify-center">
+              <Image className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">Visual Media</p>
+              <h2 className="font-display text-2xl font-bold">Creative Studio</h2>
             </div>
 
-            <CollapsibleContent>
-              <div className="glass-card p-6">
-                {/* Header */}
-                <CreativeStudioHeader
-                  state={state}
-                  onUpdate={handleUpdate}
-                  onRegenerate={handleContinue}
-                  showRegenerate={state.step === 2}
-                />
+            {/* Step Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                state.step === 1 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground'
+              }`}>
+                1
+              </div>
+              <div className="w-8 h-0.5 bg-border" />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                state.step === 2 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground'
+              }`}>
+                2
+              </div>
+            </div>
+          </div>
 
-                {/* Step content - full height, no constraints */}
-                {state.step === 1 ? (
-                  <>
-                    <StepOnePrompt 
-                      state={state} 
-                      onUpdate={handleUpdate}
-                    />
-                    
-                    {/* Step 1 Footer */}
-                    <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">
-                        {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
-                      </div>
-                      <button
-                        onClick={handleContinue}
-                        disabled={!state.prompt.trim()}
-                        className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
-                        style={{
-                          boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-                        }}
-                      >
-                        <Sparkles className="w-5 h-5" />
-                        Create Concepts
-                      </button>
+          <CollapsibleContent>
+            <div className="glass-card p-6">
+              {/* Header */}
+              <CreativeStudioHeader
+                state={state}
+                onUpdate={handleUpdate}
+                onRegenerate={handleContinue}
+                showRegenerate={state.step === 2}
+              />
+
+              {/* Step content */}
+              {state.step === 1 ? (
+                <>
+                  <StepOnePrompt 
+                    state={state} 
+                    onUpdate={handleUpdate}
+                  />
+                  
+                  {/* Step 1 Footer */}
+                  <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
                     </div>
-                  </>
-                ) : (
-                  <>
+                    <button
+                      onClick={handleContinue}
+                      disabled={!state.prompt.trim()}
+                      className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                      style={{
+                        boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                      }}
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Create Concepts
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Step 2 content with padding for sticky footer */}
+                  <div className="pb-24">
                     <StepTwoCustomize
                       state={state}
                       onUpdate={handleUpdate}
                     />
-                    
-                    {/* Step 2 Back button - stays in card */}
-                    <div className="mt-8 pt-6 border-t border-border">
+                  </div>
+                  
+                  {/* Sticky Footer - Inside the card, sticks to bottom while scrolling */}
+                  <div className="sticky bottom-0 z-10 -mx-6 px-6 py-4 bg-card/95 backdrop-blur-lg border-t border-border rounded-b-2xl">
+                    <div className="flex items-center justify-between">
                       <button
                         onClick={handleBack}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
@@ -167,37 +170,30 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                         <ArrowLeft className="w-4 h-4" />
                         Back
                       </button>
+                      
+                      <span className="text-sm text-muted-foreground">
+                        {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
+                      </span>
+                      
+                      <button
+                        onClick={handleGenerate}
+                        disabled={state.isGenerating}
+                        className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                        style={{
+                          boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                        }}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
+                      </button>
                     </div>
-                  </>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      </section>
-
-      {/* Sticky Generate Footer - Fixed at bottom of viewport for Step 2 */}
-      {state.step === 2 && isOpen && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border shadow-lg">
-          <div className="max-w-5xl mx-auto px-8 py-4 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              {state.selectedConcept ? '✓ 1 concept selected' : 'No concept selected'}
-            </span>
-            
-            <button
-              onClick={handleGenerate}
-              disabled={state.isGenerating}
-              className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
-              style={{
-                boxShadow: !state.isGenerating ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-              }}
-            >
-              <Sparkles className="w-5 h-5" />
-              Generate ({(1700 + (state.imageCount - 1) * 400).toLocaleString()} tokens)
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+                  </div>
+                </>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    </section>
   );
 };
