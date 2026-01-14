@@ -18,7 +18,7 @@ interface CreativeStudioWizardProps {
 export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWizardProps) => {
   const [state, setState] = useState<CreativeStudioState>(initialCreativeStudioState);
   const navigate = useNavigate();
-  const { selectedBrand } = useBrands();
+  const { currentBrand } = useBrands();
   const { 
     isGeneratingConcepts, 
     isGeneratingImages, 
@@ -46,9 +46,9 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
     // Call real AI to generate concepts
     const concepts = await generateConcepts(
       state.prompt,
-      selectedBrand?.name,
-      selectedBrand?.personality || undefined,
-      selectedBrand?.industry || undefined,
+      currentBrand?.name,
+      currentBrand?.personality || undefined,
+      currentBrand?.industry || undefined,
       state.useCase,
       state.targetPersona || undefined
     );
@@ -58,7 +58,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
       isLoadingConcepts: false,
       selectedConcept: concepts[0]?.id || null
     });
-  }, [state.prompt, state.useCase, state.targetPersona, selectedBrand, handleUpdate, generateConcepts]);
+  }, [state.prompt, state.useCase, state.targetPersona, currentBrand, handleUpdate, generateConcepts]);
 
   const handleBack = useCallback(() => {
     if (state.step === 3) {
