@@ -100,7 +100,10 @@ export const GeneratedImageCard = ({
     }
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't trigger click if user is interacting with action buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    
     if (onSelect && image.status === 'completed') {
       onSelect(image);
     }

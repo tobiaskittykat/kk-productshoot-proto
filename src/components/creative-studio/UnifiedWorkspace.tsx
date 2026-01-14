@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CreativeStudioState, GeneratedImage, aiModels } from './types';
 import { GeneratedImagesGallery } from './GeneratedImagesGallery';
+import { ImageDetailModal } from './ImageDetailModal';
 import { cn } from '@/lib/utils';
 
 interface UnifiedWorkspaceProps {
@@ -46,6 +47,10 @@ export const UnifiedWorkspace = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  
+  // Image detail modal state
+  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const editModes: { id: EditModeType; icon: typeof Image; label: string; shortLabel: string }[] = [
     { id: 'generate', icon: Image, label: 'Text to Image', shortLabel: 'Generate' },
@@ -99,7 +104,19 @@ export const UnifiedWorkspace = ({
     }
   };
 
-  const handleSelectForEdit = useCallback((image: GeneratedImage) => {
+  // Click on image shows detail modal, NOT immediate edit
+  const handleImageClick = useCallback((image: GeneratedImage) => {
+    setSelectedImage(image);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  // These actions come from the detail modal
+  const handleVariationFromModal = useCallback((image: GeneratedImage) => {
+    onVariation(image);
+  }, [onVariation]);
+
+  const handleEditFromModal = useCallback((image: GeneratedImage) => {
+    // Set the image as base image for editing in the Quick Edit bar
     onUpdate({ 
       baseImage: image, 
       editMode: 'edit',
@@ -107,6 +124,10 @@ export const UnifiedWorkspace = ({
     });
     setIsExpanded(true);
   }, [onUpdate]);
+
+  const handleDeleteFromModal = useCallback((image: GeneratedImage) => {
+    onDelete(image);
+  }, [onDelete]);
 
   const selectedModel = aiModels.find(m => m.value === state.aiModel) || aiModels[0];
 
@@ -332,11 +353,21 @@ export const UnifiedWorkspace = ({
           onEdit={onEditImage}
           onDelete={onDelete}
           onRegenerate={onRegenerate}
-          onSelectForEdit={handleSelectForEdit}
+          onSelectForEdit={handleImageClick}
           compact={true}
           enableDrag={true}
         />
       </div>
+
+      {/* Image Detail Modal */}
+      <ImageDetailModal
+        image={selectedImage}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        onVariation={handleVariationFromModal}
+        onEdit={handleEditFromModal}
+        onDelete={handleDeleteFromModal}
+      />
     </div>
   );
 };
