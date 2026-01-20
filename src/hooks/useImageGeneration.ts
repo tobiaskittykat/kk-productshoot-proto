@@ -96,16 +96,26 @@ export function useImageGeneration() {
       
       // Check custom moodboards first
       if (state.moodboard) {
-        // Fetch the moodboard URL from database
-        const { data: customMoodboard } = await supabase
-          .from('custom_moodboards')
-          .select('thumbnail_url, description')
-          .eq('id', state.moodboard)
-          .maybeSingle();
+        // Custom moodboards have 'custom-' prefix - strip it for DB query
+        const isCustomMoodboard = state.moodboard.startsWith('custom-');
+        const moodboardDbId = isCustomMoodboard 
+          ? state.moodboard.replace('custom-', '') 
+          : state.moodboard;
         
-        if (customMoodboard) {
-          moodboardUrl = customMoodboard.thumbnail_url;
-          moodboardDescription = customMoodboard.description || undefined;
+        if (isCustomMoodboard) {
+          // Fetch the moodboard URL from database
+          const { data: customMoodboard, error: moodboardErr } = await supabase
+            .from('custom_moodboards')
+            .select('thumbnail_url, description')
+            .eq('id', moodboardDbId)
+            .maybeSingle();
+          
+          console.log('Moodboard query:', { moodboardDbId, customMoodboard, error: moodboardErr });
+          
+          if (customMoodboard) {
+            moodboardUrl = customMoodboard.thumbnail_url;
+            moodboardDescription = customMoodboard.description || undefined;
+          }
         } else {
           // Fallback to sample moodboards (uses 'thumbnail' field)
           const sampleMoodboard = sampleMoodboards.find(m => m.id === state.moodboard);
