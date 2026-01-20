@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface CustomizationSectionProps {
-  title: string;
+  title: ReactNode;
   icon?: ReactNode;
   defaultOpen?: boolean;
   children: ReactNode;
