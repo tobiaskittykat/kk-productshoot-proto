@@ -338,57 +338,8 @@ export const targetPersonas = [
   { value: 'fitness', label: 'Fitness Enthusiasts' },
 ];
 
-// Bandolier-focused moodboards - luxury phone accessories aesthetic
-export const sampleMoodboards: Moodboard[] = [
-  { 
-    id: 'urban-luxe', 
-    name: 'Urban Luxe', 
-    thumbnail: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=300&fit=crop',
-    description: 'Night city glow, polished urban settings, sophisticated street style'
-  },
-  { 
-    id: 'winter-commute', 
-    name: 'Winter Commute', 
-    thumbnail: 'https://images.unsplash.com/photo-1483664852095-d6cc6870702d?w=400&h=300&fit=crop',
-    description: 'Steam breath, wool coats, coffee runs, cold weather elegance'
-  },
-  { 
-    id: 'leather-textures', 
-    name: 'Leather & Gold', 
-    thumbnail: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=300&fit=crop',
-    description: 'Pebbled leather, gold hardware, tactile luxury details'
-  },
-  { 
-    id: 'neutral-minimal', 
-    name: 'Neutral Minimal', 
-    thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
-    description: 'Black, greige, ivory, cream - sophisticated neutrals'
-  },
-  { 
-    id: 'travel-ready', 
-    name: 'Travel Ready', 
-    thumbnail: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=300&fit=crop',
-    description: 'Airport lounges, hotel lobbies, jet-set lifestyle'
-  },
-  { 
-    id: 'cafe-culture', 
-    name: 'Café Culture', 
-    thumbnail: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop',
-    description: 'Coffee shops, marble tables, casual sophistication'
-  },
-  { 
-    id: 'evening-out', 
-    name: 'Evening Out', 
-    thumbnail: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=300&fit=crop',
-    description: 'Dinner dates, events, low lighting, dressed up'
-  },
-  { 
-    id: 'hands-free-life', 
-    name: 'Hands-Free Life', 
-    thumbnail: 'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=400&h=300&fit=crop',
-    description: 'Active lifestyle, multitasking, on-the-go convenience'
-  },
-];
+// Custom moodboards are now loaded from the database - no hardcoded samples
+export const sampleMoodboards: Moodboard[] = [];
 
 // Bandolier product references - phone cases and accessories
 export const sampleProductReferences: ReferenceImage[] = [
