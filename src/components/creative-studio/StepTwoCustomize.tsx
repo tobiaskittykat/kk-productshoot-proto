@@ -17,7 +17,9 @@ import {
   Focus,
   BookmarkCheck,
   ChevronDown,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Trash2
 } from "lucide-react";
 import { 
   Select, 
@@ -72,9 +74,114 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingConcept, setEditingConcept] = useState<Concept | null>(null);
   const [isNewConcept, setIsNewConcept] = useState(false);
+  const [isScrapingProducts, setIsScrapingProducts] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Fetch scraped products from database
+  const { data: scrapedProducts = [], isLoading: loadingScrapedProducts, refetch: refetchScrapedProducts } = useQuery({
+    queryKey: ['scraped-products', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('scraped_products')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return (data || []).map(p => ({
+        id: `scraped-${p.id}`,
+        dbId: p.id,
+        name: p.name,
+        thumbnail: p.thumbnail_url,
+        url: p.full_url,
+        category: 'product' as const,
+        isScraped: true,
+      }));
+    },
+    enabled: !!user?.id,
+  });
+
+  // Combine scraped products with sample products (scraped first)
+  const allProductReferences = useMemo(() => {
+    return [...scrapedProducts, ...sampleProductReferences];
+  }, [scrapedProducts]);
+
+  // Handle scraping products from Bandolier
+  const handleScrapeProducts = async () => {
+    if (!user) {
+      toast({ title: 'Please sign in to scrape products', variant: 'destructive' });
+      return;
+    }
+
+    setIsScrapingProducts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-products', {
+        body: { url: 'https://www.bandolierstyle.com/collections/all' }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.products?.length > 0) {
+        // Insert products into database (upsert to avoid duplicates)
+        const productsToInsert = data.products.map((p: any) => ({
+          user_id: user.id,
+          external_id: p.id,
+          name: p.name,
+          thumbnail_url: p.thumbnail,
+          full_url: p.url || p.thumbnail,
+          category: 'product',
+          collection: 'bandolier',
+        }));
+
+        const { error: insertError } = await supabase
+          .from('scraped_products')
+          .upsert(productsToInsert, { onConflict: 'user_id,external_id' });
+
+        if (insertError) throw insertError;
+
+        toast({ 
+          title: `Synced ${data.products.length} products!`, 
+          description: 'Your product library has been updated' 
+        });
+        
+        refetchScrapedProducts();
+      } else {
+        toast({ title: 'No products found', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Failed to scrape products:', err);
+      toast({ title: 'Failed to sync products', variant: 'destructive' });
+    } finally {
+      setIsScrapingProducts(false);
+    }
+  };
+
+  // Handle deleting a scraped product
+  const handleDeleteScrapedProduct = async (productId: string) => {
+    const dbId = productId.replace('scraped-', '');
+    try {
+      const { error } = await supabase
+        .from('scraped_products')
+        .delete()
+        .eq('id', dbId);
+
+      if (error) throw error;
+      
+      // Clear selection if this product was selected
+      if (state.productReference === productId) {
+        onUpdate({ productReference: null });
+      }
+      
+      refetchScrapedProducts();
+      toast({ title: 'Product removed' });
+    } catch (err) {
+      console.error('Failed to delete product:', err);
+      toast({ title: 'Failed to remove product', variant: 'destructive' });
+    }
+  };
 
   const handleAddKeyword = () => {
     if (newKeyword.trim() && !state.extraKeywords.includes(newKeyword.trim())) {
@@ -358,6 +465,44 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
     }
   }, [state.selectedConcept, customMoodboards, state.concepts, state.savedConcepts]);
 
+  // Smart auto-selection of product reference based on selected concept
+  useEffect(() => {
+    if (!state.selectedConcept || state.productReference || allProductReferences.length === 0) return;
+    
+    const selectedConcept = state.concepts.find(c => c.id === state.selectedConcept) || 
+                           state.savedConcepts.find(c => c.id === state.selectedConcept);
+    
+    if (!selectedConcept?.productFocus?.productCategory) return;
+    
+    // Build search terms from product focus
+    const searchTerms = selectedConcept.productFocus.productCategory.toLowerCase().split(/\s+/);
+    
+    // Find best matching product
+    let bestMatch: typeof allProductReferences[0] | null = null;
+    let bestScore = 0;
+    
+    for (const product of allProductReferences) {
+      const productText = product.name.toLowerCase();
+      let score = 0;
+      
+      for (const term of searchTerms) {
+        if (term.length > 2 && productText.includes(term)) {
+          score++;
+        }
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = product;
+      }
+    }
+    
+    // Auto-select if we found a match
+    if (bestMatch && bestScore >= 1) {
+      onUpdate({ productReference: bestMatch.id });
+    }
+  }, [state.selectedConcept, allProductReferences, state.concepts, state.savedConcepts]);
+
   return (
     <div className="space-y-8">
       {/* ===== 1. CONCEPTS SECTION ===== */}
@@ -495,18 +640,35 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
           icon={<Package className="w-4 h-4" />}
         >
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Your product image for the creative</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Your product image for the creative</p>
+              {scrapedProducts.length > 0 && (
+                <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
+                  {scrapedProducts.length} from Bandolier
+                </span>
+              )}
+            </div>
             
             {/* Product Reference Grid */}
             <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-              {sampleProductReferences.slice(0, 4).map((ref) => (
-                <ReferenceThumbnail
-                  key={ref.id}
-                  reference={ref}
-                  isSelected={state.productReference === ref.id}
-                  onSelect={() => onUpdate({ productReference: ref.id })}
-                />
-              ))}
+              {loadingScrapedProducts ? (
+                <>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg bg-secondary/50 animate-pulse" />
+                  ))}
+                </>
+              ) : (
+                <>
+                  {allProductReferences.slice(0, 4).map((ref) => (
+                    <ReferenceThumbnail
+                      key={ref.id}
+                      reference={ref}
+                      isSelected={state.productReference === ref.id}
+                      onSelect={() => onUpdate({ productReference: ref.id })}
+                    />
+                  ))}
+                </>
+              )}
               
               {/* Upload Button */}
               <button className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-accent/50 bg-secondary/30 flex items-center justify-center transition-colors">
@@ -514,14 +676,29 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
               </button>
             </div>
 
-            {/* View More */}
-            <button 
-              onClick={() => setShowProductRefModal(true)}
-              className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-            >
-              View more options
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {/* Actions Row */}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowProductRefModal(true)}
+                className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+              >
+                View more options
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              
+              <button 
+                onClick={handleScrapeProducts}
+                disabled={isScrapingProducts}
+                className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-accent transition-colors disabled:opacity-50"
+              >
+                {isScrapingProducts ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                {isScrapingProducts ? 'Syncing...' : 'Sync from Bandolier'}
+              </button>
+            </div>
           </div>
         </CustomizationSection>
 
@@ -858,9 +1035,10 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
         isOpen={showProductRefModal}
         onClose={() => setShowProductRefModal(false)}
         title="Product Reference"
-        references={sampleProductReferences}
+        references={allProductReferences}
         selectedReference={state.productReference}
         onSelect={(id) => onUpdate({ productReference: id })}
+        onDelete={handleDeleteScrapedProduct}
       />
 
       <ReferenceGalleryModal
