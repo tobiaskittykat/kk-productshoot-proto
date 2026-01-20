@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Grid3X3, Wand2, Check, Loader2, X, Trash2 } from "lucide-react";
-import { sampleMoodboards, Moodboard } from "./types";
+import { Moodboard } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -152,16 +152,13 @@ export const MoodboardModal = ({
     }
   };
 
-  // Combine sample and custom moodboards for the browse tab
-  const allMoodboards: Moodboard[] = [
-    ...customMoodboards.map(m => ({
-      id: `custom-${m.id}`,
-      name: m.name,
-      thumbnail: m.thumbnail_url,
-      description: m.description || 'Custom moodboard',
-    })),
-    ...sampleMoodboards,
-  ];
+  // All moodboards come from the database now
+  const allMoodboards: Moodboard[] = customMoodboards.map(m => ({
+    id: `custom-${m.id}`,
+    name: m.name,
+    thumbnail: m.thumbnail_url,
+    description: m.description || 'Custom moodboard',
+  }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -213,12 +210,6 @@ export const MoodboardModal = ({
                   {selectedMoodboard === moodboard.id && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-accent flex items-center justify-center">
                       <Check className="w-4 h-4 text-accent-foreground" />
-                    </div>
-                  )}
-                  {/* Custom moodboard indicator */}
-                  {moodboard.id.startsWith('custom-') && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-accent/80 text-[10px] font-medium text-accent-foreground">
-                      Custom
                     </div>
                   )}
                 </button>
