@@ -1,4 +1,4 @@
-import { Check, Plus, Bookmark, BookmarkCheck, Pencil, Users, Palette, MessageSquareQuote, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Plus, Bookmark, BookmarkCheck, Pencil, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Concept, SavedConcept } from "./types";
 
@@ -72,52 +72,29 @@ export const ConceptCard = ({
                 {concept.description || concept.visualWorld?.atmosphere}
               </p>
               
-              {/* Quick info badges */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {/* Target Audience */}
+              {/* Quick summary line - simplified */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-muted-foreground">
+                {/* Audience preview */}
                 {concept.targetAudience?.persona && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-medium">
-                    <Users className="w-3 h-3" />
-                    {concept.targetAudience.persona.slice(0, 30)}
-                    {concept.targetAudience.persona.length > 30 && '...'}
+                  <span className="truncate max-w-[200px]">
+                    👤 {concept.targetAudience.persona}
                   </span>
                 )}
                 
-                {/* Visual World indicator */}
+                {/* Palette preview */}
                 {concept.visualWorld?.palette && concept.visualWorld.palette.length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/10 text-purple-500 text-xs font-medium">
-                    <Palette className="w-3 h-3" />
-                    {concept.visualWorld.palette.slice(0, 3).join(', ')}
+                  <span className="truncate max-w-[150px]">
+                    🎨 {concept.visualWorld.palette.slice(0, 2).join(', ')}
                   </span>
                 )}
                 
-                {/* Taglines indicator */}
+                {/* Tagline count */}
                 {concept.taglines && concept.taglines.length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-medium">
-                    <MessageSquareQuote className="w-3 h-3" />
-                    {concept.taglines.length} tagline{concept.taglines.length > 1 ? 's' : ''}
+                  <span>
+                    💬 {concept.taglines.length} tagline{concept.taglines.length > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
-              
-              {/* Tags */}
-              {concept.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {concept.tags.slice(0, 4).map((tag) => (
-                    <span 
-                      key={tag} 
-                      className="px-2.5 py-1 rounded-full bg-secondary text-xs text-muted-foreground font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {concept.tags.length > 4 && (
-                    <span className="px-2.5 py-1 rounded-full bg-secondary text-xs text-muted-foreground">
-                      +{concept.tags.length - 4}
-                    </span>
-                  )}
-                </div>
-              )}
             </button>
             
             {/* Action buttons - isolated from selection */}
@@ -205,13 +182,13 @@ export const ConceptCard = ({
               {concept.taglines && concept.taglines.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Taglines</p>
-                  <div className="flex flex-wrap gap-2">
+                  <ul className="space-y-1">
                     {concept.taglines.map((tagline, i) => (
-                      <span key={i} className="px-2 py-1 rounded bg-secondary text-foreground">
+                      <li key={i} className="text-foreground">
                         "{tagline}"
-                      </span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
               
@@ -260,6 +237,29 @@ export const ConceptCard = ({
   );
 };
 
+// Loading skeleton for concept cards
+export const ConceptCardSkeleton = ({ index }: { index: number }) => {
+  return (
+    <div className="w-full rounded-xl border-2 border-border bg-card overflow-hidden animate-pulse">
+      <div className="flex">
+        <div className="w-2 shrink-0 bg-accent/20" />
+        <div className="flex-1 p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <div className="h-5 bg-secondary rounded w-3/4" />
+              <div className="h-4 bg-secondary rounded w-full" />
+              <div className="h-4 bg-secondary rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface AddConceptCardProps {
   onClick: () => void;
 }
@@ -302,7 +302,7 @@ export const SavedConceptCard = ({
       <div className="flex">
         <button 
           onClick={onSelect}
-          className={`w-2 shrink-0 ${isSelected ? 'bg-accent' : 'bg-purple-400/30'} hover:bg-accent/60 transition-colors`} 
+          className={`w-2 shrink-0 ${isSelected ? 'bg-accent' : 'bg-accent/30'} hover:bg-accent/60 transition-colors`} 
         />
         
         <div className="flex-1 p-4">
@@ -313,7 +313,7 @@ export const SavedConceptCard = ({
               className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                 isSelected 
                   ? 'bg-accent text-accent-foreground' 
-                  : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-secondary text-muted-foreground'
               }`}
             >
               <BookmarkCheck className="w-3.5 h-3.5" />
@@ -332,20 +332,16 @@ export const SavedConceptCard = ({
                 {concept.description || concept.visualWorld?.atmosphere}
               </p>
               
-              {/* Quick badges */}
+              {/* Quick summary - simplified */}
               {(concept.targetAudience?.persona || concept.taglines?.length) && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] text-muted-foreground">
                   {concept.targetAudience?.persona && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-medium">
-                      <Users className="w-2.5 h-2.5" />
-                      {concept.targetAudience.persona.slice(0, 20)}...
+                    <span className="truncate max-w-[120px]">
+                      👤 {concept.targetAudience.persona}
                     </span>
                   )}
                   {concept.taglines && concept.taglines.length > 0 && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-medium">
-                      <MessageSquareQuote className="w-2.5 h-2.5" />
-                      {concept.taglines.length}
-                    </span>
+                    <span>💬 {concept.taglines.length}</span>
                   )}
                 </div>
               )}

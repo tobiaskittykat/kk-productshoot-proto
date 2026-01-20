@@ -29,7 +29,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { ConceptCard, AddConceptCard, SavedConceptCard } from "./ConceptCard";
+import { ConceptCard, AddConceptCard, SavedConceptCard, ConceptCardSkeleton } from "./ConceptCard";
 import { ConceptEditModal } from "./ConceptEditModal";
 import { CustomizationSection } from "./CustomizationSection";
 import { MoodboardThumbnail } from "./MoodboardThumbnail";
@@ -308,80 +308,74 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
           <span className="text-sm text-muted-foreground">Pick one or add your own</span>
         </div>
 
-        {state.isLoadingConcepts ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-xl border border-border bg-card animate-pulse overflow-hidden">
-                <div className="flex">
-                  <div className="w-2 bg-secondary" />
-                  <div className="flex-1 p-5">
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-secondary" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 bg-secondary rounded w-3/4" />
-                        <div className="h-4 bg-secondary rounded w-full" />
-                        <div className="h-4 bg-secondary rounded w-2/3" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Saved Concepts - Collapsible */}
+        {state.savedConcepts.length > 0 && (
+          <Collapsible open={savedConceptsOpen} onOpenChange={setSavedConceptsOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-left hover:bg-secondary/30 rounded-lg px-2 -mx-2 transition-colors">
+              <div className="flex items-center gap-2">
+                <BookmarkCheck className="w-4 h-4 text-accent" />
+                <span className="text-sm font-medium text-foreground">Your Saved Concepts</span>
+                <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                  {state.savedConcepts.length}
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Saved Concepts - Collapsible */}
-            {state.savedConcepts.length > 0 && (
-              <Collapsible open={savedConceptsOpen} onOpenChange={setSavedConceptsOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-left hover:bg-secondary/30 rounded-lg px-2 -mx-2 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <BookmarkCheck className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm font-medium text-foreground">Your Saved Concepts</span>
-                    <span className="text-xs bg-purple-500/10 text-purple-500 px-2 py-0.5 rounded-full">
-                      {state.savedConcepts.length}
-                    </span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${savedConceptsOpen ? 'rotate-180' : ''}`} />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2 space-y-2">
-                  {state.savedConcepts.map((concept) => (
-                    <SavedConceptCard
-                      key={concept.id}
-                      concept={concept}
-                      isSelected={state.selectedConcept === concept.id}
-                      onSelect={() => handleConceptSelect(concept)}
-                      onEdit={() => handleEditConcept(concept)}
-                      onDelete={() => handleDeleteSavedConcept(concept.id)}
-                    />
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-            
-            {/* Generated Concepts */}
-            {state.concepts.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> AI-generated concepts
-                </p>
-              </div>
-            )}
-            {state.concepts.map((concept, index) => (
-              <ConceptCard
-                key={concept.id}
-                concept={concept}
-                index={index}
-                isSelected={state.selectedConcept === concept.id}
-                onSelect={() => handleConceptSelect(concept)}
-                onSave={() => handleSaveConcept(concept)}
-                onEdit={() => handleEditConcept(concept)}
-                isSaved={isConceptSaved(concept.id)}
-                showSaveButton={!!user}
-              />
-            ))}
-            <AddConceptCard onClick={handleAddConcept} />
-          </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${savedConceptsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-2">
+              {state.savedConcepts.map((concept) => (
+                <SavedConceptCard
+                  key={concept.id}
+                  concept={concept}
+                  isSelected={state.selectedConcept === concept.id}
+                  onSelect={() => handleConceptSelect(concept)}
+                  onEdit={() => handleEditConcept(concept)}
+                  onDelete={() => handleDeleteSavedConcept(concept.id)}
+                />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         )}
+        
+        {/* Generated Concepts - with progressive loading */}
+        <div className="space-y-3">
+          {state.concepts.length > 0 && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> 
+              {state.isLoadingConcepts 
+                ? `Generating concepts (${state.concepts.length}/3)...` 
+                : 'AI-generated concepts'}
+            </p>
+          )}
+          
+          {/* Show loaded concepts */}
+          {state.concepts.map((concept, index) => (
+            <ConceptCard
+              key={concept.id}
+              concept={concept}
+              index={index}
+              isSelected={state.selectedConcept === concept.id}
+              onSelect={() => handleConceptSelect(concept)}
+              onSave={() => handleSaveConcept(concept)}
+              onEdit={() => handleEditConcept(concept)}
+              isSaved={isConceptSaved(concept.id)}
+              showSaveButton={!!user}
+            />
+          ))}
+          
+          {/* Show skeleton placeholders while loading */}
+          {state.isLoadingConcepts && (
+            <>
+              {Array.from({ length: 3 - state.concepts.length }).map((_, i) => (
+                <ConceptCardSkeleton key={`skeleton-${i}`} index={state.concepts.length + i} />
+              ))}
+            </>
+          )}
+          
+          {/* Add concept button (hide while loading) */}
+          {!state.isLoadingConcepts && (
+            <AddConceptCard onClick={handleAddConcept} />
+          )}
+        </div>
       </div>
 
       {/* ===== CUSTOMIZATION PANEL ===== */}
