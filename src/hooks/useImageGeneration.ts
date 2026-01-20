@@ -13,18 +13,21 @@ import { useToast } from '@/hooks/use-toast';
 export function useImageGeneration() {
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [conceptsProgress, setConceptsProgress] = useState(0); // 0-3 concepts loaded
   const { toast } = useToast();
 
-  // Generate concepts from prompt
+  // Generate concepts from prompt with progressive callback
   const generateConcepts = useCallback(async (
     prompt: string,
     brandName?: string,
     brandPersonality?: string,
     brandIndustry?: string,
     useCase?: string,
-    targetPersona?: string
+    targetPersona?: string,
+    onConceptReady?: (concept: Concept, index: number) => void
   ): Promise<Concept[]> => {
     setIsGeneratingConcepts(true);
+    setConceptsProgress(0);
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-concepts', {
@@ -48,7 +51,21 @@ export function useImageGeneration() {
         return [];
       }
 
-      return data.concepts || [];
+      const concepts = data.concepts || [];
+      
+      // Progressive reveal with slight delays for UX
+      if (onConceptReady && concepts.length > 0) {
+        for (let i = 0; i < concepts.length; i++) {
+          setConceptsProgress(i + 1);
+          onConceptReady(concepts[i], i);
+          // Small delay between concepts for smooth UX
+          if (i < concepts.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+      }
+
+      return concepts;
     } catch (err) {
       console.error('Error generating concepts:', err);
       toast({
@@ -59,6 +76,7 @@ export function useImageGeneration() {
       return [];
     } finally {
       setIsGeneratingConcepts(false);
+      setConceptsProgress(0);
     }
   }, [toast]);
 
@@ -287,6 +305,7 @@ export function useImageGeneration() {
   return {
     isGeneratingConcepts,
     isGeneratingImages,
+    conceptsProgress,
     generateConcepts,
     generateImages,
     generateVariations,

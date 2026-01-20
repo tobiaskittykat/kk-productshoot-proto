@@ -24,6 +24,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   const { 
     isGeneratingConcepts, 
     isGeneratingImages, 
+    conceptsProgress,
     generateConcepts, 
     generateImages,
     generateVariations,
@@ -87,23 +88,30 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   }, []);
 
   const handleContinue = useCallback(async () => {
-    handleUpdate({ isLoadingConcepts: true, step: 2 });
+    // Clear existing concepts and show loading state
+    handleUpdate({ isLoadingConcepts: true, step: 2, concepts: [] });
     
-    // Call real AI to generate concepts
-    const concepts = await generateConcepts(
+    // Progressive callback to add concepts one by one
+    const onConceptReady = (concept: any, index: number) => {
+      setState(prev => ({
+        ...prev,
+        concepts: [...prev.concepts, concept],
+        selectedConcept: index === 0 ? concept.id : prev.selectedConcept,
+      }));
+    };
+    
+    // Call real AI to generate concepts with progressive reveal
+    await generateConcepts(
       state.prompt,
       currentBrand?.name,
       currentBrand?.personality || undefined,
       currentBrand?.industry || undefined,
       state.useCase,
-      state.targetPersona || undefined
+      state.targetPersona || undefined,
+      onConceptReady
     );
     
-    handleUpdate({ 
-      concepts, 
-      isLoadingConcepts: false,
-      selectedConcept: concepts[0]?.id || null
-    });
+    handleUpdate({ isLoadingConcepts: false });
   }, [state.prompt, state.useCase, state.targetPersona, currentBrand, handleUpdate, generateConcepts]);
 
   const handleBack = useCallback(() => {
