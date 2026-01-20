@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.generate-image]
 verify_jwt = false
+
+[functions.scrape-products]
+verify_jwt = false
+
+[functions.smart-match]
+verify_jwt = false

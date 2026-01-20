@@ -75,6 +75,7 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   const [editingConcept, setEditingConcept] = useState<Concept | null>(null);
   const [isNewConcept, setIsNewConcept] = useState(false);
   const [isScrapingProducts, setIsScrapingProducts] = useState(false);
+  const [isSmartMatching, setIsSmartMatching] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -443,85 +444,82 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   // Show first 6 moodboards
   const visibleMoodboards = customMoodboards.slice(0, 6);
 
-  // Smart auto-selection of moodboard based on selected concept
+  // Smart AI-powered auto-selection of moodboard and product based on selected concept
   useEffect(() => {
-    if (!state.selectedConcept || state.moodboard || customMoodboards.length === 0) return;
+    if (!state.selectedConcept) return;
+    if (customMoodboards.length === 0 && allProductReferences.length === 0) return;
     
     const selectedConcept = state.concepts.find(c => c.id === state.selectedConcept) || 
                            state.savedConcepts.find(c => c.id === state.selectedConcept);
     
     if (!selectedConcept) return;
-    
-    // Build search terms from concept metadata
-    const searchTerms: string[] = [];
-    if (selectedConcept.title) searchTerms.push(...selectedConcept.title.toLowerCase().split(' '));
-    if (selectedConcept.coreIdea) searchTerms.push(...selectedConcept.coreIdea.toLowerCase().split(' '));
-    if (selectedConcept.visualWorld?.atmosphere) searchTerms.push(...selectedConcept.visualWorld.atmosphere.toLowerCase().split(' '));
-    if (selectedConcept.visualWorld?.palette) searchTerms.push(...selectedConcept.visualWorld.palette.map(p => p.toLowerCase()));
-    
-    // Find best matching moodboard
-    let bestMatch: Moodboard | null = null;
-    let bestScore = 0;
-    
-    for (const moodboard of customMoodboards) {
-      const moodboardText = `${moodboard.name} ${moodboard.description || ''}`.toLowerCase();
-      let score = 0;
-      
-      for (const term of searchTerms) {
-        if (term.length > 2 && moodboardText.includes(term)) {
-          score++;
-        }
-      }
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = moodboard;
-      }
-    }
-    
-    // Only auto-select if we found a decent match
-    if (bestMatch && bestScore >= 2) {
-      onUpdate({ moodboard: bestMatch.id });
-    }
-  }, [state.selectedConcept, customMoodboards, state.concepts, state.savedConcepts]);
 
-  // Smart auto-selection of product reference based on selected concept
-  useEffect(() => {
-    if (!state.selectedConcept || state.productReference || allProductReferences.length === 0) return;
-    
-    const selectedConcept = state.concepts.find(c => c.id === state.selectedConcept) || 
-                           state.savedConcepts.find(c => c.id === state.selectedConcept);
-    
-    if (!selectedConcept?.productFocus?.productCategory) return;
-    
-    // Build search terms from product focus
-    const searchTerms = selectedConcept.productFocus.productCategory.toLowerCase().split(/\s+/);
-    
-    // Find best matching product
-    let bestMatch: typeof allProductReferences[0] | null = null;
-    let bestScore = 0;
-    
-    for (const product of allProductReferences) {
-      const productText = product.name.toLowerCase();
-      let score = 0;
-      
-      for (const term of searchTerms) {
-        if (term.length > 2 && productText.includes(term)) {
-          score++;
+    // Call the smart-match agent
+    const runSmartMatch = async () => {
+      setIsSmartMatching(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('smart-match', {
+          body: {
+            concept: {
+              title: selectedConcept.title,
+              coreIdea: selectedConcept.coreIdea,
+              visualWorld: selectedConcept.visualWorld,
+              productFocus: selectedConcept.productFocus,
+              targetAudience: selectedConcept.targetAudience,
+              tonality: selectedConcept.tonality,
+              consumerInsight: selectedConcept.consumerInsight,
+            },
+            moodboards: customMoodboards.map(m => ({ 
+              id: m.id, 
+              name: m.name, 
+              description: m.description 
+            })),
+            products: allProductReferences.map(p => ({ 
+              id: p.id, 
+              name: p.name, 
+              category: (p as any).productType 
+            })),
+          }
+        });
+
+        if (error) {
+          console.error('Smart match error:', error);
+          return;
         }
+
+        const updates: Partial<CreativeStudioState> = {};
+        
+        if (data?.moodboardId) {
+          updates.moodboard = data.moodboardId;
+        }
+        if (data?.productId) {
+          updates.productReference = data.productId;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          onUpdate(updates);
+          
+          // Show toast with matching reasons
+          const reasons: string[] = [];
+          if (data?.moodboardReason) reasons.push(`🎨 ${data.moodboardReason}`);
+          if (data?.productReason) reasons.push(`📦 ${data.productReason}`);
+          
+          if (reasons.length > 0) {
+            toast({ 
+              title: 'Smart match complete', 
+              description: reasons.join('\n'),
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Smart match failed:', err);
+      } finally {
+        setIsSmartMatching(false);
       }
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = product;
-      }
-    }
-    
-    // Auto-select if we found a match
-    if (bestMatch && bestScore >= 1) {
-      onUpdate({ productReference: bestMatch.id });
-    }
-  }, [state.selectedConcept, allProductReferences, state.concepts, state.savedConcepts]);
+    };
+
+    runSmartMatch();
+  }, [state.selectedConcept, customMoodboards, allProductReferences, state.concepts, state.savedConcepts]);
 
   return (
     <div className="space-y-8">
@@ -613,7 +611,17 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
         {/* ===== 2. MOODBOARD SECTION ===== */}
         <CustomizationSection 
-          title="Moodboard" 
+          title={
+            <span className="flex items-center gap-2">
+              Moodboard
+              {isSmartMatching && (
+                <span className="flex items-center gap-1 text-xs text-accent">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  matching...
+                </span>
+              )}
+            </span>
+          } 
           icon={<Palette className="w-4 h-4" />}
         >
           <div className="space-y-4">
@@ -656,7 +664,17 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
         {/* ===== 3. PRODUCT REFERENCE SECTION ===== */}
         <CustomizationSection 
-          title="Product Reference" 
+          title={
+            <span className="flex items-center gap-2">
+              Product Reference
+              {isSmartMatching && (
+                <span className="flex items-center gap-1 text-xs text-accent">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  matching...
+                </span>
+              )}
+            </span>
+          } 
           icon={<Package className="w-4 h-4" />}
         >
           <div className="space-y-4">
