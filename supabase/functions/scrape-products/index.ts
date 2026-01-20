@@ -3,13 +3,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ProductImage {
-  id: string;
+interface ScrapedProduct {
   name: string;
-  thumbnail: string;
-  url: string;
+  imageUrl: string;
   category: string;
+  color?: string;
   collection?: string;
+}
+
+interface FirecrawlResponse {
+  success: boolean;
+  data?: {
+    extract?: {
+      products?: ScrapedProduct[];
+    };
+  };
+  error?: string;
 }
 
 Deno.serve(async (req) => {
@@ -32,7 +41,45 @@ Deno.serve(async (req) => {
 
     console.log('Scraping products from:', targetUrl);
 
-    // Use Firecrawl to scrape the products page
+    // Use Firecrawl's JSON extraction with LLM to get clean product data
+    const productSchema = {
+      type: "object",
+      properties: {
+        products: {
+          type: "array",
+          description: "List of actual product items for sale. DO NOT include logos, icons, banners, or non-product images.",
+          items: {
+            type: "object",
+            properties: {
+              name: { 
+                type: "string", 
+                description: "Clean product name without dimensions or codes (e.g., 'Hailey Crossbody', 'Lily Phone Case', 'Donna Strap')" 
+              },
+              imageUrl: { 
+                type: "string", 
+                description: "Main product image URL from Shopify CDN (cdn.shopify.com). Must be an actual product photo." 
+              },
+              category: { 
+                type: "string", 
+                enum: ["phone-case", "crossbody", "strap", "wallet", "bag", "accessory"],
+                description: "Product category based on the type of item" 
+              },
+              color: { 
+                type: "string", 
+                description: "Product color and/or material finish (e.g., 'Black Gold', 'Cognac Chrome', 'Zebra Print')" 
+              },
+              collection: { 
+                type: "string", 
+                description: "Collection name if shown (e.g., 'New Arrivals', 'Best Sellers', 'iPhone 16')" 
+              }
+            },
+            required: ["name", "imageUrl", "category"]
+          }
+        }
+      },
+      required: ["products"]
+    };
+
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -41,13 +88,25 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: targetUrl,
-        formats: ['html', 'links', 'screenshot'],
-        onlyMainContent: false,
-        waitFor: 5000, // Wait for dynamic content
+        formats: ['extract'],
+        extract: {
+          schema: productSchema,
+          prompt: `Extract up to 50 actual product items from this e-commerce page. 
+          
+IMPORTANT RULES:
+- Only extract real products for sale (phone cases, crossbody bags, straps, wallets, accessories)
+- DO NOT include: logos, icons, banners, promotional graphics, Adobe files, or any non-product images
+- Product image URLs must be from cdn.shopify.com and show actual product photos
+- Clean up product names: remove file codes, dimensions, dates (e.g., "Hailey Big D Ring Gold 17 20250811 003" should become "Hailey D-Ring - Gold")
+- Combine product name with color/finish in a clean format like "Product Name - Color"
+- Assign accurate categories based on what the product actually is
+- Skip duplicates - if same product appears in multiple colors, each color is a separate product`
+        },
+        waitFor: 5000,
       }),
     });
 
-    const data = await response.json();
+    const data: FirecrawlResponse = await response.json();
 
     if (!response.ok) {
       console.error('Firecrawl API error:', data);
@@ -57,71 +116,53 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Extract product images from the HTML/links
-    const html = data.data?.html || data.html || '';
-    const links = data.data?.links || data.links || [];
-    
-    // Parse product image URLs from HTML
-    // Bandolier typically has product images in their CDN
-    const productImages: ProductImage[] = [];
-    
-    // Find Shopify CDN images (common pattern for Bandolier)
-    const imgRegex = /https:\/\/[^"'\s]+(?:cdn\.shopify\.com|bandolierstyle\.com)[^"'\s]*(?:\.jpg|\.png|\.webp)[^"'\s]*/gi;
-    const matches = html.match(imgRegex) || [];
-    
-    // Also check links for product pages
-    const productLinks = links.filter((link: string) => 
-      link.includes('/products/') || link.includes('/collections/')
-    );
-    
-    // Dedupe and clean image URLs
-    const seenUrls = new Set<string>();
-    let counter = 1;
-    
-    for (const match of matches) {
-      // Clean URL (remove query params for deduping, keep for actual use)
-      const cleanUrl = match.split('?')[0];
-      if (seenUrls.has(cleanUrl)) continue;
-      seenUrls.add(cleanUrl);
-      
-      // Skip tiny images (icons, etc)
-      if (match.includes('_icon') || match.includes('_small') || match.includes('16x16') || match.includes('32x32')) {
-        continue;
-      }
-      
-      // Extract product name from URL
-      const urlParts = cleanUrl.split('/');
-      const filename = urlParts[urlParts.length - 1];
-      const productName = filename
-        .replace(/\.[^/.]+$/, '') // Remove extension
-        .replace(/_/g, ' ')
-        .replace(/-/g, ' ')
-        .replace(/\d+x\d+/g, '') // Remove dimensions
-        .trim();
-      
-      if (productName.length > 2) {
-        productImages.push({
-          id: `bandolier-${counter}`,
-          name: productName.charAt(0).toUpperCase() + productName.slice(1),
-          thumbnail: match.includes('?') ? match : `${match}?w=400&h=300&fit=crop`,
-          url: match.includes('?') ? match : `${match}?w=800`,
-          category: 'product',
-        });
-        counter++;
-      }
-      
-      // Limit to 50 products
-      if (counter > 50) break;
-    }
+    const extractedProducts = data.data?.extract?.products || [];
+    console.log(`Firecrawl extracted ${extractedProducts.length} products`);
 
-    console.log(`Found ${productImages.length} product images`);
+    // Validate and clean the products
+    const validProducts = extractedProducts
+      .filter((product: ScrapedProduct) => {
+        // Must have valid Shopify CDN image URL
+        if (!product.imageUrl?.includes('cdn.shopify.com')) {
+          console.log('Skipping non-Shopify image:', product.name);
+          return false;
+        }
+        // Must have a meaningful name
+        if (!product.name || product.name.length < 3) {
+          console.log('Skipping product with invalid name:', product.name);
+          return false;
+        }
+        // Skip obvious non-products
+        const skipPatterns = ['logo', 'icon', 'banner', 'adobe', 'express', 'file'];
+        if (skipPatterns.some(p => product.name.toLowerCase().includes(p))) {
+          console.log('Skipping non-product:', product.name);
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 50) // Limit to 50 products
+      .map((product: ScrapedProduct, index: number) => ({
+        id: `bandolier-${index + 1}`,
+        name: product.name,
+        thumbnail: product.imageUrl.includes('?') 
+          ? product.imageUrl 
+          : `${product.imageUrl}?w=400&h=400&fit=crop`,
+        url: product.imageUrl.includes('?') 
+          ? product.imageUrl.replace(/\?.*$/, '?w=800') 
+          : `${product.imageUrl}?w=800`,
+        category: product.category || 'product',
+        color: product.color,
+        collection: product.collection,
+      }));
+
+    console.log(`Returning ${validProducts.length} validated products`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        products: productImages,
-        productLinks: productLinks.slice(0, 20),
-        totalFound: matches.length 
+        products: validProducts,
+        totalExtracted: extractedProducts.length,
+        totalValidated: validProducts.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
