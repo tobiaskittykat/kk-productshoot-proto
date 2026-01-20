@@ -272,6 +272,42 @@ export type Database = {
           },
         ]
       }
+      scraped_products: {
+        Row: {
+          category: string | null
+          collection: string | null
+          created_at: string | null
+          external_id: string
+          full_url: string
+          id: string
+          name: string
+          thumbnail_url: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          collection?: string | null
+          created_at?: string | null
+          external_id: string
+          full_url: string
+          id?: string
+          name: string
+          thumbnail_url: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          collection?: string | null
+          created_at?: string | null
+          external_id?: string
+          full_url?: string
+          id?: string
+          name?: string
+          thumbnail_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
