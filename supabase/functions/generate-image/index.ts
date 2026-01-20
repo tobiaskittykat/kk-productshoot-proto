@@ -240,22 +240,25 @@ Deno.serve(async (req) => {
           });
         }
         
-        // Add product references as visual inputs (up to 3)
-        const productUrls = body.productReferenceUrls || [];
+        // Add product references as visual inputs (up to 3, skip GIFs which aren't supported)
+        const productUrls = (body.productReferenceUrls || [])
+          .filter(url => url && url.startsWith('http') && !url.toLowerCase().includes('.gif'));
+        
         if (productUrls.length > 0) {
           for (let i = 0; i < Math.min(productUrls.length, 3); i++) {
             const url = productUrls[i];
-            if (url && url.startsWith('http')) {
-              messageContent.push({
-                type: "image_url",
-                image_url: { url }
-              });
-            }
+            messageContent.push({
+              type: "image_url",
+              image_url: { url }
+            });
           }
           messageContent.push({
             type: "text",
             text: `Use the above ${productUrls.length} image(s) as the PRODUCT REFERENCE(s). Feature these products prominently in the generated image.`
           });
+        } else if ((body.productReferenceUrls || []).length > 0) {
+          // All refs were GIFs - add text note instead
+          console.log('Product references were GIFs (unsupported), skipping image attachment');
         }
         
         // Note: Shot type guidance is now in the text prompt via buildPrompt()
