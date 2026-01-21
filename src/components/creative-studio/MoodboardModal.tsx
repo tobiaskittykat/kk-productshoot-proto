@@ -230,7 +230,9 @@ export const MoodboardModal = ({
         cursor = data.nextCursor;
       }
 
-      queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      // Force immediate refetch across all components using this query
+      await queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      await queryClient.refetchQueries({ queryKey: ['custom-moodboards'] });
       toast({ 
         title: 'All moodboards repaired!', 
         description: `Updated ${allChanges.length} moodboard names & descriptions` 

@@ -434,8 +434,9 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   };
 
   // Fetch moodboards from database (including visual_analysis)
+  // IMPORTANT: Use same query key as MoodboardModal so invalidation works across both
   const { data: customMoodboards = [], isLoading: loadingMoodboards } = useQuery({
-    queryKey: ['custom-moodboards-preview', user?.id],
+    queryKey: ['custom-moodboards', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
