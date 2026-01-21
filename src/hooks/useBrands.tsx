@@ -2,6 +2,18 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+export interface BrandContext {
+  mission?: string;
+  values?: string[];
+  tone_of_voice?: string;
+  visual_style?: {
+    photography_style?: string;
+    color_palette?: string[];
+    avoid?: string[];
+  };
+  target_audience?: string;
+}
+
 export interface Brand {
   id: string;
   user_id: string;
@@ -12,6 +24,7 @@ export interface Brand {
   personality: string | null;
   social_connections: Record<string, { url: string; connected: boolean }>;
   assets: Record<string, any>;
+  brand_context: BrandContext;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +90,7 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
       markets: b.markets || [],
       social_connections: b.social_connections || {},
       assets: b.assets || {},
+      brand_context: b.brand_context || {},
     })) as Brand[];
 
     setBrands(typedBrands);
@@ -101,28 +115,39 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
   const createBrand = async (data: Partial<Brand>) => {
     if (!user) return { data: null, error: new Error("Not authenticated") };
 
+    const insertData: any = {
+      user_id: user.id,
+      name: data.name || "Untitled Brand",
+      website: data.website,
+      industry: data.industry,
+      markets: data.markets || [],
+      personality: data.personality,
+      social_connections: data.social_connections || {},
+      assets: data.assets || {},
+      brand_context: data.brand_context || {},
+    };
+
     const { data: newBrand, error } = await supabase
       .from("brands")
-      .insert({
-        user_id: user.id,
-        name: data.name || "Untitled Brand",
-        website: data.website,
-        industry: data.industry,
-        markets: data.markets || [],
-        personality: data.personality,
-        social_connections: data.social_connections || {},
-        assets: data.assets || {},
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (!error && newBrand) {
-      const typedBrand = {
-        ...newBrand,
+      const typedBrand: Brand = {
+        id: newBrand.id,
+        user_id: newBrand.user_id,
+        name: newBrand.name,
+        website: newBrand.website,
+        industry: newBrand.industry,
         markets: newBrand.markets || [],
-        social_connections: newBrand.social_connections || {},
-        assets: newBrand.assets || {},
-      } as Brand;
+        personality: newBrand.personality,
+        social_connections: (newBrand.social_connections as Record<string, { url: string; connected: boolean }>) || {},
+        assets: (newBrand.assets as Record<string, any>) || {},
+        brand_context: (newBrand.brand_context as BrandContext) || {},
+        created_at: newBrand.created_at,
+        updated_at: newBrand.updated_at,
+      };
       setBrands(prev => [typedBrand, ...prev]);
       setCurrentBrand(typedBrand);
       return { data: typedBrand, error: null };
@@ -132,9 +157,11 @@ export const BrandsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateBrand = async (id: string, data: Partial<Brand>) => {
+    // Cast to any to avoid type conflicts between Brand and database types
+    const updateData: any = { ...data };
     const { error } = await supabase
       .from("brands")
-      .update(data)
+      .update(updateData)
       .eq("id", id);
 
     if (!error) {
