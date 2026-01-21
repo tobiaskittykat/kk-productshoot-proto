@@ -14,7 +14,7 @@ interface MoodboardThumbnailProps {
   size?: 'default' | 'large';
 }
 
-const LOAD_TIMEOUT_MS = 12000; // 12 seconds
+const LOAD_TIMEOUT_MS = 15000; // 15 seconds
 
 export const MoodboardThumbnail = ({ 
   moodboard, 
@@ -28,31 +28,60 @@ export const MoodboardThumbnail = ({
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
   
   const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear timeout helper
+  const clearLoadTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
   // Clear timeout on unmount
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    return () => clearLoadTimeout();
+  }, [clearLoadTimeout]);
+
+  // Intersection Observer to detect visibility
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   // Reset state when moodboard changes
   useEffect(() => {
-    // Clear any pending timeout
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
+    clearLoadTimeout();
     setResolvedSrc(moodboard.thumbnail);
     setTriedSigned(false);
     setImageError(false);
     setIsLoading(true);
     setRetryCount(0);
-  }, [moodboard.id, moodboard.thumbnail]);
+    setIsVisible(false);
+  }, [moodboard.id, moodboard.thumbnail, clearLoadTimeout]);
 
-  // Check if image is already cached/complete when src changes
+  // Check if image is already cached/complete, and start timeout when visible
   useEffect(() => {
+    if (!isVisible) return; // Don't start timeout until visible
+    
     const img = imgRef.current;
     if (img && img.complete && img.naturalWidth > 0) {
       // Image already loaded (cached)
@@ -61,8 +90,8 @@ export const MoodboardThumbnail = ({
       return;
     }
     
-    // Start timeout watchdog
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Start timeout watchdog only when visible
+    clearLoadTimeout();
     timeoutRef.current = setTimeout(() => {
       // If still loading after timeout, try signed URL or mark as error
       if (isLoading && !imageError) {
@@ -71,14 +100,12 @@ export const MoodboardThumbnail = ({
       }
     }, LOAD_TIMEOUT_MS);
     
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [resolvedSrc, retryCount]);
+    return () => clearLoadTimeout();
+  }, [resolvedSrc, retryCount, isVisible, isLoading, imageError, moodboard.name, clearLoadTimeout]);
 
   // Handle image load error - try signed URL fallback
   const handleImageError = useCallback(async () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    clearLoadTimeout();
     
     if (!triedSigned && moodboard.filePath) {
       setTriedSigned(true);
@@ -99,17 +126,18 @@ export const MoodboardThumbnail = ({
     }
     setImageError(true);
     setIsLoading(false);
-  }, [triedSigned, moodboard.filePath, moodboard.name]);
+  }, [triedSigned, moodboard.filePath, moodboard.name, clearLoadTimeout]);
 
   const handleImageLoad = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    clearLoadTimeout();
     setIsLoading(false);
     setImageError(false);
-  }, []);
+  }, [clearLoadTimeout]);
 
   // Retry loading (cache-bust)
   const handleRetry = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    clearLoadTimeout();
     setImageError(false);
     setIsLoading(true);
     setTriedSigned(false);
@@ -117,7 +145,7 @@ export const MoodboardThumbnail = ({
     // Add cache-bust param
     const baseUrl = moodboard.thumbnail.split('?')[0];
     setResolvedSrc(`${baseUrl}?t=${Date.now()}`);
-  }, [moodboard.thumbnail]);
+  }, [moodboard.thumbnail, clearLoadTimeout]);
 
   // Toggle selection - clicking selected moodboard deselects it
   const handleClick = () => {
@@ -135,6 +163,7 @@ export const MoodboardThumbnail = ({
     <>
       {/* Use div with role="button" to avoid nested button issues */}
       <div
+        ref={containerRef}
         role="button"
         tabIndex={0}
         onClick={handleClick}
@@ -178,7 +207,7 @@ export const MoodboardThumbnail = ({
             className="absolute inset-0 w-full h-full object-cover"
             onError={handleImageError}
             onLoad={handleImageLoad}
-            loading="eager" // Changed from lazy to ensure events fire
+            loading="eager"
             decoding="async"
           />
         )}
