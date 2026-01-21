@@ -16,7 +16,6 @@ interface ConceptRequest {
 
 interface ProductFocus {
   productCategory: string;
-  visualGuidance?: string;
 }
 
 interface VisualWorld {
@@ -93,9 +92,9 @@ ${targetPersona ? `Target Audience Hint: ${targetPersona}` : ""}
 Each concept must include ALL 9 elements:
 
 1. **Name** (title): Catchy campaign title (3-5 words)
-2. **Product Focus** (productFocus): High-level product category (exact product chosen later via reference image)
-   - productCategory: Product group (e.g., "Nike running shoes", "premium leather handbag", "wireless earbuds")
-   - visualGuidance: Optional shot direction (e.g., "hero shot centered", "macro on texture")
+2. **Product Focus** (productFocus): What product category is the campaign for?
+   - productCategory: Product type only (e.g., "Premium leather phone cases", "Athletic running shoes", "Wireless earbuds")
+   - Do NOT include shot types, angles, or photography directions—that comes later in execution
 3. **Single-minded Idea** (coreIdea): One sentence that captures the core concept
 4. **Visual World** (visualWorld): Art direction rules
    - atmosphere: Mood, lighting, environment description
@@ -129,8 +128,7 @@ Return EXACTLY 3 concepts in this JSON format:
       "coreIdea": "Single sentence core concept",
       "consumerInsight": "The tension or truth driving this concept",
       "productFocus": {
-        "productCategory": "High-level product group",
-        "visualGuidance": "Shot direction hint"
+        "productCategory": "Product type only, no shot directions"
       },
       "visualWorld": {
         "atmosphere": "Mood and environment description",
@@ -217,8 +215,7 @@ Make each concept unique and commercially viable. Think like a high-end creative
           coreIdea: "Elevate the everyday with refined simplicity.",
           consumerInsight: "People want luxury that doesn't feel try-hard.",
           productFocus: {
-            productCategory: "Premium fashion accessories",
-            visualGuidance: "Centered hero shot with texture close-ups"
+            productCategory: "Premium fashion accessories"
           },
           visualWorld: {
             atmosphere: "Bright, airy spaces with clean architectural lines",
@@ -250,8 +247,7 @@ Make each concept unique and commercially viable. Think like a high-end creative
           coreIdea: "Real moments, real connection, real value.",
           consumerInsight: "Consumers are tired of perfection—they crave authenticity.",
           productFocus: {
-            productCategory: "Lifestyle everyday goods",
-            visualGuidance: "Candid in-use moments, documentary style"
+            productCategory: "Lifestyle everyday goods"
           },
           visualWorld: {
             atmosphere: "Golden hour, candid captures, imperfect beauty",
@@ -283,8 +279,7 @@ Make each concept unique and commercially viable. Think like a high-end creative
           coreIdea: "Stand out or sit down.",
           consumerInsight: "In a scroll-past world, subtlety is invisible.",
           productFocus: {
-            productCategory: "Bold statement products",
-            visualGuidance: "Dynamic angles, strong graphic framing"
+            productCategory: "Bold statement products"
           },
           visualWorld: {
             atmosphere: "High contrast, dramatic shadows, bold geometry",
