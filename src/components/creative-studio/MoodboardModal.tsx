@@ -102,16 +102,33 @@ export const MoodboardModal = ({
           .getPublicUrl(fileName);
 
         // Create metadata record
-        const { error: dbError } = await supabase
+        const { data: insertedMoodboard, error: dbError } = await supabase
           .from('custom_moodboards')
           .insert({
             user_id: user.id,
             name: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
             file_path: fileName,
             thumbnail_url: urlData.publicUrl,
-          });
+          })
+          .select('id')
+          .single();
 
         if (dbError) throw dbError;
+
+        // Trigger AI analysis of the moodboard (fire-and-forget)
+        if (insertedMoodboard?.id) {
+          supabase.functions.invoke('analyze-moodboard', {
+            body: { moodboardId: insertedMoodboard.id }
+          }).then(res => {
+            if (res.error) {
+              console.error('Moodboard analysis failed:', res.error);
+            } else {
+              console.log('Moodboard analysis complete:', res.data);
+              // Refresh to show updated analysis
+              queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+            }
+          });
+        }
 
         setUploadProgress(prev => [...prev, `✓ ${file.name} uploaded`]);
       }

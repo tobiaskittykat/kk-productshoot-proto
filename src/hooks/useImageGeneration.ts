@@ -9,12 +9,13 @@ import {
   sampleContextReferences
 } from '@/components/creative-studio/types';
 import { useToast } from '@/hooks/use-toast';
-
+import { useAuth } from '@/hooks/useAuth';
 export function useImageGeneration() {
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [conceptsProgress, setConceptsProgress] = useState(0); // 0-3 concepts loaded
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Generate concepts from prompt with progressive callback
   const generateConcepts = useCallback(async (
@@ -95,6 +96,9 @@ export function useImageGeneration() {
       let moodboardUrl: string | undefined;
       
       // Check custom moodboards first
+      let moodboardName: string | undefined;
+      let moodboardAnalysis: Record<string, unknown> | undefined;
+      
       if (state.moodboard) {
         // Custom moodboards have 'custom-' prefix - strip it for DB query
         const isCustomMoodboard = state.moodboard.startsWith('custom-');
@@ -103,10 +107,10 @@ export function useImageGeneration() {
           : state.moodboard;
         
         if (isCustomMoodboard) {
-          // Fetch the moodboard URL from database
+          // Fetch the moodboard URL + visual analysis from database
           const { data: customMoodboard, error: moodboardErr } = await supabase
             .from('custom_moodboards')
-            .select('thumbnail_url, description')
+            .select('thumbnail_url, description, name, visual_analysis')
             .eq('id', moodboardDbId)
             .maybeSingle();
           
@@ -115,6 +119,8 @@ export function useImageGeneration() {
           if (customMoodboard) {
             moodboardUrl = customMoodboard.thumbnail_url;
             moodboardDescription = customMoodboard.description || undefined;
+            moodboardName = customMoodboard.name;
+            moodboardAnalysis = customMoodboard.visual_analysis as Record<string, unknown> | undefined;
           }
         } else {
           // Fallback to sample moodboards (uses 'thumbnail' field)
@@ -122,28 +128,51 @@ export function useImageGeneration() {
           if (sampleMoodboard) {
             moodboardUrl = sampleMoodboard.thumbnail;
             moodboardDescription = sampleMoodboard.description;
+            moodboardName = sampleMoodboard.name;
           }
         }
       }
 
-      // Resolve product reference URLs (supports both sample + scraped products, now array)
+      // Resolve product reference URLs and names (supports both sample + scraped products)
       const productReferenceUrls: string[] = [];
+      const productNames: string[] = [];
       for (const productRef of state.productReferences) {
         if (productRef.startsWith('scraped-')) {
           const dbId = productRef.replace('scraped-', '');
           const { data: scrapedRow, error: scrapedErr } = await supabase
             .from('scraped_products')
-            .select('full_url, thumbnail_url')
+            .select('full_url, thumbnail_url, name')
             .eq('id', dbId)
             .maybeSingle();
 
           if (!scrapedErr && scrapedRow) {
             const url = scrapedRow.full_url || scrapedRow.thumbnail_url;
             if (url) productReferenceUrls.push(url);
+            if (scrapedRow.name) productNames.push(scrapedRow.name);
           }
         } else {
           const ref = sampleProductReferences.find(r => r.id === productRef);
           if (ref?.url) productReferenceUrls.push(ref.url);
+          if (ref?.name) productNames.push(ref.name);
+        }
+      }
+      
+      // Fetch brand context
+      let brandContext: Record<string, unknown> | undefined;
+      let brandName: string | undefined;
+      let brandPersonality: string | undefined;
+      
+      if (user?.id) {
+        const { data: brand } = await supabase
+          .from('brands')
+          .select('name, personality, brand_context')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (brand) {
+          brandName = brand.name;
+          brandPersonality = brand.personality || undefined;
+          brandContext = brand.brand_context as Record<string, unknown> | undefined;
         }
       }
 
@@ -168,18 +197,29 @@ export function useImageGeneration() {
           prompt: state.prompt,
           conceptTitle: selectedConcept?.title,
           conceptDescription: selectedConcept?.description,
+          coreIdea: selectedConcept?.coreIdea,
+          tonality: selectedConcept?.tonality,
           
           moodboardId: state.moodboard,
+          moodboardName,
           moodboardDescription,
-          moodboardUrl, // NEW: Pass moodboard image URL for multimodal
+          moodboardUrl,
+          moodboardAnalysis,
+          
           artisticStyle: state.artisticStyle,
           lightingStyle: state.lightingStyle,
           cameraAngle: state.cameraAngle,
           
-          // Reference URLs (product images as visual refs)
+          // Reference URLs and names
           productReferenceUrls,
-          // Shot type as text prompt guidance (not image attachment)
+          productNames,
+          // Shot type as text prompt guidance
           shotTypePrompts,
+          
+          // Brand context for prompt agent
+          brandName,
+          brandPersonality,
+          brandContext,
           
           extraKeywords: state.extraKeywords,
           negativePrompt: state.negativePrompt,
