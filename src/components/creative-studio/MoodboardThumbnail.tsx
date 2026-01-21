@@ -3,7 +3,7 @@ import {
   Dialog, 
   DialogContent 
 } from "@/components/ui/dialog";
-import { Check, Expand } from "lucide-react";
+import { Check, Expand, ImageOff } from "lucide-react";
 import { Moodboard } from "./types";
 
 interface MoodboardThumbnailProps {
@@ -20,6 +20,7 @@ export const MoodboardThumbnail = ({
   size = 'default'
 }: MoodboardThumbnailProps) => {
   const [isFullView, setIsFullView] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Toggle selection - clicking selected moodboard deselects it
   const handleClick = () => {
@@ -40,12 +41,20 @@ export const MoodboardThumbnail = ({
             : 'border-border hover:border-accent/50'
         }`}
       >
-        {/* Background Image */}
-        <img 
-          src={moodboard.thumbnail} 
-          alt={moodboard.name}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        {/* Background Image or Error State */}
+        {imageError ? (
+          <div className="absolute inset-0 w-full h-full bg-secondary flex flex-col items-center justify-center gap-2">
+            <ImageOff className="w-8 h-8 text-muted-foreground/50" />
+            <span className="text-xs text-muted-foreground">Image unavailable</span>
+          </div>
+        ) : (
+          <img 
+            src={moodboard.thumbnail} 
+            alt={moodboard.name}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        )}
         
         {/* Gradient overlay for text */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -67,16 +76,18 @@ export const MoodboardThumbnail = ({
           </div>
         )}
 
-        {/* Expand button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsFullView(true);
-          }}
-          className={`absolute ${isLarge ? 'top-3 left-3 w-7 h-7' : 'top-2 left-2 w-6 h-6'} rounded-lg bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70`}
-        >
-          <Expand className={isLarge ? 'w-4 h-4 text-white' : 'w-3 h-3 text-white'} />
-        </button>
+        {/* Expand button - only show if image loaded */}
+        {!imageError && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFullView(true);
+            }}
+            className={`absolute ${isLarge ? 'top-3 left-3 w-7 h-7' : 'top-2 left-2 w-6 h-6'} rounded-lg bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70`}
+          >
+            <Expand className={isLarge ? 'w-4 h-4 text-white' : 'w-3 h-3 text-white'} />
+          </button>
+        )}
       </button>
 
       {/* Full View Dialog */}

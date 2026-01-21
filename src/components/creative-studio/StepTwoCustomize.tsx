@@ -77,6 +77,7 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   const [isNewConcept, setIsNewConcept] = useState(false);
   const [isScrapingProducts, setIsScrapingProducts] = useState(false);
   const [isSmartMatching, setIsSmartMatching] = useState(false);
+  const [lastMatchedConcept, setLastMatchedConcept] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -218,6 +219,9 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
   // Handle concept selection with preset application
   const handleConceptSelect = useCallback((concept: Concept) => {
+    // Reset the smart-match tracker so it will run for the new concept
+    setLastMatchedConcept(null);
+    
     const updates: Partial<CreativeStudioState> = {
       selectedConcept: concept.id,
       // Reset curated options when concept changes (will be repopulated by smart-match)
@@ -514,14 +518,23 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   }, [state.productReferences, allProductReferences, curatedProductItems]);
 
   // Smart AI-powered auto-selection of moodboard and product based on selected concept
+  // IMPORTANT: Only runs when concept CHANGES, not when moodboards/products data loads
   useEffect(() => {
     if (!state.selectedConcept) return;
+    
+    // Skip if we already matched for this concept
+    if (lastMatchedConcept === state.selectedConcept) return;
+    
+    // Wait for both data sources to be ready before running
     if (customMoodboards.length === 0 && allProductReferences.length === 0) return;
     
     const selectedConcept = state.concepts.find(c => c.id === state.selectedConcept) || 
                            state.savedConcepts.find(c => c.id === state.selectedConcept);
     
     if (!selectedConcept) return;
+
+    // Mark this concept as being matched
+    setLastMatchedConcept(state.selectedConcept);
 
     // Call the smart-match agent
     const runSmartMatch = async () => {
@@ -588,7 +601,7 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
     };
 
     runSmartMatch();
-  }, [state.selectedConcept, customMoodboards, allProductReferences, state.concepts, state.savedConcepts]);
+  }, [state.selectedConcept, customMoodboards.length, allProductReferences.length, state.concepts, state.savedConcepts, lastMatchedConcept]);
 
   return (
     <div className="space-y-8">
