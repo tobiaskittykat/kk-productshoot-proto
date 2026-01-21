@@ -425,9 +425,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body: GenerateImageRequest = await req.json();
+    const body: GenerateImageRequest & { moodboard?: { thumbnail?: string; url?: string } } = await req.json();
     const imageCount = Math.min(body.imageCount || 1, 8);
     const selectedModel = modelMap[body.aiModel || 'auto'] || modelMap['auto'];
+    
+    // Extract moodboard URL from various possible locations (top-level or nested)
+    const moodboardUrl = body.moodboardUrl || body.moodboard?.thumbnail || body.moodboard?.url;
+    console.log("=== MOODBOARD URL EXTRACTION ===");
+    console.log("body.moodboardUrl:", body.moodboardUrl);
+    console.log("body.moodboard?.thumbnail:", body.moodboard?.thumbnail);
+    console.log("Resolved moodboardUrl:", moodboardUrl || "NONE");
+    console.log("================================");
     
     console.log("Generating", imageCount, "images with model:", selectedModel);
     console.log("Request:", JSON.stringify(body, null, 2));
@@ -459,15 +467,18 @@ Deno.serve(async (req) => {
         }
         
         // Add moodboard reference as style guide (IMPORTANT: must attach as image)
-        if (body.moodboardUrl && body.moodboardUrl.startsWith('http')) {
+        if (moodboardUrl && moodboardUrl.startsWith('http')) {
+          console.log("✅ ATTACHING MOODBOARD TO MULTIMODAL PAYLOAD:", moodboardUrl);
           messageContent.push({
             type: "image_url",
-            image_url: { url: body.moodboardUrl }
+            image_url: { url: moodboardUrl }
           });
           messageContent.push({
             type: "text",
             text: "⚠️ PRIMARY STYLE REFERENCE: This moodboard image should STRONGLY influence the color palette, lighting quality, mood, and visual atmosphere of the generated image. It carries HIGH WEIGHT for all aesthetic decisions. Blend it harmoniously with the text direction, but let this image lead the visual feel."
           });
+        } else {
+          console.log("⚠️ NO MOODBOARD URL TO ATTACH - moodboardUrl was:", moodboardUrl);
         }
         
         // Add product references as visual inputs (up to 3, skip GIFs which aren't supported)
