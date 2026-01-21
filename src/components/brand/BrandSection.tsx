@@ -25,8 +25,10 @@ import {
   Check,
   X,
   Pencil,
-  Trash2
+  Trash2,
+  Brain
 } from "lucide-react";
+import { BrandBrainSection } from "@/components/settings/BrandBrainSection";
 import {
   Select,
   SelectContent,
@@ -320,6 +322,10 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
                 <TabsTrigger value="sources" className="rounded-lg data-[state=active]:bg-background">
                   <Upload className="w-4 h-4 mr-2" />
                   Sources
+                </TabsTrigger>
+                <TabsTrigger value="brain" className="rounded-lg data-[state=active]:bg-background">
+                  <Brain className="w-4 h-4 mr-2" />
+                  Brand Brain
                 </TabsTrigger>
               </TabsList>
 
@@ -755,6 +761,11 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
                 <p className="text-xs text-muted-foreground">PDF, DOCX, images up to 10MB each</p>
               </div>
             </div>
+          </TabsContent>
+
+          {/* Brand Brain Tab */}
+          <TabsContent value="brain" className="space-y-6">
+            <BrandBrainSection variant="embedded" />
           </TabsContent>
             </Tabs>
           </CollapsibleContent>
