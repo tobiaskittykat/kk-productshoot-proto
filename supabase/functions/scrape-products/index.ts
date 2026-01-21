@@ -21,6 +21,46 @@ interface FirecrawlResponse {
   error?: string;
 }
 
+// Validate that an image URL actually returns a valid image
+async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    // Try HEAD first (faster), fall back to GET if HEAD isn't supported
+    let response = await fetch(url, { 
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ImageValidator/1.0)',
+      },
+    });
+    
+    // Some CDNs don't support HEAD, try GET with a range header
+    if (!response.ok && response.status === 405) {
+      response = await fetch(url, { 
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ImageValidator/1.0)',
+          'Range': 'bytes=0-1023', // Only fetch first 1KB to verify
+        },
+      });
+    }
+    
+    if (!response.ok) {
+      console.log(`Image validation failed (${response.status}):`, url);
+      return false;
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) {
+      console.log(`Not an image (${contentType}):`, url);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.log(`Image validation error:`, url, error);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -119,8 +159,8 @@ IMPORTANT RULES:
     const extractedProducts = data.data?.extract?.products || [];
     console.log(`Firecrawl extracted ${extractedProducts.length} products`);
 
-    // Validate and clean the products
-    const validProducts = extractedProducts
+    // First pass: filter out obvious non-products
+    const preFilteredProducts = extractedProducts
       .filter((product: ScrapedProduct) => {
         // Must have valid Shopify CDN image URL
         if (!product.imageUrl?.includes('cdn.shopify.com')) {
@@ -140,29 +180,49 @@ IMPORTANT RULES:
         }
         return true;
       })
-      .slice(0, 50) // Limit to 50 products
-      .map((product: ScrapedProduct, index: number) => ({
-        id: `bandolier-${index + 1}`,
-        name: product.name,
-        thumbnail: product.imageUrl.includes('?') 
-          ? product.imageUrl 
-          : `${product.imageUrl}?w=400&h=400&fit=crop`,
-        url: product.imageUrl.includes('?') 
-          ? product.imageUrl.replace(/\?.*$/, '?w=800') 
-          : `${product.imageUrl}?w=800`,
-        category: product.category || 'product',
-        color: product.color,
-        collection: product.collection,
-      }));
+      .slice(0, 50); // Limit to 50 products
 
-    console.log(`Returning ${validProducts.length} validated products`);
+    console.log(`Pre-filter passed: ${preFilteredProducts.length} products`);
+
+    // Second pass: validate that each image URL actually returns a valid image
+    console.log('Validating image URLs (this may take a moment)...');
+    const validationResults = await Promise.all(
+      preFilteredProducts.map(async (product: ScrapedProduct) => {
+        const isValid = await validateImageUrl(product.imageUrl);
+        return { product, isValid };
+      })
+    );
+
+    const validProducts = validationResults
+      .filter(r => r.isValid)
+      .map((r, index) => {
+        const product = r.product;
+        return {
+          id: `bandolier-${index + 1}`,
+          name: product.name,
+          thumbnail: product.imageUrl.includes('?') 
+            ? product.imageUrl 
+            : `${product.imageUrl}?w=400&h=400&fit=crop`,
+          url: product.imageUrl.includes('?') 
+            ? product.imageUrl.replace(/\?.*$/, '?w=800') 
+            : `${product.imageUrl}?w=800`,
+          category: product.category || 'product',
+          color: product.color,
+          collection: product.collection,
+        };
+      });
+
+    const droppedCount = preFilteredProducts.length - validProducts.length;
+    console.log(`Validation complete: ${validProducts.length} valid, ${droppedCount} dropped (invalid/404)`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         products: validProducts,
         totalExtracted: extractedProducts.length,
-        totalValidated: validProducts.length
+        totalPreFiltered: preFilteredProducts.length,
+        totalValidated: validProducts.length,
+        totalDroppedInvalidImages: droppedCount
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

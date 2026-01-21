@@ -152,7 +152,7 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
     }));
   }, [scrapedProducts, inferProductType]);
 
-  // Handle scraping products from Bandolier
+  // Handle scraping products from Bandolier (clean refresh: delete old, insert new)
   const handleScrapeProducts = async () => {
     if (!user) {
       toast({ title: 'Please sign in to scrape products', variant: 'destructive' });
@@ -167,28 +167,48 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
       if (error) throw error;
 
-        if (data.success && data.products?.length > 0) {
-          // Insert products into database (upsert to avoid duplicates)
-          const productsToInsert = data.products.map((p: any) => ({
-            user_id: user.id,
-            // Use URL as a stable external identifier (index-based IDs change between runs)
-            external_id: p.url || p.thumbnail || p.id,
-            name: p.name,
-            thumbnail_url: p.thumbnail,
-            full_url: p.url || p.thumbnail,
-            category: p.category || inferProductType(p.name),
-            collection: p.collection || 'bandolier',
-          }));
+      if (data.success && data.products?.length > 0) {
+        // CLEAN REFRESH: Delete all existing scraped products for this user first
+        // This ensures broken/stale URLs don't persist across syncs
+        const { error: deleteError } = await supabase
+          .from('scraped_products')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (deleteError) {
+          console.error('Failed to clear old products:', deleteError);
+          // Continue anyway - better to have duplicates than fail entirely
+        }
+
+        // Insert freshly scraped + validated products
+        const productsToInsert = data.products.map((p: any) => ({
+          user_id: user.id,
+          external_id: p.url || p.thumbnail || p.id,
+          name: p.name,
+          thumbnail_url: p.thumbnail,
+          full_url: p.url || p.thumbnail,
+          category: p.category || inferProductType(p.name),
+          collection: p.collection || 'bandolier',
+        }));
 
         const { error: insertError } = await supabase
           .from('scraped_products')
-          .upsert(productsToInsert, { onConflict: 'user_id,external_id' });
+          .insert(productsToInsert);
 
         if (insertError) throw insertError;
 
+        // Clear any selections that may have been deleted
+        onUpdate({ productReferences: [] });
+
+        // Build informative toast message
+        const droppedCount = data.totalDroppedInvalidImages || 0;
+        const description = droppedCount > 0 
+          ? `${droppedCount} broken images were skipped`
+          : 'All product images verified';
+
         toast({ 
           title: `Synced ${data.products.length} products!`, 
-          description: 'Your product library has been updated' 
+          description 
         });
         
         refetchScrapedProducts();
