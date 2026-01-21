@@ -36,6 +36,7 @@ interface ImageAnalysis {
   textures: string[];
   mood: string;
   style: string;
+  category: string;
 }
 
 Deno.serve(async (req) => {
@@ -122,10 +123,13 @@ Deno.serve(async (req) => {
       console.log(`Analyzing single brand image: ${brandImage.image_url}`);
       const analysis = await analyzeImage(brandImage.image_url, LOVABLE_API_KEY);
 
-      // Update the image with analysis
+      // Update the image with analysis and inferred category
       const { error: updateError } = await supabase
         .from('brand_images')
-        .update({ visual_analysis: analysis })
+        .update({ 
+          visual_analysis: analysis,
+          category: analysis.category 
+        })
         .eq('id', imageId);
 
       if (updateError) {
@@ -228,7 +232,8 @@ You MUST call the extract_image_analysis function with your findings.`;
 - Composition approach
 - Textures and materials visible
 - Overall mood/vibe
-- Photography/visual style`;
+- Photography/visual style
+- Category: Determine if this is a logo, campaign/editorial shot, product photo, lifestyle image, texture/pattern closeup, or general brand image`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -282,9 +287,14 @@ You MUST call the extract_image_analysis function with your findings.`;
                 style: {
                   type: "string",
                   description: "Photography/visual style"
+                },
+                category: {
+                  type: "string",
+                  enum: ["logo", "campaign", "product", "lifestyle", "texture", "general"],
+                  description: "Image category: 'logo' for brand logos/marks/wordmarks, 'campaign' for editorial/advertising/hero shots, 'product' for product-focused shots on plain backgrounds, 'lifestyle' for products in use/context/with models, 'texture' for material/pattern/detail closeups, 'general' for other brand imagery"
                 }
               },
-              required: ["colors", "lighting", "composition", "textures", "mood", "style"],
+              required: ["colors", "lighting", "composition", "textures", "mood", "style", "category"],
               additionalProperties: false
             }
           }
