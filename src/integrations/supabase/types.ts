@@ -17,6 +17,7 @@ export type Database = {
       brands: {
         Row: {
           assets: Json | null
+          brand_context: Json | null
           created_at: string
           id: string
           industry: string | null
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           assets?: Json | null
+          brand_context?: Json | null
           created_at?: string
           id?: string
           industry?: string | null
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           assets?: Json | null
+          brand_context?: Json | null
           created_at?: string
           id?: string
           industry?: string | null
@@ -67,6 +70,7 @@ export type Database = {
           thumbnail_url: string
           updated_at: string
           user_id: string
+          visual_analysis: Json | null
         }
         Insert: {
           brand_id?: string | null
@@ -78,6 +82,7 @@ export type Database = {
           thumbnail_url: string
           updated_at?: string
           user_id: string
+          visual_analysis?: Json | null
         }
         Update: {
           brand_id?: string | null
@@ -89,6 +94,7 @@ export type Database = {
           thumbnail_url?: string
           updated_at?: string
           user_id?: string
+          visual_analysis?: Json | null
         }
         Relationships: [
           {

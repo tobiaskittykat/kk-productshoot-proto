@@ -11,18 +11,37 @@ interface GenerateImageRequest {
   prompt: string;
   conceptTitle?: string;
   conceptDescription?: string;
+  coreIdea?: string;
+  tonality?: {
+    voice?: string;
+    emotion?: string;
+    visualStyle?: string;
+  };
   
   // Style settings
   moodboardId?: string;
+  moodboardName?: string;
   moodboardDescription?: string;
-  moodboardUrl?: string; // NEW: Actual moodboard image URL
+  moodboardUrl?: string;
+  moodboardAnalysis?: {
+    dominant_colors?: string[];
+    color_mood?: string;
+    key_elements?: string[];
+    composition_style?: string;
+    lighting_quality?: string;
+    textures?: string[];
+    emotional_tone?: string;
+    suggested_props?: string[];
+    best_for?: string[];
+  };
   artisticStyle?: string;
   lightingStyle?: string;
   cameraAngle?: string;
   
   // References
-  productReferenceUrls?: string[]; // Product images as visual refs
-  shotTypePrompts?: string[]; // Shot type text guidance (not image URLs)
+  productReferenceUrls?: string[];
+  productNames?: string[];
+  shotTypePrompts?: string[];
   
   // Edit mode
   sourceImageUrl?: string;
@@ -46,6 +65,21 @@ interface GenerateImageRequest {
   // Organization
   brandId?: string;
   folder?: string;
+  
+  // Brand context (NEW)
+  brandContext?: {
+    mission?: string;
+    values?: string[];
+    tone_of_voice?: string;
+    visual_style?: {
+      photography_style?: string;
+      color_palette?: string[];
+      avoid?: string[];
+    };
+    target_audience?: string;
+  };
+  brandName?: string;
+  brandPersonality?: string;
 }
 
 // AI model mapping
@@ -54,93 +88,212 @@ const modelMap: Record<string, string> = {
   'nano-banana': 'google/gemini-2.5-flash-image-preview',
 };
 
-// Build the text prompt from all settings
-function buildPrompt(request: GenerateImageRequest): string {
+// Call the prompt agent to craft a refined prompt
+async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: string): Promise<string> {
+  try {
+    console.log("Calling prompt agent to craft refined prompt...");
+    
+    const promptAgentPayload = {
+      conceptTitle: request.conceptTitle,
+      conceptDescription: request.conceptDescription,
+      coreIdea: request.coreIdea,
+      tonality: request.tonality,
+      moodboardName: request.moodboardName,
+      moodboardDescription: request.moodboardDescription,
+      moodboardAnalysis: request.moodboardAnalysis,
+      productNames: request.productNames,
+      shotTypePrompts: request.shotTypePrompts,
+      artisticStyle: request.artisticStyle,
+      lightingStyle: request.lightingStyle,
+      cameraAngle: request.cameraAngle,
+      extraKeywords: request.extraKeywords,
+      textOnImage: request.textOnImage,
+      negativePrompt: request.negativePrompt,
+      brandContext: request.brandContext,
+      brandName: request.brandName,
+      brandPersonality: request.brandPersonality,
+    };
+
+    // Build the creative brief inline (same logic as craft-image-prompt function)
+    const sections: string[] = [];
+    
+    // Brand Context Section
+    if (request.brandContext || request.brandName || request.brandPersonality) {
+      sections.push("=== BRAND CONTEXT ===");
+      if (request.brandName) sections.push(`Brand: ${request.brandName}`);
+      if (request.brandPersonality) sections.push(`Personality: ${request.brandPersonality}`);
+      if (request.brandContext?.mission) sections.push(`Mission: ${request.brandContext.mission}`);
+      if (request.brandContext?.values && request.brandContext.values.length > 0) {
+        sections.push(`Values: ${request.brandContext.values.join(", ")}`);
+      }
+      if (request.brandContext?.tone_of_voice) sections.push(`Tone of Voice: ${request.brandContext.tone_of_voice}`);
+      if (request.brandContext?.visual_style?.photography_style) {
+        sections.push(`Photography Style: ${request.brandContext.visual_style.photography_style}`);
+      }
+      if (request.brandContext?.visual_style?.color_palette && request.brandContext.visual_style.color_palette.length > 0) {
+        sections.push(`Brand Colors: ${request.brandContext.visual_style.color_palette.join(", ")}`);
+      }
+      if (request.brandContext?.visual_style?.avoid && request.brandContext.visual_style.avoid.length > 0) {
+        sections.push(`AVOID: ${request.brandContext.visual_style.avoid.join(", ")}`);
+      }
+      if (request.brandContext?.target_audience) sections.push(`Target Audience: ${request.brandContext.target_audience}`);
+      sections.push("");
+    }
+    
+    // Campaign Concept Section
+    if (request.conceptTitle || request.conceptDescription || request.coreIdea) {
+      sections.push("=== CAMPAIGN CONCEPT ===");
+      if (request.conceptTitle) sections.push(`Title: ${request.conceptTitle}`);
+      if (request.coreIdea) sections.push(`Core Idea: ${request.coreIdea}`);
+      if (request.conceptDescription) sections.push(`Description: ${request.conceptDescription}`);
+      if (request.tonality) {
+        if (request.tonality.voice) sections.push(`Voice: ${request.tonality.voice}`);
+        if (request.tonality.emotion) sections.push(`Emotion: ${request.tonality.emotion}`);
+        if (request.tonality.visualStyle) sections.push(`Visual Style: ${request.tonality.visualStyle}`);
+      }
+      sections.push("");
+    }
+    
+    // Moodboard Inspiration Section
+    if (request.moodboardName || request.moodboardDescription || request.moodboardAnalysis) {
+      sections.push("=== MOODBOARD INSPIRATION ===");
+      if (request.moodboardName) sections.push(`Moodboard: ${request.moodboardName}`);
+      if (request.moodboardDescription) sections.push(`Description: ${request.moodboardDescription}`);
+      if (request.moodboardAnalysis) {
+        const analysis = request.moodboardAnalysis;
+        if (analysis.dominant_colors?.length) sections.push(`Colors: ${analysis.dominant_colors.join(", ")}`);
+        if (analysis.color_mood) sections.push(`Color Mood: ${analysis.color_mood}`);
+        if (analysis.key_elements?.length) sections.push(`Key Visual Elements: ${analysis.key_elements.join(", ")}`);
+        if (analysis.lighting_quality) sections.push(`Lighting Reference: ${analysis.lighting_quality}`);
+        if (analysis.textures?.length) sections.push(`Textures: ${analysis.textures.join(", ")}`);
+        if (analysis.emotional_tone) sections.push(`Emotional Tone: ${analysis.emotional_tone}`);
+        if (analysis.suggested_props?.length) sections.push(`Suggested Props: ${analysis.suggested_props.join(", ")}`);
+        if (analysis.composition_style) sections.push(`Composition: ${analysis.composition_style}`);
+      }
+      sections.push("");
+    }
+    
+    // Product Section
+    if (request.productNames && request.productNames.length > 0) {
+      sections.push("=== PRODUCT ===");
+      sections.push(`Feature: ${request.productNames.join(", ")}`);
+      sections.push("");
+    }
+    
+    // Shot Type Section
+    if (request.shotTypePrompts && request.shotTypePrompts.length > 0) {
+      sections.push("=== SHOT DIRECTION ===");
+      sections.push(request.shotTypePrompts.join(". "));
+      sections.push("");
+    }
+    
+    // Technical Settings Section
+    if (request.artisticStyle || request.lightingStyle || request.cameraAngle) {
+      sections.push("=== TECHNICAL SETTINGS ===");
+      if (request.artisticStyle && request.artisticStyle !== 'auto') sections.push(`Style: ${request.artisticStyle}`);
+      if (request.lightingStyle && request.lightingStyle !== 'auto') sections.push(`Lighting: ${request.lightingStyle}`);
+      if (request.cameraAngle && request.cameraAngle !== 'auto') sections.push(`Camera: ${request.cameraAngle}`);
+      sections.push("");
+    }
+    
+    // Extra Keywords Section
+    if (request.extraKeywords && request.extraKeywords.length > 0) {
+      sections.push("=== ADDITIONAL KEYWORDS ===");
+      sections.push(request.extraKeywords.join(", "));
+      sections.push("");
+    }
+    
+    // Text Overlay Section
+    if (request.textOnImage) {
+      sections.push("=== TEXT OVERLAY ===");
+      sections.push(`Include text: "${request.textOnImage}"`);
+      sections.push("");
+    }
+    
+    // Negative Prompt Section
+    if (request.negativePrompt) {
+      sections.push("=== MUST AVOID ===");
+      sections.push(request.negativePrompt);
+      sections.push("");
+    }
+    
+    const creativeBrief = sections.join("\n");
+    
+    // Now call AI to craft the prompt
+    const systemPrompt = `You are an expert creative director at a luxury fashion brand, skilled at crafting evocative image generation prompts.
+
+Your job is to take a creative brief and transform it into a single, cohesive image generation prompt that will produce stunning, on-brand visuals.
+
+GUIDELINES:
+1. Lead with the most important visual element (usually the product + how it's shown)
+2. Weave in 2-3 specific elements from the moodboard analysis if provided
+3. Set the mood, lighting, and atmosphere naturally as part of the scene description
+4. Be specific and evocative - use sensory language
+5. Keep it focused - one clear scene, not multiple concepts
+6. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle", "high-end fashion")
+7. If brand guidelines say to avoid something, make sure to NOT include those elements
+8. The prompt should feel like a creative direction, not a list of keywords
+
+QUALITY STANDARDS:
+- High-quality, professional imagery
+- Sharp focus on key elements
+- Appropriate lighting for the mood
+- Clean, intentional composition
+
+OUTPUT: Return ONLY the crafted prompt text. No explanations, no bullet points, just the prompt.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Craft a single, evocative image generation prompt from this creative brief:\n\n${creativeBrief}\n\nRemember: One cohesive prompt that captures the essence of this creative direction.` }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Prompt agent failed, falling back to basic prompt");
+      return buildFallbackPrompt(request);
+    }
+
+    const aiResponse = await response.json();
+    const craftedPrompt = aiResponse.choices?.[0]?.message?.content?.trim();
+    
+    if (!craftedPrompt) {
+      console.error("No prompt from agent, falling back to basic prompt");
+      return buildFallbackPrompt(request);
+    }
+    
+    console.log("Prompt agent crafted:", craftedPrompt);
+    return craftedPrompt;
+    
+  } catch (error) {
+    console.error("Prompt agent error:", error);
+    return buildFallbackPrompt(request);
+  }
+}
+
+// Fallback to simple prompt building if agent fails
+function buildFallbackPrompt(request: GenerateImageRequest): string {
   const parts: string[] = [];
   
-  // Base concept
-  if (request.conceptDescription) {
-    parts.push(request.conceptDescription);
-  } else if (request.prompt) {
-    parts.push(request.prompt);
-  }
+  if (request.conceptDescription) parts.push(request.conceptDescription);
+  else if (request.prompt) parts.push(request.prompt);
   
-  // Artistic style
-  if (request.artisticStyle && request.artisticStyle !== 'auto') {
-    const styleDescriptions: Record<string, string> = {
-      'photorealistic': 'photorealistic, highly detailed, professional photography',
-      'cinematic': 'cinematic composition, dramatic lighting, film-like quality',
-      'film-noir': 'film noir style, high contrast, dramatic shadows, black and white mood',
-      'vintage-film': 'vintage film aesthetic, grain, warm tones, nostalgic feel',
-      'cartoon': 'cartoon style, vibrant colors, stylized illustration',
-      'anime': 'anime art style, clean lines, expressive, Japanese animation aesthetic',
-      '3d-render': '3D rendered, volumetric lighting, CGI quality',
-      'watercolor': 'watercolor painting, soft edges, flowing colors',
-      'oil-painting': 'oil painting style, rich textures, classical art feel',
-      'pop-art': 'pop art style, bold colors, graphic design elements',
-      'cyberpunk': 'cyberpunk aesthetic, neon lights, futuristic, high-tech',
-      'minimalist': 'minimalist design, clean, simple, negative space',
-      'sketch': 'pencil sketch style, hand-drawn, artistic lines',
-      'collage': 'collage art style, mixed media, layered elements',
-    };
-    parts.push(styleDescriptions[request.artisticStyle] || request.artisticStyle);
-  }
+  if (request.moodboardDescription) parts.push(request.moodboardDescription);
+  if (request.shotTypePrompts?.length) parts.push(request.shotTypePrompts.join(", "));
+  if (request.extraKeywords?.length) parts.push(request.extraKeywords.join(", "));
   
-  // Moodboard description
-  if (request.moodboardDescription) {
-    parts.push(`Mood: ${request.moodboardDescription}`);
-  }
+  parts.push("high quality, professional, sharp focus");
   
-  // Lighting
-  if (request.lightingStyle && request.lightingStyle !== 'auto') {
-    const lightingDescriptions: Record<string, string> = {
-      'natural': 'natural lighting',
-      'studio': 'professional studio lighting',
-      'dramatic': 'dramatic lighting with strong shadows',
-      'golden-hour': 'golden hour warm lighting',
-      'soft': 'soft diffused lighting',
-      'neon': 'neon lighting, colorful glow',
-      'backlit': 'backlit, rim lighting effect',
-    };
-    parts.push(lightingDescriptions[request.lightingStyle] || request.lightingStyle);
-  }
-  
-  // Camera angle
-  if (request.cameraAngle && request.cameraAngle !== 'auto') {
-    const angleDescriptions: Record<string, string> = {
-      'eye-level': 'eye level shot',
-      'overhead': 'overhead flat lay shot',
-      'close-up': 'close-up macro shot',
-      'wide': 'wide angle shot',
-      'low-angle': 'low angle hero shot',
-      'dutch-angle': 'dutch angle tilted composition',
-    };
-    parts.push(angleDescriptions[request.cameraAngle] || request.cameraAngle);
-  }
-  
-  // Shot type guidance (content direction - lightweight text, not dominant)
-  if (request.shotTypePrompts && request.shotTypePrompts.length > 0) {
-    parts.push(request.shotTypePrompts.join(', '));
-  }
-  
-  // Extra keywords
-  if (request.extraKeywords && request.extraKeywords.length > 0) {
-    parts.push(request.extraKeywords.join(', '));
-  }
-  
-  // Text on image
-  if (request.textOnImage) {
-    parts.push(`With text overlay: "${request.textOnImage}"`);
-  }
-  
-  // Quality enhancers
-  parts.push('high quality, professional, sharp focus');
-  
-  // Negative prompt handling - prepend what to avoid
-  let finalPrompt = parts.join('. ');
-  if (request.negativePrompt) {
-    finalPrompt += `. Avoid: ${request.negativePrompt}`;
-  }
+  let finalPrompt = parts.join(". ");
+  if (request.negativePrompt) finalPrompt += `. Avoid: ${request.negativePrompt}`;
   
   return finalPrompt;
 }
@@ -202,8 +355,8 @@ Deno.serve(async (req) => {
     console.log("Generating", imageCount, "images with model:", selectedModel);
     console.log("Request:", JSON.stringify(body, null, 2));
 
-    // Build the refined prompt
-    const refinedPrompt = buildPrompt(body);
+    // Use the prompt agent to craft a refined, intelligent prompt
+    const refinedPrompt = await craftPromptWithAgent(body, LOVABLE_API_KEY);
     console.log("Refined prompt:", refinedPrompt);
 
     // Generate images in parallel for faster response

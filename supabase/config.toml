@@ -1,6 +1,12 @@
 project_id = "zlvfvjefvyrnevxuaiyd"
 
+[functions.analyze-moodboard]
+verify_jwt = false
+
 [functions.chat]
+verify_jwt = false
+
+[functions.craft-image-prompt]
 verify_jwt = false
 
 [functions.crawl-social-links]
