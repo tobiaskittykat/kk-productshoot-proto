@@ -16,8 +16,16 @@ export interface BrandImage {
   updated_at: string;
 }
 
+export interface ColorPalette {
+  description: string;
+  foundation: string[];
+  accents: string[];
+  seasonalPops?: string[];
+}
+
 export interface VisualDNA {
-  primaryColors: string[];
+  colorPalette: ColorPalette;
+  primaryColors?: string[]; // Deprecated - for backwards compatibility
   colorMood: string;
   photographyStyle: string;
   texturePreferences: string[];

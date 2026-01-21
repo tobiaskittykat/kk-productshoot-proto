@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useBrandImages, BrandBrain, VisualDNA } from "@/hooks/useBrandImages";
+import { useBrandImages, BrandBrain, VisualDNA, ColorPalette } from "@/hooks/useBrandImages";
 import { useBrands } from "@/hooks/useBrands";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,12 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
   const [isEditingDNA, setIsEditingDNA] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [editedSummary, setEditedSummary] = useState("");
-  const [editedColors, setEditedColors] = useState<string[]>([]);
+  const [editedPalette, setEditedPalette] = useState<ColorPalette>({
+    description: "",
+    foundation: [],
+    accents: [],
+    seasonalPops: [],
+  });
   const [editedAvoid, setEditedAvoid] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +67,14 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
   useEffect(() => {
     if (brandBrain) {
       setEditedSummary(brandBrain.creativeDirectionSummary || "");
-      setEditedColors(brandBrain.visualDNA?.primaryColors || []);
+      // Handle backwards compatibility - convert old primaryColors to new colorPalette
+      const palette = brandBrain.visualDNA?.colorPalette || {
+        description: brandBrain.visualDNA?.colorMood || "Brand color palette",
+        foundation: brandBrain.visualDNA?.primaryColors?.slice(0, 3) || [],
+        accents: brandBrain.visualDNA?.primaryColors?.slice(3) || [],
+        seasonalPops: [],
+      };
+      setEditedPalette(palette);
       setEditedAvoid(brandBrain.visualDNA?.avoidElements || []);
     }
   }, [brandBrain]);
@@ -102,7 +114,7 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
     
     const updatedDNA: VisualDNA = {
       ...brandBrain.visualDNA,
-      primaryColors: editedColors,
+      colorPalette: editedPalette,
       avoidElements: editedAvoid,
     };
     
@@ -110,15 +122,26 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
     setIsEditingDNA(false);
   };
 
-  const addColor = (color: string) => {
-    if (color.trim() && !editedColors.includes(color.trim())) {
-      setEditedColors([...editedColors, color.trim()]);
+  const updatePaletteField = (field: keyof ColorPalette, value: string | string[]) => {
+    setEditedPalette(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addToPaletteArray = (field: 'foundation' | 'accents' | 'seasonalPops', value: string) => {
+    if (value.trim() && !editedPalette[field]?.includes(value.trim())) {
+      setEditedPalette(prev => ({
+        ...prev,
+        [field]: [...(prev[field] || []), value.trim()]
+      }));
     }
   };
 
-  const removeColor = (index: number) => {
-    setEditedColors(editedColors.filter((_, i) => i !== index));
+  const removeFromPaletteArray = (field: 'foundation' | 'accents' | 'seasonalPops', index: number) => {
+    setEditedPalette(prev => ({
+      ...prev,
+      [field]: (prev[field] || []).filter((_, i) => i !== index)
+    }));
   };
+
 
   const addAvoidItem = (item: string) => {
     if (item.trim() && !editedAvoid.includes(item.trim())) {
@@ -295,46 +318,152 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {/* Colors */}
-              <div className="space-y-2">
-                <span className="text-muted-foreground">Primary Colors</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {(isEditingDNA ? editedColors : brandBrain.visualDNA.primaryColors).map((color, i) => (
-                    <Badge
-                      key={i}
-                      variant="outline"
-                      className={cn("text-xs", isEditingDNA && "pr-1")}
-                    >
-                      {color}
-                      {isEditingDNA && (
-                        <X
-                          className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
-                          onClick={() => removeColor(i)}
+            <div className="space-y-4 text-sm">
+              {/* Color Palette - Full Width */}
+              <div className="space-y-3">
+                <span className="text-muted-foreground">Color Palette</span>
+                
+                {/* Palette Description */}
+                {(() => {
+                  const palette = isEditingDNA 
+                    ? editedPalette 
+                    : (brandBrain.visualDNA.colorPalette || {
+                        description: brandBrain.visualDNA.colorMood || "Brand color palette",
+                        foundation: brandBrain.visualDNA.primaryColors?.slice(0, 3) || [],
+                        accents: brandBrain.visualDNA.primaryColors?.slice(3) || [],
+                        seasonalPops: [],
+                      });
+                  
+                  return (
+                    <>
+                      {isEditingDNA ? (
+                        <Input
+                          value={editedPalette.description}
+                          onChange={(e) => updatePaletteField('description', e.target.value)}
+                          placeholder="Describe the palette character..."
+                          className="text-sm"
                         />
+                      ) : (
+                        <p className="text-foreground font-medium">{palette.description}</p>
                       )}
-                    </Badge>
-                  ))}
-                  {isEditingDNA && (
-                    <Input
-                      placeholder="Add color..."
-                      className="h-6 w-24 text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          addColor((e.target as HTMLInputElement).value);
-                          (e.target as HTMLInputElement).value = "";
-                        }
-                      }}
-                    />
-                  )}
-                </div>
+                      
+                      <div className="grid grid-cols-3 gap-4 text-xs">
+                        {/* Foundation Colors */}
+                        <div className="space-y-1.5">
+                          <span className="text-muted-foreground">Foundation</span>
+                          <div className="flex flex-wrap gap-1">
+                            {palette.foundation?.map((color, i) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className={cn("text-xs", isEditingDNA && "pr-1")}
+                              >
+                                {color}
+                                {isEditingDNA && (
+                                  <X
+                                    className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
+                                    onClick={() => removeFromPaletteArray('foundation', i)}
+                                  />
+                                )}
+                              </Badge>
+                            ))}
+                            {isEditingDNA && (
+                              <Input
+                                placeholder="Add..."
+                                className="h-6 w-20 text-xs"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    addToPaletteArray('foundation', (e.target as HTMLInputElement).value);
+                                    (e.target as HTMLInputElement).value = "";
+                                  }
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Accent Colors */}
+                        <div className="space-y-1.5">
+                          <span className="text-muted-foreground">Accents</span>
+                          <div className="flex flex-wrap gap-1">
+                            {palette.accents?.map((color, i) => (
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className={cn("text-xs", isEditingDNA && "pr-1")}
+                              >
+                                {color}
+                                {isEditingDNA && (
+                                  <X
+                                    className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
+                                    onClick={() => removeFromPaletteArray('accents', i)}
+                                  />
+                                )}
+                              </Badge>
+                            ))}
+                            {isEditingDNA && (
+                              <Input
+                                placeholder="Add..."
+                                className="h-6 w-20 text-xs"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    addToPaletteArray('accents', (e.target as HTMLInputElement).value);
+                                    (e.target as HTMLInputElement).value = "";
+                                  }
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Seasonal Pops */}
+                        <div className="space-y-1.5">
+                          <span className="text-muted-foreground">Seasonal Pops</span>
+                          <div className="flex flex-wrap gap-1">
+                            {palette.seasonalPops?.map((color, i) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className={cn("text-xs border-dashed", isEditingDNA && "pr-1")}
+                              >
+                                {color}
+                                {isEditingDNA && (
+                                  <X
+                                    className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
+                                    onClick={() => removeFromPaletteArray('seasonalPops', i)}
+                                  />
+                                )}
+                              </Badge>
+                            ))}
+                            {isEditingDNA && (
+                              <Input
+                                placeholder="Add..."
+                                className="h-6 w-20 text-xs"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    addToPaletteArray('seasonalPops', (e.target as HTMLInputElement).value);
+                                    (e.target as HTMLInputElement).value = "";
+                                  }
+                                }}
+                              />
+                            )}
+                            {!isEditingDNA && (!palette.seasonalPops || palette.seasonalPops.length === 0) && (
+                              <span className="text-muted-foreground italic">None defined</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
-              {/* Color Mood */}
-              <div className="space-y-2">
-                <span className="text-muted-foreground">Color Mood</span>
-                <p className="text-foreground">{brandBrain.visualDNA.colorMood}</p>
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Color Mood */}
+                <div className="space-y-2">
+                  <span className="text-muted-foreground">Color Mood</span>
+                  <p className="text-foreground">{brandBrain.visualDNA.colorMood}</p>
+                </div>
 
               {/* Photography Style */}
               <div className="space-y-2">

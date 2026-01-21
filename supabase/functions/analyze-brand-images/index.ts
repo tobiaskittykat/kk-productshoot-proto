@@ -6,8 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ColorPalette {
+  description: string;
+  foundation: string[];
+  accents: string[];
+  seasonalPops?: string[];
+}
+
 interface VisualDNA {
-  primaryColors: string[];
+  colorPalette: ColorPalette;
   colorMood: string;
   photographyStyle: string;
   texturePreferences: string[];
@@ -392,10 +399,30 @@ Synthesize this into a cohesive Brand Brain that:
                 visualDNA: {
                   type: "object",
                   properties: {
-                    primaryColors: {
-                      type: "array",
-                      items: { type: "string" },
-                      description: "4-6 primary brand colors with specific names"
+                    colorPalette: {
+                      type: "object",
+                      properties: {
+                        description: {
+                          type: "string",
+                          description: "One sentence describing the overall palette character (e.g., 'Warm neutral foundation with luxurious metallic accents')"
+                        },
+                        foundation: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "2-4 base/background colors that appear most frequently across brand imagery"
+                        },
+                        accents: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "1-3 accent/highlight colors used for emphasis (e.g., gold hardware, brand color pops)"
+                        },
+                        seasonalPops: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "0-3 optional variety colors that appear in seasonal or limited collections"
+                        }
+                      },
+                      required: ["description", "foundation", "accents"]
                     },
                     colorMood: {
                       type: "string",
@@ -424,7 +451,7 @@ Synthesize this into a cohesive Brand Brain that:
                       description: "Visual elements to avoid"
                     }
                   },
-                  required: ["primaryColors", "colorMood", "photographyStyle", "texturePreferences", "lightingStyle", "compositionStyle", "avoidElements"]
+                  required: ["colorPalette", "colorMood", "photographyStyle", "texturePreferences", "lightingStyle", "compositionStyle", "avoidElements"]
                 },
                 brandVoice: {
                   type: "object",
@@ -493,7 +520,12 @@ function createDefaultBrandBrain(existingContext: any, brandName: string): Brand
   return {
     generatedAt: new Date().toISOString(),
     visualDNA: {
-      primaryColors: vs.color_palette || ["neutral grey", "warm white"],
+      colorPalette: {
+        description: "Professional and refined color palette",
+        foundation: vs.color_palette?.slice(0, 3) || ["neutral grey", "warm white"],
+        accents: vs.color_palette?.slice(3) || [],
+        seasonalPops: [],
+      },
       colorMood: "Professional and refined",
       photographyStyle: vs.photography_style || "Clean editorial",
       texturePreferences: ["smooth", "refined materials"],
