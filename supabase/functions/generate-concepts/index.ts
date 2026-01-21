@@ -5,9 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ColorPalette {
+  description?: string;
+  foundation?: string[];
+  accents?: string[];
+  seasonalPops?: string[];
+}
+
 interface BrandBrain {
   visualDNA?: {
-    primaryColors?: string[];
+    colorPalette?: ColorPalette;
+    primaryColors?: string[]; // Legacy fallback
     colorMood?: string;
     photographyStyle?: string;
     texturePreferences?: string[];
@@ -114,7 +122,16 @@ Deno.serve(async (req) => {
       if (brandBrain.visualDNA) {
         const vd = brandBrain.visualDNA;
         const visualParts: string[] = [];
-        if (vd.primaryColors?.length) visualParts.push(`Colors: ${vd.primaryColors.join(", ")}`);
+        // Use new colorPalette structure with fallback to legacy primaryColors
+        if (vd.colorPalette) {
+          if (vd.colorPalette.description) visualParts.push(`Color Palette: ${vd.colorPalette.description}`);
+          if (vd.colorPalette.foundation?.length) visualParts.push(`Foundation Colors: ${vd.colorPalette.foundation.join(", ")}`);
+          if (vd.colorPalette.accents?.length) visualParts.push(`Accent Colors: ${vd.colorPalette.accents.join(", ")}`);
+          if (vd.colorPalette.seasonalPops?.length) visualParts.push(`Seasonal Colors: ${vd.colorPalette.seasonalPops.join(", ")}`);
+        } else if (vd.primaryColors?.length) {
+          // Legacy fallback
+          visualParts.push(`Colors: ${vd.primaryColors.join(", ")}`);
+        }
         if (vd.colorMood) visualParts.push(`Color Mood: ${vd.colorMood}`);
         if (vd.photographyStyle) visualParts.push(`Photography: ${vd.photographyStyle}`);
         if (vd.lightingStyle) visualParts.push(`Lighting: ${vd.lightingStyle}`);

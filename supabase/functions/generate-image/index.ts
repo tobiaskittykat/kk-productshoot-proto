@@ -100,7 +100,13 @@ interface GenerateImageRequest {
   // Brand Brain (synthesized visual identity)
   brandBrain?: {
     visualDNA?: {
-      primaryColors?: string[];
+      colorPalette?: {
+        description?: string;
+        foundation?: string[];
+        accents?: string[];
+        seasonalPops?: string[];
+      };
+      primaryColors?: string[]; // Legacy fallback
       colorMood?: string;
       photographyStyle?: string;
       texturePreferences?: string[];
@@ -182,7 +188,16 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       
       if (request.brandBrain.visualDNA) {
         const vd = request.brandBrain.visualDNA;
-        if (vd.primaryColors?.length) sections.push(`Brand Colors (INCORPORATE): ${vd.primaryColors.join(", ")}`);
+        // Use new colorPalette structure with fallback to legacy primaryColors
+        if (vd.colorPalette) {
+          if (vd.colorPalette.description) sections.push(`Color Palette: ${vd.colorPalette.description}`);
+          if (vd.colorPalette.foundation?.length) sections.push(`Foundation Colors (USE FOR BASE/BACKGROUND): ${vd.colorPalette.foundation.join(", ")}`);
+          if (vd.colorPalette.accents?.length) sections.push(`Accent Colors (USE FOR HIGHLIGHTS/PRODUCT): ${vd.colorPalette.accents.join(", ")}`);
+          if (vd.colorPalette.seasonalPops?.length) sections.push(`Seasonal Pop Colors (OPTIONAL VARIETY): ${vd.colorPalette.seasonalPops.join(", ")}`);
+        } else if (vd.primaryColors?.length) {
+          // Legacy fallback
+          sections.push(`Brand Colors (INCORPORATE): ${vd.primaryColors.join(", ")}`);
+        }
         if (vd.colorMood) sections.push(`Color Mood: ${vd.colorMood}`);
         if (vd.photographyStyle) sections.push(`Photography Style: ${vd.photographyStyle}`);
         if (vd.lightingStyle) sections.push(`Lighting: ${vd.lightingStyle}`);
