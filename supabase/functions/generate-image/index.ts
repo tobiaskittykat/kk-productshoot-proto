@@ -311,13 +311,14 @@ CRITICAL RULES:
    - "Product Focus" = isolated product shot, no hands or models
    - "Composition" = styled flat lay or arrangement with props
 2. Lead with the shot type and product, then build the scene around it
-3. Weave in 2-3 specific elements from the Visual World and moodboard analysis
-4. Set the mood, lighting, and atmosphere naturally as part of the scene description
-5. Be specific and evocative - use sensory language
-6. Keep it focused - one clear scene, not multiple concepts
-7. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle")
-8. Respect the Tonality - if "never rules" are specified, absolutely do NOT include those elements
-9. Match the target audience vibe without being heavy-handed
+3. **USE EXACT NAMES** - When product names are provided (e.g., "Lily Duet - Black/Gold"), use them EXACTLY as written. NEVER use placeholder syntax like "[Product Name]", "(e.g., ...)", or any bracketed templates. Write the actual name directly.
+4. Weave in 2-3 specific elements from the Visual World and moodboard analysis
+5. Set the mood, lighting, and atmosphere naturally as part of the scene description
+6. Be specific and evocative - use sensory language
+7. Keep it focused - one clear scene, not multiple concepts
+8. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle")
+9. Respect the Tonality - if "never rules" are specified, absolutely do NOT include those elements
+10. Match the target audience vibe without being heavy-handed
 
 QUALITY STANDARDS:
 - High-quality, professional imagery
@@ -325,7 +326,7 @@ QUALITY STANDARDS:
 - Appropriate lighting for the mood
 - Clean, intentional composition
 
-OUTPUT: Return ONLY the crafted prompt text. No explanations, no bullet points, just the prompt.`;
+OUTPUT: Return ONLY the crafted prompt text. No explanations, no bullet points, no placeholders, just the final prompt with real names.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -348,12 +349,19 @@ OUTPUT: Return ONLY the crafted prompt text. No explanations, no bullet points, 
     }
 
     const aiResponse = await response.json();
-    const craftedPrompt = aiResponse.choices?.[0]?.message?.content?.trim();
+    let craftedPrompt = aiResponse.choices?.[0]?.message?.content?.trim();
     
     if (!craftedPrompt) {
       console.error("No prompt from agent, falling back to basic prompt");
       return buildFallbackPrompt(request);
     }
+    
+    // Safety net: Clean up any placeholder patterns the AI might have introduced
+    craftedPrompt = craftedPrompt
+      .replace(/\[(?:Product Name|product)[^\]]*,?\s*(?:e\.g\.,?\s*)?([\w\s\-\/]+)\]/gi, '$1')
+      .replace(/\(e\.g\.,?\s*[^)]+\)/gi, '')
+      .replace(/\[[^\]]*\]/g, '')
+      .trim();
     
     console.log("Prompt agent crafted:", craftedPrompt);
     return craftedPrompt;
