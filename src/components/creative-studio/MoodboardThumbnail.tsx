@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { 
   Dialog, 
   DialogContent 
 } from "@/components/ui/dialog";
-import { Check, Expand, ImageOff, Loader2 } from "lucide-react";
+import { Check, Expand, ImageOff, Loader2, RefreshCw } from "lucide-react";
 import { Moodboard } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +13,8 @@ interface MoodboardThumbnailProps {
   onSelect: () => void;
   size?: 'default' | 'large';
 }
+
+const LOAD_TIMEOUT_MS = 12000; // 12 seconds
 
 export const MoodboardThumbnail = ({ 
   moodboard, 
@@ -25,19 +27,62 @@ export const MoodboardThumbnail = ({
   const [triedSigned, setTriedSigned] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  const imgRef = useRef<HTMLImageElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   // Reset state when moodboard changes
   useEffect(() => {
+    // Clear any pending timeout
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
     setResolvedSrc(moodboard.thumbnail);
     setTriedSigned(false);
     setImageError(false);
     setIsLoading(true);
+    setRetryCount(0);
   }, [moodboard.id, moodboard.thumbnail]);
 
+  // Check if image is already cached/complete when src changes
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      // Image already loaded (cached)
+      setIsLoading(false);
+      setImageError(false);
+      return;
+    }
+    
+    // Start timeout watchdog
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      // If still loading after timeout, try signed URL or mark as error
+      if (isLoading && !imageError) {
+        console.warn(`[MoodboardThumbnail] Timeout loading: ${moodboard.name}`);
+        handleImageError();
+      }
+    }, LOAD_TIMEOUT_MS);
+    
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [resolvedSrc, retryCount]);
+
   // Handle image load error - try signed URL fallback
-  const handleImageError = async () => {
+  const handleImageError = useCallback(async () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
     if (!triedSigned && moodboard.filePath) {
       setTriedSigned(true);
+      console.log(`[MoodboardThumbnail] Trying signed URL for: ${moodboard.name}`);
       try {
         const { data, error } = await supabase.storage
           .from('moodboards')
@@ -45,32 +90,56 @@ export const MoodboardThumbnail = ({
         
         if (data?.signedUrl && !error) {
           setResolvedSrc(data.signedUrl);
+          setIsLoading(true); // Reset loading for new URL attempt
           return; // Don't set error, let the new URL try to load
         }
       } catch (err) {
-        console.error('Failed to create signed URL:', err);
+        console.error('[MoodboardThumbnail] Failed to create signed URL:', err);
       }
     }
     setImageError(true);
     setIsLoading(false);
-  };
+  }, [triedSigned, moodboard.filePath, moodboard.name]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsLoading(false);
-  };
+    setImageError(false);
+  }, []);
+
+  // Retry loading (cache-bust)
+  const handleRetry = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImageError(false);
+    setIsLoading(true);
+    setTriedSigned(false);
+    setRetryCount(prev => prev + 1);
+    // Add cache-bust param
+    const baseUrl = moodboard.thumbnail.split('?')[0];
+    setResolvedSrc(`${baseUrl}?t=${Date.now()}`);
+  }, [moodboard.thumbnail]);
 
   // Toggle selection - clicking selected moodboard deselects it
   const handleClick = () => {
     onSelect(); // Parent will handle toggle logic
   };
 
+  const handleExpandClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFullView(true);
+  };
+
   const isLarge = size === 'large';
 
   return (
     <>
-      <button
+      {/* Use div with role="button" to avoid nested button issues */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={handleClick}
-        className={`group relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
+        className={`group relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md cursor-pointer ${
           isLarge ? 'aspect-[4/3]' : 'aspect-[4/3]'
         } ${
           isSelected
@@ -87,27 +156,38 @@ export const MoodboardThumbnail = ({
 
         {/* Background Image or Error State */}
         {imageError ? (
-          <div className="absolute inset-0 w-full h-full bg-secondary flex flex-col items-center justify-center gap-2">
+          <div 
+            className="absolute inset-0 w-full h-full bg-secondary flex flex-col items-center justify-center gap-2 cursor-pointer"
+            onClick={handleRetry}
+          >
             <ImageOff className="w-8 h-8 text-muted-foreground/50" />
             <span className="text-xs text-muted-foreground">Image unavailable</span>
+            <button
+              onClick={handleRetry}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-accent/10 hover:bg-accent/20 rounded text-accent transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </button>
           </div>
         ) : (
           <img 
-            src={resolvedSrc} 
+            ref={imgRef}
+            src={resolvedSrc}
             alt={moodboard.name}
             className="absolute inset-0 w-full h-full object-cover"
             onError={handleImageError}
             onLoad={handleImageLoad}
-            loading="lazy"
+            loading="eager" // Changed from lazy to ensure events fire
             decoding="async"
           />
         )}
         
         {/* Gradient overlay for text */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         
         {/* Content */}
-        <div className={`absolute bottom-0 left-0 right-0 ${isLarge ? 'p-4' : 'p-2.5'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 ${isLarge ? 'p-4' : 'p-2.5'} pointer-events-none`}>
           <h4 className={`font-medium text-white leading-tight ${isLarge ? 'text-sm' : 'text-xs'}`}>
             {moodboard.name}
           </h4>
@@ -118,7 +198,7 @@ export const MoodboardThumbnail = ({
 
         {/* Selected check */}
         {isSelected && (
-          <div className={`absolute ${isLarge ? 'top-3 right-3 w-6 h-6' : 'top-2 right-2 w-5 h-5'} rounded-full bg-accent flex items-center justify-center`}>
+          <div className={`absolute ${isLarge ? 'top-3 right-3 w-6 h-6' : 'top-2 right-2 w-5 h-5'} rounded-full bg-accent flex items-center justify-center pointer-events-none`}>
             <Check className={isLarge ? 'w-4 h-4 text-accent-foreground' : 'w-3 h-3 text-accent-foreground'} />
           </div>
         )}
@@ -126,16 +206,13 @@ export const MoodboardThumbnail = ({
         {/* Expand button - only show if image loaded */}
         {!imageError && !isLoading && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFullView(true);
-            }}
+            onClick={handleExpandClick}
             className={`absolute ${isLarge ? 'top-3 left-3 w-7 h-7' : 'top-2 left-2 w-6 h-6'} rounded-lg bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70`}
           >
             <Expand className={isLarge ? 'w-4 h-4 text-white' : 'w-3 h-3 text-white'} />
           </button>
         )}
-      </button>
+      </div>
 
       {/* Full View Dialog */}
       <Dialog open={isFullView} onOpenChange={setIsFullView}>

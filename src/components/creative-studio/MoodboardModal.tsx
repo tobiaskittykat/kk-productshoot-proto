@@ -390,19 +390,23 @@ export const MoodboardModal = ({
 
                   <div className="grid grid-cols-3 gap-3">
                     {customMoodboards.map((moodboard) => (
-                      <div key={moodboard.id} className="group relative aspect-[4/3] rounded-lg overflow-hidden border border-border">
-                        <img 
-                          src={moodboard.thumbnail_url} 
-                          alt={moodboard.name}
-                          className="w-full h-full object-cover"
+                      <div key={moodboard.id} className="group relative">
+                        <MoodboardThumbnail
+                          moodboard={{
+                            id: `custom-${moodboard.id}`,
+                            name: moodboard.name,
+                            thumbnail: moodboard.thumbnail_url,
+                            filePath: moodboard.file_path,
+                            description: moodboard.description || 'Custom moodboard',
+                          }}
+                          isSelected={selectedMoodboard === `custom-${moodboard.id}`}
+                          onSelect={() => handleSelect(`custom-${moodboard.id}`)}
+                          size="default"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <p className="absolute bottom-1.5 left-2 right-2 text-xs text-white truncate">{moodboard.name}</p>
-                        
-                        {/* Delete button */}
+                        {/* Delete button overlay */}
                         <button
-                          onClick={() => handleDeleteCustomMoodboard(moodboard)}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomMoodboard(moodboard); }}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive z-20"
                         >
                           <Trash2 className="w-3 h-3 text-white" />
                         </button>

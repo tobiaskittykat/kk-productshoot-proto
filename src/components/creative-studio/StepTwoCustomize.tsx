@@ -573,14 +573,43 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
         const updates: Partial<CreativeStudioState> = {};
         
-        // Store curated options
+        // Normalize moodboard IDs returned from smart-match
+        // The AI might return bare UUIDs, but frontend expects "custom-{uuid}" format
+        const normalizeId = (id: string, validIds: string[]) => {
+          if (validIds.includes(id)) return id;
+          // Try with custom- prefix
+          const prefixed = `custom-${id}`;
+          if (validIds.includes(prefixed)) return prefixed;
+          // Try stripping prefix if it has one
+          if (id.startsWith('custom-')) {
+            const stripped = id.replace('custom-', '');
+            if (validIds.includes(stripped)) return stripped;
+          }
+          return null; // Invalid ID
+        };
+        
+        // Store curated options (normalize IDs)
         if (data?.rankedMoodboards?.length > 0) {
-          updates.curatedMoodboards = data.rankedMoodboards;
-          updates.moodboard = data.rankedMoodboards[0]; // Pre-select best
+          const validMoodboardIds = customMoodboards.map(m => m.id);
+          const normalizedMoodboards = data.rankedMoodboards
+            .map((id: string) => normalizeId(id, validMoodboardIds))
+            .filter(Boolean) as string[];
+          
+          if (normalizedMoodboards.length > 0) {
+            updates.curatedMoodboards = normalizedMoodboards;
+            updates.moodboard = normalizedMoodboards[0]; // Pre-select best
+          }
         }
         if (data?.rankedProducts?.length > 0) {
-          updates.curatedProducts = data.rankedProducts;
-          updates.productReferences = [data.rankedProducts[0]]; // Pre-select best
+          const validProductIds = allProductReferences.map(p => p.id);
+          const normalizedProducts = data.rankedProducts
+            .map((id: string) => normalizeId(id, validProductIds))
+            .filter(Boolean) as string[];
+          
+          if (normalizedProducts.length > 0) {
+            updates.curatedProducts = normalizedProducts;
+            updates.productReferences = [normalizedProducts[0]]; // Pre-select best
+          }
         }
 
         if (Object.keys(updates).length > 0) {
