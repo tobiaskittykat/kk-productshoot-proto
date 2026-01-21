@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -21,43 +23,69 @@ interface FirecrawlResponse {
   error?: string;
 }
 
-// Validate that an image URL actually returns a valid image
-async function validateImageUrl(url: string): Promise<boolean> {
+// Download image and upload to Supabase storage
+async function mirrorImageToStorage(
+  supabaseClient: any,
+  imageUrl: string,
+  userId: string,
+  productId: string
+): Promise<{ storagePath: string; publicUrl: string } | null> {
   try {
-    // Try HEAD first (faster), fall back to GET if HEAD isn't supported
-    let response = await fetch(url, { 
-      method: 'HEAD',
+    console.log(`Mirroring image for product ${productId}...`);
+    
+    // Fetch the image
+    const response = await fetch(imageUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImageValidator/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; ImageMirror/1.0)',
       },
     });
     
-    // Some CDNs don't support HEAD, try GET with a range header
-    if (!response.ok && response.status === 405) {
-      response = await fetch(url, { 
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ImageValidator/1.0)',
-          'Range': 'bytes=0-1023', // Only fetch first 1KB to verify
-        },
-      });
-    }
-    
     if (!response.ok) {
-      console.log(`Image validation failed (${response.status}):`, url);
-      return false;
+      console.log(`Failed to fetch image (${response.status}):`, imageUrl);
+      return null;
     }
     
-    const contentType = response.headers.get('content-type') || '';
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
     if (!contentType.startsWith('image/')) {
-      console.log(`Not an image (${contentType}):`, url);
-      return false;
+      console.log(`Not an image (${contentType}):`, imageUrl);
+      return null;
     }
     
-    return true;
+    // Get image as array buffer
+    const imageBuffer = await response.arrayBuffer();
+    
+    // Determine file extension from content type
+    const ext = contentType.includes('png') ? 'png' : 
+                contentType.includes('webp') ? 'webp' : 'jpg';
+    
+    // Upload to Supabase storage
+    const storagePath = `${userId}/${productId}.${ext}`;
+    
+    const { error: uploadError } = await supabaseClient.storage
+      .from('product-images')
+      .upload(storagePath, imageBuffer, {
+        contentType,
+        upsert: true,
+      });
+    
+    if (uploadError) {
+      console.error(`Upload error for ${productId}:`, uploadError);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabaseClient.storage
+      .from('product-images')
+      .getPublicUrl(storagePath);
+    
+    console.log(`Successfully mirrored: ${productId}`);
+    return {
+      storagePath,
+      publicUrl: urlData.publicUrl,
+    };
   } catch (error) {
-    console.log(`Image validation error:`, url, error);
-    return false;
+    console.error(`Mirror error for ${productId}:`, error);
+    return null;
   }
 }
 
@@ -67,8 +95,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const { url, userId } = await req.json();
     const targetUrl = url || 'https://www.bandolierstyle.com/collections/all';
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'userId is required for image mirroring' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
@@ -78,6 +113,11 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Initialize Supabase client for storage operations
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('Scraping products from:', targetUrl);
 
@@ -183,37 +223,40 @@ IMPORTANT RULES:
       .slice(0, 50); // Limit to 50 products
 
     console.log(`Pre-filter passed: ${preFilteredProducts.length} products`);
+    console.log('Starting image mirroring to storage...');
 
-    // Second pass: validate that each image URL actually returns a valid image
-    console.log('Validating image URLs (this may take a moment)...');
-    const validationResults = await Promise.all(
-      preFilteredProducts.map(async (product: ScrapedProduct) => {
-        const isValid = await validateImageUrl(product.imageUrl);
-        return { product, isValid };
+    // Mirror each image to Supabase storage
+    const mirrorResults = await Promise.all(
+      preFilteredProducts.map(async (product: ScrapedProduct, index: number) => {
+        const productId = `bandolier-${Date.now()}-${index}`;
+        const mirrorResult = await mirrorImageToStorage(
+          supabaseClient,
+          product.imageUrl,
+          userId,
+          productId
+        );
+        
+        if (mirrorResult) {
+          return {
+            id: productId,
+            name: product.name,
+            thumbnail: mirrorResult.publicUrl,
+            url: mirrorResult.publicUrl,
+            storagePath: mirrorResult.storagePath,
+            category: product.category || 'product',
+            color: product.color,
+            collection: product.collection,
+          };
+        }
+        return null;
       })
     );
 
-    const validProducts = validationResults
-      .filter(r => r.isValid)
-      .map((r, index) => {
-        const product = r.product;
-        return {
-          id: `bandolier-${index + 1}`,
-          name: product.name,
-          thumbnail: product.imageUrl.includes('?') 
-            ? product.imageUrl 
-            : `${product.imageUrl}?w=400&h=400&fit=crop`,
-          url: product.imageUrl.includes('?') 
-            ? product.imageUrl.replace(/\?.*$/, '?w=800') 
-            : `${product.imageUrl}?w=800`,
-          category: product.category || 'product',
-          color: product.color,
-          collection: product.collection,
-        };
-      });
-
+    // Filter out failed mirrors
+    const validProducts = mirrorResults.filter(p => p !== null);
     const droppedCount = preFilteredProducts.length - validProducts.length;
-    console.log(`Validation complete: ${validProducts.length} valid, ${droppedCount} dropped (invalid/404)`);
+
+    console.log(`Mirroring complete: ${validProducts.length} succeeded, ${droppedCount} failed`);
 
     return new Response(
       JSON.stringify({ 
@@ -221,8 +264,8 @@ IMPORTANT RULES:
         products: validProducts,
         totalExtracted: extractedProducts.length,
         totalPreFiltered: preFilteredProducts.length,
-        totalValidated: validProducts.length,
-        totalDroppedInvalidImages: droppedCount
+        totalMirrored: validProducts.length,
+        totalDropped: droppedCount
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -290,6 +290,7 @@ export type Database = {
           full_url: string
           id: string
           name: string
+          storage_path: string | null
           thumbnail_url: string
           user_id: string
         }
@@ -301,6 +302,7 @@ export type Database = {
           full_url: string
           id?: string
           name: string
+          storage_path?: string | null
           thumbnail_url: string
           user_id: string
         }
@@ -312,6 +314,7 @@ export type Database = {
           full_url?: string
           id?: string
           name?: string
+          storage_path?: string | null
           thumbnail_url?: string
           user_id?: string
         }

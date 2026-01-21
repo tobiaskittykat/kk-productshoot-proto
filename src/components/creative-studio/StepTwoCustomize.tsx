@@ -91,6 +91,7 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
   };
 
   // Fetch scraped products from database
+  // Since products are now mirrored to our storage, we use direct URLs (no proxy needed)
   const { data: scrapedProducts = [], isLoading: loadingScrapedProducts, refetch: refetchScrapedProducts } = useQuery({
     queryKey: ['scraped-products', user?.id],
     queryFn: async () => {
@@ -106,11 +107,13 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
         id: `scraped-${p.id}`,
         dbId: p.id,
         name: p.name,
-        thumbnail: proxyImageUrl(p.thumbnail_url) || p.thumbnail_url,
-        url: proxyImageUrl(p.full_url) || p.full_url,
+        // Use storage URL directly if available, otherwise use stored URLs
+        thumbnail: p.thumbnail_url,
+        url: p.full_url,
         category: 'product' as const,
         isScraped: true,
         productType: p.category || undefined,
+        storagePath: p.storage_path || undefined,
       }));
     },
     enabled: !!user?.id,
@@ -161,8 +164,9 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
 
     setIsScrapingProducts(true);
     try {
+      // Pass userId so edge function can mirror images to user's storage folder
       const { data, error } = await supabase.functions.invoke('scrape-products', {
-        body: { url: 'https://www.bandolierstyle.com/collections/all' }
+        body: { url: 'https://www.bandolierstyle.com/collections/all', userId: user.id }
       });
 
       if (error) throw error;
@@ -180,15 +184,16 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
           // Continue anyway - better to have duplicates than fail entirely
         }
 
-        // Insert freshly scraped + validated products
+        // Insert freshly scraped + mirrored products (now served from our storage)
         const productsToInsert = data.products.map((p: any) => ({
           user_id: user.id,
-          external_id: p.url || p.thumbnail || p.id,
+          external_id: p.storagePath || p.id,
           name: p.name,
           thumbnail_url: p.thumbnail,
           full_url: p.url || p.thumbnail,
           category: p.category || inferProductType(p.name),
           collection: p.collection || 'bandolier',
+          storage_path: p.storagePath || null,
         }));
 
         const { error: insertError } = await supabase
@@ -201,10 +206,10 @@ export const StepTwoCustomize = ({ state, onUpdate }: StepTwoCustomizeProps) => 
         onUpdate({ productReferences: [] });
 
         // Build informative toast message
-        const droppedCount = data.totalDroppedInvalidImages || 0;
+        const droppedCount = data.totalDropped || 0;
         const description = droppedCount > 0 
-          ? `${droppedCount} broken images were skipped`
-          : 'All product images verified';
+          ? `${droppedCount} images failed to mirror`
+          : 'All product images saved to your library';
 
         toast({ 
           title: `Synced ${data.products.length} products!`, 
