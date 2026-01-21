@@ -522,6 +522,7 @@ export function BrandBrainSection({ variant = "standalone" }: BrandBrainSectionP
                   )}
                 </div>
               </div>
+              </div>
             </div>
           </div>
 
