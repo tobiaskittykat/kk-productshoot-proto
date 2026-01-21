@@ -176,13 +176,12 @@ export const ProductReferencePicker = ({
                           atLimit && "opacity-50 cursor-not-allowed"
                         )}
                       >
-                        {/* Image or fallback */}
+                        {/* Image - now served from our storage, no referrerPolicy needed */}
                         {!hasError ? (
                           <img
                             src={product.thumbnailUrl}
                             alt={product.name}
                             loading="lazy"
-                            referrerPolicy="no-referrer"
                             className="absolute inset-0 w-full h-full object-cover"
                             onError={() => handleImageError(product.id)}
                           />

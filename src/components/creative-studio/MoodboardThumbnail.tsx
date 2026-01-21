@@ -5,7 +5,6 @@ import {
 } from "@/components/ui/dialog";
 import { Check, Expand, ImageOff, Loader2, RefreshCw } from "lucide-react";
 import { Moodboard } from "./types";
-import { supabase } from "@/integrations/supabase/client";
 
 interface MoodboardThumbnailProps {
   moodboard: Moodboard;
@@ -14,7 +13,20 @@ interface MoodboardThumbnailProps {
   size?: 'default' | 'large';
 }
 
-const LOAD_TIMEOUT_MS = 15000; // 15 seconds
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+// Build optimized thumbnail URL using Supabase's image transformation
+const buildThumbnailUrl = (filePath: string | undefined, width: number = 400): string => {
+  if (!filePath) return '';
+  // Use Supabase's render endpoint for resized images
+  return `${SUPABASE_URL}/storage/v1/render/image/public/moodboards/${filePath}?width=${width}&quality=80`;
+};
+
+// Build full-size URL for dialog view
+const buildFullUrl = (filePath: string | undefined): string => {
+  if (!filePath) return '';
+  return `${SUPABASE_URL}/storage/v1/object/public/moodboards/${filePath}`;
+};
 
 export const MoodboardThumbnail = ({ 
   moodboard, 
@@ -23,8 +35,6 @@ export const MoodboardThumbnail = ({
   size = 'default'
 }: MoodboardThumbnailProps) => {
   const [isFullView, setIsFullView] = useState(false);
-  const [resolvedSrc, setResolvedSrc] = useState(moodboard.thumbnail || '');
-  const [triedSigned, setTriedSigned] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
@@ -32,20 +42,10 @@ export const MoodboardThumbnail = ({
   
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clear timeout helper
-  const clearLoadTimeout = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  // Clear timeout on unmount
-  useEffect(() => {
-    return () => clearLoadTimeout();
-  }, [clearLoadTimeout]);
+  // Build URLs from file path
+  const thumbnailUrl = buildThumbnailUrl(moodboard.filePath, size === 'large' ? 600 : 400);
+  const fullUrl = buildFullUrl(moodboard.filePath);
 
   // Intersection Observer to detect visibility
   useEffect(() => {
@@ -60,7 +60,7 @@ export const MoodboardThumbnail = ({
           }
         });
       },
-      { threshold: 0.1, rootMargin: '50px' }
+      { threshold: 0.1, rootMargin: '100px' }
     );
 
     observer.observe(container);
@@ -69,114 +69,46 @@ export const MoodboardThumbnail = ({
 
   // Reset state when moodboard changes
   useEffect(() => {
-    clearLoadTimeout();
-    setResolvedSrc(moodboard.thumbnail || '');
-    setTriedSigned(false);
     setImageError(false);
     setIsLoading(true);
     setRetryCount(0);
-  }, [moodboard.id, moodboard.thumbnail, clearLoadTimeout]);
+  }, [moodboard.id, moodboard.filePath]);
 
-  // In large gallery grids, avoid kicking off dozens of image requests at once.
-  // Only start loading when the thumbnail is near/inside the viewport (or selected).
+  // Only start loading when visible or selected
   const shouldLoadImage = isVisible || isSelected;
 
-  // Check if image is already cached/complete, and start timeout when visible
+  // Check if image is already cached
   useEffect(() => {
-    if (!shouldLoadImage) return; // Don't start timeout until we actually start loading
+    if (!shouldLoadImage) return;
     
     const img = imgRef.current;
     if (img && img.complete && img.naturalWidth > 0) {
-      // Image already loaded (cached)
       setIsLoading(false);
       setImageError(false);
-      return;
     }
-    
-    // Start timeout watchdog only when visible
-    clearLoadTimeout();
-    timeoutRef.current = setTimeout(() => {
-      // If still loading after timeout, try signed URL or mark as error
-      if (isLoading && !imageError) {
-        console.warn(`[MoodboardThumbnail] Timeout loading: ${moodboard.name}`);
-        handleImageError();
-      }
-    }, LOAD_TIMEOUT_MS);
-    
-    return () => clearLoadTimeout();
-  }, [resolvedSrc, retryCount, shouldLoadImage, isLoading, imageError, moodboard.name, clearLoadTimeout]);
+  }, [shouldLoadImage, thumbnailUrl, retryCount]);
 
-  // Handle image load error - try signed URL fallback
-  const handleImageError = useCallback(async () => {
-    clearLoadTimeout();
-    
-    if (!triedSigned && moodboard.filePath) {
-      setTriedSigned(true);
-      console.log(`[MoodboardThumbnail] Trying signed URL for: ${moodboard.name}`);
-      try {
-        const { data, error } = await supabase.storage
-          .from('moodboards')
-          .createSignedUrl(moodboard.filePath, 60 * 60 * 24 * 7); // 7 days
-        
-        if (data?.signedUrl && !error) {
-          setResolvedSrc(data.signedUrl);
-          setIsLoading(true); // Reset loading for new URL attempt
-          return; // Don't set error, let the new URL try to load
-        }
-      } catch (err) {
-        console.error('[MoodboardThumbnail] Failed to create signed URL:', err);
-      }
-    }
+  const handleImageError = useCallback(() => {
+    console.warn(`[MoodboardThumbnail] Failed to load: ${moodboard.name}`);
     setImageError(true);
     setIsLoading(false);
-  }, [triedSigned, moodboard.filePath, moodboard.name, clearLoadTimeout]);
+  }, [moodboard.name]);
 
   const handleImageLoad = useCallback(() => {
-    clearLoadTimeout();
     setIsLoading(false);
     setImageError(false);
-  }, [clearLoadTimeout]);
+  }, []);
 
-  // Retry loading (cache-bust)
-  const handleRetry = useCallback(async (e: React.MouseEvent) => {
+  // Retry loading with cache-bust
+  const handleRetry = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    clearLoadTimeout();
     setImageError(false);
     setIsLoading(true);
-    setTriedSigned(false);
     setRetryCount(prev => prev + 1);
+  }, []);
 
-    // Add cache-bust param (prefer current resolvedSrc, fallback to moodboard.thumbnail)
-    const base = (resolvedSrc || moodboard.thumbnail || '').split('?')[0];
-    if (base) {
-      setResolvedSrc(`${base}?t=${Date.now()}`);
-      return;
-    }
-
-    // If we somehow have no public URL, try a signed URL from storage.
-    if (moodboard.filePath) {
-      setTriedSigned(true);
-      try {
-        const { data, error } = await supabase.storage
-          .from('moodboards')
-          .createSignedUrl(moodboard.filePath, 60 * 60 * 24 * 7);
-        if (data?.signedUrl && !error) {
-          setResolvedSrc(data.signedUrl);
-          return;
-        }
-      } catch (err) {
-        console.error('[MoodboardThumbnail] Retry signed URL failed:', err);
-      }
-    }
-
-    // Nothing we can do (should be very rare) — show error state.
-    setImageError(true);
-    setIsLoading(false);
-  }, [moodboard.filePath, moodboard.thumbnail, resolvedSrc, clearLoadTimeout]);
-
-  // Toggle selection - clicking selected moodboard deselects it
   const handleClick = () => {
-    onSelect(); // Parent will handle toggle logic
+    onSelect();
   };
 
   const handleExpandClick = (e: React.MouseEvent) => {
@@ -186,9 +118,13 @@ export const MoodboardThumbnail = ({
 
   const isLarge = size === 'large';
 
+  // Add cache-bust for retries
+  const currentThumbnailUrl = retryCount > 0 
+    ? `${thumbnailUrl}&t=${Date.now()}` 
+    : thumbnailUrl;
+
   return (
     <>
-      {/* Use div with role="button" to avoid nested button issues */}
       <div
         ref={containerRef}
         role="button"
@@ -226,17 +162,16 @@ export const MoodboardThumbnail = ({
               Retry
             </button>
           </div>
-        ) : shouldLoadImage ? (
+        ) : shouldLoadImage && currentThumbnailUrl ? (
           <img 
             ref={imgRef}
-            src={resolvedSrc}
+            src={currentThumbnailUrl}
             alt={moodboard.name}
             className="absolute inset-0 w-full h-full object-cover"
             onError={handleImageError}
             onLoad={handleImageLoad}
-            loading={size === 'large' ? 'lazy' : 'eager'}
+            loading="lazy"
             decoding="async"
-            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="absolute inset-0 w-full h-full bg-secondary" />
@@ -262,7 +197,7 @@ export const MoodboardThumbnail = ({
           </div>
         )}
 
-        {/* Expand button - only show if image loaded */}
+        {/* Expand button */}
         {!imageError && !isLoading && (
           <button
             onClick={handleExpandClick}
@@ -276,16 +211,16 @@ export const MoodboardThumbnail = ({
       {/* Full View Dialog */}
       <Dialog open={isFullView} onOpenChange={setIsFullView}>
         <DialogContent className="max-w-3xl max-h-[85vh] p-0 overflow-hidden flex flex-col">
-          {/* Image section - uncropped */}
+          {/* Image section - full quality */}
           <div className="bg-secondary flex-shrink-0 flex items-center justify-center">
             <img 
-              src={resolvedSrc} 
+              src={fullUrl} 
               alt={moodboard.name}
               className="max-h-[45vh] w-full object-contain"
             />
           </div>
           
-          {/* Content section - scrollable */}
+          {/* Content section */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div>
               <h3 className="font-semibold text-lg">{moodboard.name}</h3>
@@ -294,10 +229,9 @@ export const MoodboardThumbnail = ({
               )}
             </div>
             
-            {/* Visual Analysis - only if available */}
+            {/* Visual Analysis */}
             {moodboard.visualAnalysis && (
               <div className="space-y-4 pt-4 border-t border-border">
-                {/* Emotional Tone */}
                 {moodboard.visualAnalysis.emotional_tone && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Mood</p>
@@ -305,7 +239,6 @@ export const MoodboardThumbnail = ({
                   </div>
                 )}
                 
-                {/* Color Palette */}
                 {moodboard.visualAnalysis.dominant_colors && moodboard.visualAnalysis.dominant_colors.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Colors</p>
@@ -319,7 +252,6 @@ export const MoodboardThumbnail = ({
                   </div>
                 )}
                 
-                {/* Key Elements */}
                 {moodboard.visualAnalysis.key_elements && moodboard.visualAnalysis.key_elements.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Key Elements</p>
@@ -333,7 +265,6 @@ export const MoodboardThumbnail = ({
                   </div>
                 )}
                 
-                {/* Lighting & Textures */}
                 <div className="grid grid-cols-2 gap-4">
                   {moodboard.visualAnalysis.lighting_quality && (
                     <div>
@@ -349,7 +280,6 @@ export const MoodboardThumbnail = ({
                   )}
                 </div>
                 
-                {/* Best For */}
                 {moodboard.visualAnalysis.best_for && moodboard.visualAnalysis.best_for.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Best For</p>
