@@ -100,9 +100,10 @@ export function useImageGeneration() {
       let moodboardAnalysis: Record<string, unknown> | undefined;
       
       if (state.moodboard) {
-        // Custom moodboards have 'custom-' prefix - strip it for DB query
-        const isCustomMoodboard = state.moodboard.startsWith('custom-');
-        const moodboardDbId = isCustomMoodboard 
+        // Custom moodboards may have 'custom-' prefix OR be raw UUIDs - handle both
+        const isCustomMoodboard = state.moodboard.startsWith('custom-') || 
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state.moodboard);
+        const moodboardDbId = state.moodboard.startsWith('custom-')
           ? state.moodboard.replace('custom-', '') 
           : state.moodboard;
         
@@ -192,13 +193,33 @@ export function useImageGeneration() {
       // Track when we started to find newly generated images if timeout occurs
       const generationStartTime = new Date().toISOString();
       
+      // Use concept description as the primary prompt (not the raw brief)
+      const primaryPrompt = selectedConcept?.description || selectedConcept?.coreIdea || selectedConcept?.title || state.prompt;
+      
+      console.log('=== GENERATION INPUT DEBUG ===');
+      console.log('Primary prompt (from concept):', primaryPrompt);
+      console.log('Full concept:', JSON.stringify(selectedConcept, null, 2));
+      console.log('Moodboard URL:', moodboardUrl);
+      console.log('Product URLs:', productReferenceUrls);
+      console.log('Shot prompts:', shotTypePrompts);
+      console.log('==============================');
+      
       const { data, error } = await supabase.functions.invoke('generate-image', {
         body: {
-          prompt: state.prompt,
+          // Use concept-derived prompt instead of raw brief
+          prompt: primaryPrompt,
           conceptTitle: selectedConcept?.title,
           conceptDescription: selectedConcept?.description,
           coreIdea: selectedConcept?.coreIdea,
           tonality: selectedConcept?.tonality,
+          
+          // Full 9-point concept data (NEW)
+          visualWorld: selectedConcept?.visualWorld,
+          contentPillars: selectedConcept?.contentPillars,
+          targetAudience: selectedConcept?.targetAudience,
+          consumerInsight: selectedConcept?.consumerInsight,
+          productFocus: selectedConcept?.productFocus,
+          taglines: selectedConcept?.taglines,
           
           moodboardId: state.moodboard,
           moodboardName,
