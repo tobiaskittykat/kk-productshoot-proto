@@ -182,9 +182,36 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       sections.push("");
     }
     
-    // ===== VISUAL WORLD (from 9-point framework) =====
+    // ===== MOODBOARD INSPIRATION (FIRST - PRIMARY STYLE INFLUENCE) =====
+    // Placed BEFORE Visual World to establish style priority
+    const hasMoodboard = !!(request.moodboardName || request.moodboardDescription || request.moodboardAnalysis);
+    if (hasMoodboard) {
+      sections.push("=== MOODBOARD INSPIRATION (PRIMARY STYLE INFLUENCE) ===");
+      sections.push("⚠️ HIGH WEIGHT: The moodboard defines the dominant aesthetic. Use its colors, lighting, mood, and atmosphere as the primary style guide.");
+      if (request.moodboardName) sections.push(`Moodboard: ${request.moodboardName}`);
+      if (request.moodboardDescription) sections.push(`Description: ${request.moodboardDescription}`);
+      if (request.moodboardAnalysis) {
+        const analysis = request.moodboardAnalysis;
+        if (analysis.dominant_colors?.length) sections.push(`Colors (FOLLOW THESE): ${analysis.dominant_colors.join(", ")}`);
+        if (analysis.color_mood) sections.push(`Color Mood: ${analysis.color_mood}`);
+        if (analysis.key_elements?.length) sections.push(`Key Visual Elements: ${analysis.key_elements.join(", ")}`);
+        if (analysis.lighting_quality) sections.push(`Lighting (MATCH THIS): ${analysis.lighting_quality}`);
+        if (analysis.textures?.length) sections.push(`Textures: ${analysis.textures.join(", ")}`);
+        if (analysis.emotional_tone) sections.push(`Emotional Tone (CAPTURE THIS): ${analysis.emotional_tone}`);
+        if (analysis.suggested_props?.length) sections.push(`Suggested Props: ${analysis.suggested_props.join(", ")}`);
+        if (analysis.composition_style) sections.push(`Composition: ${analysis.composition_style}`);
+      }
+      sections.push("");
+    }
+    
+    // ===== VISUAL WORLD (SUPPORTING DIRECTION when moodboard present) =====
     if (request.visualWorld) {
-      sections.push("=== VISUAL WORLD ===");
+      if (hasMoodboard) {
+        sections.push("=== VISUAL WORLD (SUPPORTING DIRECTION) ===");
+        sections.push("MEDIUM WEIGHT: Use for composition, props, and scene structure. Blend harmoniously with moodboard aesthetic.");
+      } else {
+        sections.push("=== VISUAL WORLD ===");
+      }
       if (request.visualWorld.atmosphere) sections.push(`Atmosphere: ${request.visualWorld.atmosphere}`);
       if (request.visualWorld.materials?.length) sections.push(`Materials: ${request.visualWorld.materials.join(", ")}`);
       if (request.visualWorld.palette?.length) sections.push(`Color Palette: ${request.visualWorld.palette.join(", ")}`);
@@ -194,66 +221,6 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
     }
     
     // ===== TONALITY (from 9-point framework) =====
-    if (request.tonality) {
-      sections.push("=== TONALITY ===");
-      if (request.tonality.adjectives?.length) sections.push(`Feel: ${request.tonality.adjectives.join(", ")}`);
-      if (request.tonality.neverRules?.length) sections.push(`NEVER: ${request.tonality.neverRules.join(", ")}`);
-      // Legacy fields
-      if (request.tonality.voice) sections.push(`Voice: ${request.tonality.voice}`);
-      if (request.tonality.emotion) sections.push(`Emotion: ${request.tonality.emotion}`);
-      if (request.tonality.visualStyle) sections.push(`Visual Style: ${request.tonality.visualStyle}`);
-      sections.push("");
-    }
-    
-    // ===== TARGET AUDIENCE (from 9-point framework) =====
-    if (request.targetAudience) {
-      sections.push("=== TARGET AUDIENCE ===");
-      if (request.targetAudience.persona) sections.push(`Persona: ${request.targetAudience.persona}`);
-      if (request.targetAudience.situation) sections.push(`Situation: ${request.targetAudience.situation}`);
-      sections.push("");
-    }
-    
-    // ===== CONSUMER INSIGHT (from 9-point framework) =====
-    if (request.consumerInsight) {
-      sections.push("=== CONSUMER INSIGHT ===");
-      sections.push(request.consumerInsight);
-      sections.push("");
-    }
-    
-    // ===== TAGLINES (from 9-point framework) =====
-    if (request.taglines?.length) {
-      sections.push("=== TAGLINES ===");
-      sections.push(request.taglines.join(" | "));
-      sections.push("");
-    }
-    
-    // ===== CONTENT PILLARS (from 9-point framework) =====
-    if (request.contentPillars?.length) {
-      sections.push("=== CONTENT PILLARS ===");
-      for (const pillar of request.contentPillars) {
-        sections.push(`• ${pillar.name}: ${pillar.description}`);
-      }
-      sections.push("");
-    }
-    
-    // Moodboard Inspiration Section
-    if (request.moodboardName || request.moodboardDescription || request.moodboardAnalysis) {
-      sections.push("=== MOODBOARD INSPIRATION ===");
-      if (request.moodboardName) sections.push(`Moodboard: ${request.moodboardName}`);
-      if (request.moodboardDescription) sections.push(`Description: ${request.moodboardDescription}`);
-      if (request.moodboardAnalysis) {
-        const analysis = request.moodboardAnalysis;
-        if (analysis.dominant_colors?.length) sections.push(`Colors: ${analysis.dominant_colors.join(", ")}`);
-        if (analysis.color_mood) sections.push(`Color Mood: ${analysis.color_mood}`);
-        if (analysis.key_elements?.length) sections.push(`Key Visual Elements: ${analysis.key_elements.join(", ")}`);
-        if (analysis.lighting_quality) sections.push(`Lighting Reference: ${analysis.lighting_quality}`);
-        if (analysis.textures?.length) sections.push(`Textures: ${analysis.textures.join(", ")}`);
-        if (analysis.emotional_tone) sections.push(`Emotional Tone: ${analysis.emotional_tone}`);
-        if (analysis.suggested_props?.length) sections.push(`Suggested Props: ${analysis.suggested_props.join(", ")}`);
-        if (analysis.composition_style) sections.push(`Composition: ${analysis.composition_style}`);
-      }
-      sections.push("");
-    }
     
     // Product Section (product names for clarity)
     if (request.productNames && request.productNames.length > 0) {
@@ -312,13 +279,14 @@ CRITICAL RULES:
    - "Composition" = styled flat lay or arrangement with props
 2. Lead with the shot type and product, then build the scene around it
 3. **USE EXACT NAMES** - When product names are provided (e.g., "Lily Duet - Black/Gold"), use them EXACTLY as written. NEVER use placeholder syntax like "[Product Name]", "(e.g., ...)", or any bracketed templates. Write the actual name directly.
-4. Weave in 2-3 specific elements from the Visual World and moodboard analysis
-5. Set the mood, lighting, and atmosphere naturally as part of the scene description
-6. Be specific and evocative - use sensory language
-7. Keep it focused - one clear scene, not multiple concepts
-8. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle")
-9. Respect the Tonality - if "never rules" are specified, absolutely do NOT include those elements
-10. Match the target audience vibe without being heavy-handed
+4. **MOODBOARD LEADS STYLE** - When moodboard analysis is provided (marked as PRIMARY STYLE INFLUENCE), it carries HIGH WEIGHT for aesthetic decisions (colors, lighting, mood, atmosphere). The concept's Visual World carries MEDIUM WEIGHT for composition, props, and scene structure. BLEND both harmoniously, but when choosing colors, lighting, or mood, LEAN TOWARD the moodboard's aesthetic.
+5. Weave in 2-3 specific elements from BOTH the Visual World AND moodboard analysis, but let moodboard dominate the "feel"
+6. Set the mood, lighting, and atmosphere naturally - prioritize the moodboard's emotional tone
+7. Be specific and evocative - use sensory language
+8. Keep it focused - one clear scene, not multiple concepts
+9. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle")
+10. Respect the Tonality - if "never rules" are specified, absolutely do NOT include those elements
+11. Match the target audience vibe without being heavy-handed
 
 QUALITY STANDARDS:
 - High-quality, professional imagery
@@ -482,7 +450,7 @@ Deno.serve(async (req) => {
           });
           messageContent.push({
             type: "text",
-            text: "Use the above image as the STYLE and AESTHETIC reference. Match its color palette, mood, lighting, and visual atmosphere."
+            text: "⚠️ PRIMARY STYLE REFERENCE: This moodboard image should STRONGLY influence the color palette, lighting quality, mood, and visual atmosphere of the generated image. It carries HIGH WEIGHT for all aesthetic decisions. Blend it harmoniously with the text direction, but let this image lead the visual feel."
           });
         }
         
