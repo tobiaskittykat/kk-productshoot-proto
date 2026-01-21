@@ -10,7 +10,8 @@ import {
   Image as ImageIcon,
   Palette,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Expand
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { GeneratedImage } from './types';
@@ -37,6 +38,7 @@ export const ImageDetailModal = ({
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [resolvedMoodboardUrl, setResolvedMoodboardUrl] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
 
   // Resolve moodboard URL if we have ID but no URL
   useEffect(() => {
@@ -243,19 +245,28 @@ export const ImageDetailModal = ({
                     {resolvedMoodboardUrl && (
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground">Moodboard (Style)</p>
-                        <div className="aspect-video rounded-lg overflow-hidden border border-border bg-secondary/30">
+                        <div 
+                          className="aspect-video rounded-lg overflow-hidden border border-border bg-secondary/30 relative group cursor-pointer"
+                          onClick={() => !failedImages.has(resolvedMoodboardUrl) && setExpandedImageUrl(resolvedMoodboardUrl)}
+                        >
                           {failedImages.has(resolvedMoodboardUrl) ? (
                             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                               <AlertCircle className="w-5 h-5 mr-2" />
                               <span className="text-xs">Couldn't load</span>
                             </div>
                           ) : (
-                            <img
-                              src={resolvedMoodboardUrl}
-                              alt="Moodboard reference"
-                              className="w-full h-full object-cover"
-                              onError={() => handleImageError(resolvedMoodboardUrl)}
-                            />
+                            <>
+                              <img
+                                src={resolvedMoodboardUrl}
+                                alt="Moodboard reference"
+                                className="w-full h-full object-cover"
+                                onError={() => handleImageError(resolvedMoodboardUrl)}
+                              />
+                              {/* Expand hint */}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Expand className="w-5 h-5 text-white" />
+                              </div>
+                            </>
                           )}
                         </div>
                       </div>
@@ -348,6 +359,25 @@ export const ImageDetailModal = ({
           </div>
         </div>
       </DialogContent>
+
+      {/* Expanded Image Dialog */}
+      <Dialog open={!!expandedImageUrl} onOpenChange={(open) => !open && setExpandedImageUrl(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2 bg-black/95">
+          <button
+            onClick={() => setExpandedImageUrl(null)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          {expandedImageUrl && (
+            <img
+              src={expandedImageUrl}
+              alt="Expanded reference"
+              className="w-full h-full object-contain max-h-[85vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
