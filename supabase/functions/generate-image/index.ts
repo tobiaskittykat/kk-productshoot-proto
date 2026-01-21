@@ -13,10 +13,26 @@ interface GenerateImageRequest {
   conceptDescription?: string;
   coreIdea?: string;
   tonality?: {
+    adjectives?: string[];
+    neverRules?: string[];
     voice?: string;
     emotion?: string;
     visualStyle?: string;
   };
+  
+  // Full 9-point concept data (NEW)
+  visualWorld?: {
+    atmosphere?: string;
+    materials?: string[];
+    palette?: string[];
+    composition?: string;
+    mustHave?: string[];
+  };
+  contentPillars?: { name: string; description: string }[];
+  targetAudience?: { persona?: string; situation?: string };
+  consumerInsight?: string;
+  productFocus?: { productCategory?: string; visualGuidance?: string };
+  taglines?: string[];
   
   // Style settings
   moodboardId?: string;
@@ -66,7 +82,7 @@ interface GenerateImageRequest {
   brandId?: string;
   folder?: string;
   
-  // Brand context (NEW)
+  // Brand context
   brandContext?: {
     mission?: string;
     values?: string[];
@@ -114,8 +130,17 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       brandPersonality: request.brandPersonality,
     };
 
-    // Build the creative brief inline (same logic as craft-image-prompt function)
+    // Build the creative brief inline with ALL 9-point concept data
     const sections: string[] = [];
+    
+    // ===== SHOT DIRECTION FIRST (MANDATORY) =====
+    // Put shot type at the very top so it's emphasized as non-negotiable
+    if (request.shotTypePrompts && request.shotTypePrompts.length > 0) {
+      sections.push("=== MANDATORY SHOT DIRECTION ===");
+      sections.push("⚠️ CRITICAL: The following shot type MUST be followed exactly:");
+      sections.push(request.shotTypePrompts.join(". "));
+      sections.push("");
+    }
     
     // Brand Context Section
     if (request.brandContext || request.brandName || request.brandPersonality) {
@@ -140,16 +165,73 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       sections.push("");
     }
     
-    // Campaign Concept Section
+    // ===== PRODUCT FOCUS (from 9-point framework) =====
+    if (request.productFocus) {
+      sections.push("=== PRODUCT FOCUS ===");
+      if (request.productFocus.productCategory) sections.push(`Category: ${request.productFocus.productCategory}`);
+      if (request.productFocus.visualGuidance) sections.push(`Visual Guidance: ${request.productFocus.visualGuidance}`);
+      sections.push("");
+    }
+    
+    // Campaign Concept Section (Core Idea = Single-minded Idea)
     if (request.conceptTitle || request.conceptDescription || request.coreIdea) {
       sections.push("=== CAMPAIGN CONCEPT ===");
       if (request.conceptTitle) sections.push(`Title: ${request.conceptTitle}`);
-      if (request.coreIdea) sections.push(`Core Idea: ${request.coreIdea}`);
+      if (request.coreIdea) sections.push(`Single-Minded Idea: ${request.coreIdea}`);
       if (request.conceptDescription) sections.push(`Description: ${request.conceptDescription}`);
-      if (request.tonality) {
-        if (request.tonality.voice) sections.push(`Voice: ${request.tonality.voice}`);
-        if (request.tonality.emotion) sections.push(`Emotion: ${request.tonality.emotion}`);
-        if (request.tonality.visualStyle) sections.push(`Visual Style: ${request.tonality.visualStyle}`);
+      sections.push("");
+    }
+    
+    // ===== VISUAL WORLD (from 9-point framework) =====
+    if (request.visualWorld) {
+      sections.push("=== VISUAL WORLD ===");
+      if (request.visualWorld.atmosphere) sections.push(`Atmosphere: ${request.visualWorld.atmosphere}`);
+      if (request.visualWorld.materials?.length) sections.push(`Materials: ${request.visualWorld.materials.join(", ")}`);
+      if (request.visualWorld.palette?.length) sections.push(`Color Palette: ${request.visualWorld.palette.join(", ")}`);
+      if (request.visualWorld.composition) sections.push(`Composition Rule: ${request.visualWorld.composition}`);
+      if (request.visualWorld.mustHave?.length) sections.push(`MUST HAVE in frame: ${request.visualWorld.mustHave.join(", ")}`);
+      sections.push("");
+    }
+    
+    // ===== TONALITY (from 9-point framework) =====
+    if (request.tonality) {
+      sections.push("=== TONALITY ===");
+      if (request.tonality.adjectives?.length) sections.push(`Feel: ${request.tonality.adjectives.join(", ")}`);
+      if (request.tonality.neverRules?.length) sections.push(`NEVER: ${request.tonality.neverRules.join(", ")}`);
+      // Legacy fields
+      if (request.tonality.voice) sections.push(`Voice: ${request.tonality.voice}`);
+      if (request.tonality.emotion) sections.push(`Emotion: ${request.tonality.emotion}`);
+      if (request.tonality.visualStyle) sections.push(`Visual Style: ${request.tonality.visualStyle}`);
+      sections.push("");
+    }
+    
+    // ===== TARGET AUDIENCE (from 9-point framework) =====
+    if (request.targetAudience) {
+      sections.push("=== TARGET AUDIENCE ===");
+      if (request.targetAudience.persona) sections.push(`Persona: ${request.targetAudience.persona}`);
+      if (request.targetAudience.situation) sections.push(`Situation: ${request.targetAudience.situation}`);
+      sections.push("");
+    }
+    
+    // ===== CONSUMER INSIGHT (from 9-point framework) =====
+    if (request.consumerInsight) {
+      sections.push("=== CONSUMER INSIGHT ===");
+      sections.push(request.consumerInsight);
+      sections.push("");
+    }
+    
+    // ===== TAGLINES (from 9-point framework) =====
+    if (request.taglines?.length) {
+      sections.push("=== TAGLINES ===");
+      sections.push(request.taglines.join(" | "));
+      sections.push("");
+    }
+    
+    // ===== CONTENT PILLARS (from 9-point framework) =====
+    if (request.contentPillars?.length) {
+      sections.push("=== CONTENT PILLARS ===");
+      for (const pillar of request.contentPillars) {
+        sections.push(`• ${pillar.name}: ${pillar.description}`);
       }
       sections.push("");
     }
@@ -173,17 +255,10 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       sections.push("");
     }
     
-    // Product Section
+    // Product Section (product names for clarity)
     if (request.productNames && request.productNames.length > 0) {
-      sections.push("=== PRODUCT ===");
-      sections.push(`Feature: ${request.productNames.join(", ")}`);
-      sections.push("");
-    }
-    
-    // Shot Type Section
-    if (request.shotTypePrompts && request.shotTypePrompts.length > 0) {
-      sections.push("=== SHOT DIRECTION ===");
-      sections.push(request.shotTypePrompts.join(". "));
+      sections.push("=== PRODUCT REFERENCES ===");
+      sections.push(`Feature these products: ${request.productNames.join(", ")}`);
       sections.push("");
     }
     
@@ -219,20 +294,30 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
     
     const creativeBrief = sections.join("\n");
     
+    // Log the full creative brief for transparency
+    console.log("=== CREATIVE BRIEF SENT TO PROMPT AGENT ===");
+    console.log(creativeBrief);
+    console.log("============================================");
+    
     // Now call AI to craft the prompt
     const systemPrompt = `You are an expert creative director at a luxury fashion brand, skilled at crafting evocative image generation prompts.
 
 Your job is to take a creative brief and transform it into a single, cohesive image generation prompt that will produce stunning, on-brand visuals.
 
-GUIDELINES:
-1. Lead with the most important visual element (usually the product + how it's shown)
-2. Weave in 2-3 specific elements from the moodboard analysis if provided
-3. Set the mood, lighting, and atmosphere naturally as part of the scene description
-4. Be specific and evocative - use sensory language
-5. Keep it focused - one clear scene, not multiple concepts
-6. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle", "high-end fashion")
-7. If brand guidelines say to avoid something, make sure to NOT include those elements
-8. The prompt should feel like a creative direction, not a list of keywords
+CRITICAL RULES:
+1. **SHOT DIRECTION IS MANDATORY** - If a shot type is specified (e.g., "Product in Hand", "On Model", "Product Focus"), the generated image MUST follow it exactly. This is non-negotiable.
+   - "Product in Hand" = hands holding the product, close-up
+   - "On Model" = product being worn/carried by a person
+   - "Product Focus" = isolated product shot, no hands or models
+   - "Composition" = styled flat lay or arrangement with props
+2. Lead with the shot type and product, then build the scene around it
+3. Weave in 2-3 specific elements from the Visual World and moodboard analysis
+4. Set the mood, lighting, and atmosphere naturally as part of the scene description
+5. Be specific and evocative - use sensory language
+6. Keep it focused - one clear scene, not multiple concepts
+7. Include quality indicators naturally (e.g., "editorial photography", "luxury lifestyle")
+8. Respect the Tonality - if "never rules" are specified, absolutely do NOT include those elements
+9. Match the target audience vibe without being heavy-handed
 
 QUALITY STANDARDS:
 - High-quality, professional imagery
@@ -409,13 +494,17 @@ Deno.serve(async (req) => {
             type: "text",
             text: `Use the above ${productUrls.length} image(s) as the PRODUCT REFERENCE(s). Feature these products prominently in the generated image.`
           });
-        } else if ((body.productReferenceUrls || []).length > 0) {
-          // All refs were GIFs - add text note instead
-          console.log('Product references were GIFs (unsupported), skipping image attachment');
         }
         
-        // Note: Shot type guidance is now in the text prompt via buildPrompt()
+        // Note: Shot type guidance is now in the text prompt via the creative brief
         // No image attachment for shot references - they guide via text only
+        
+        // Log the multimodal content structure for transparency
+        console.log("=== MULTIMODAL CONTENT STRUCTURE ===");
+        console.log(JSON.stringify(messageContent.map(c => 
+          c.type === 'image_url' ? { type: 'image_url', url: c.image_url?.url?.slice(0, 100) + '...' } : c
+        ), null, 2));
+        console.log("=====================================");
 
         // Call Lovable AI Gateway for image generation
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
