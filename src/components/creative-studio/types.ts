@@ -77,6 +77,7 @@ export interface ConceptPresets {
   lightingStyle?: string;
   cameraAngle?: string;
   moodboardId?: string;
+  productIds?: string[];       // Up to 3 product reference IDs
   extraKeywords?: string[];
   useCase?: string;
   aspectRatio?: string;
