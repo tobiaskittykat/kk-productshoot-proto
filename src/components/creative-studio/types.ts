@@ -146,6 +146,16 @@ export interface GeneratedImage {
   productReferenceUrls?: string[]; // Support multiple product references
   contextReferenceUrl?: string;
   contextReferenceUrls?: string[]; // Support multiple context references
+  // Generation settings
+  settings?: {
+    aiModel?: string;
+    artisticStyle?: string;
+    lightingStyle?: string;
+    cameraAngle?: string;
+    resolution?: string;
+    aspectRatio?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface CreativeStudioState {
