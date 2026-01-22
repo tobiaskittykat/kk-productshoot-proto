@@ -20,7 +20,8 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
-  Check
+  Check,
+  ImageOff
 } from "lucide-react";
 import { 
   Select, 
@@ -999,15 +1000,54 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                     ))}
                   </>
                 ) : displayedMoodboards.length > 0 ? (
-                  displayedMoodboards.map((moodboard) => (
-                    <MoodboardThumbnail
-                      key={moodboard.id}
-                      moodboard={moodboard}
-                      isSelected={state.moodboard === moodboard.id}
-                      onSelect={() => handleMoodboardSelect(moodboard.id)}
-                      size="large"
-                    />
-                  ))
+                  displayedMoodboards.map((moodboard) => {
+                    const isSelected = state.moodboard === moodboard.id;
+                    const imageUrl = moodboard.thumbnail || (moodboard.filePath 
+                      ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/moodboards/${moodboard.filePath}`
+                      : '');
+                    return (
+                      <button
+                        key={moodboard.id}
+                        type="button"
+                        onClick={() => handleMoodboardSelect(moodboard.id)}
+                        className={`group relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
+                          isSelected
+                            ? 'border-accent ring-2 ring-accent/30 shadow-md'
+                            : 'border-border hover:border-accent/50'
+                        }`}
+                      >
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={moodboard.name}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="absolute inset-0 bg-secondary items-center justify-center hidden">
+                          <ImageOff className="w-8 h-8 text-muted-foreground/50" />
+                        </div>
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                        {/* Name */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none">
+                          <p className="text-sm font-medium text-white leading-tight">{moodboard.name}</p>
+                        </div>
+                        {/* Selected check */}
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-accent flex items-center justify-center pointer-events-none">
+                            <Check className="w-4 h-4 text-accent-foreground" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
                 ) : (
                   <div className="col-span-3 text-center py-8 text-muted-foreground text-sm">
                     No moodboards available. Upload some in the library.
