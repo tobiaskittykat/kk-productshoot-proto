@@ -184,9 +184,16 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to fetch brand images: ${imagesError.message}`);
       }
 
-      // Analyze any unanalyzed images first
-      const unanalyzedImages = (brandImages || []).filter(img => !img.visual_analysis);
-      console.log(`Found ${unanalyzedImages.length} unanalyzed images`);
+      // Analyze any unanalyzed images first, or images missing model detection data (legacy)
+      const unanalyzedImages = (brandImages || []).filter(img => {
+        // Re-analyze if no visual_analysis exists
+        if (!img.visual_analysis) return true;
+        // Also re-analyze if hasModel field is missing (legacy data before model detection)
+        const analysis = img.visual_analysis as Record<string, unknown>;
+        if (analysis.hasModel === undefined) return true;
+        return false;
+      });
+      console.log(`Found ${unanalyzedImages.length} images needing analysis (including legacy without model data)`);
 
       for (const img of unanalyzedImages) {
         try {
@@ -546,7 +553,7 @@ Synthesize this into a cohesive Brand Brain that:
                       description: "Model styling guidelines if the brand uses models"
                     }
                   },
-                  required: ["colorPalette", "colorMood", "photographyStyle", "texturePreferences", "lightingStyle", "compositionStyle", "avoidElements"]
+                  required: ["colorPalette", "colorMood", "photographyStyle", "texturePreferences", "lightingStyle", "compositionStyle", "avoidElements", "modelStyling"]
                 },
                 brandVoice: {
                   type: "object",
