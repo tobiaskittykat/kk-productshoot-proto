@@ -61,7 +61,7 @@ const navItems = [
   { id: "home", label: "Home", icon: Home },
   { id: "notifications", label: "Notifications", icon: Bell, badge: 9 },
   { id: "visual-editor", label: "Visual Editor", icon: PenTool },
-  { id: "gallery", label: "Gallery", icon: GalleryHorizontal },
+  { id: "gallery", label: "Gallery", icon: GalleryHorizontal, href: "/gallery" },
   { id: "task-lists", label: "Task Lists", icon: ListTodo },
   { id: "users", label: "Users", icon: Users },
   { id: "settings", label: "AI Settings", icon: Settings2, href: "/settings" },
