@@ -226,23 +226,67 @@ export function useBrandImages() {
 
       if (error) throw error;
 
+      // Check if processing in background
+      if (data?.processing) {
+        toast({
+          title: "Analyzing images...",
+          description: data.message || `Processing ${data.imagesToAnalyze} images. This may take a few minutes.`,
+        });
+        
+        // Start polling for completion
+        const pollForCompletion = async () => {
+          let attempts = 0;
+          const maxAttempts = 60; // Poll for up to 5 minutes (every 5 seconds)
+          
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+            attempts++;
+            
+            // Refetch brands to check if brandBrain has been updated
+            await refetchBrands();
+            
+            // Check if the brand brain has been updated recently
+            const { data: updatedBrand } = await supabase
+              .from('brands')
+              .select('brand_context')
+              .eq('id', currentBrand.id)
+              .single();
+            
+            const updatedBrain = (updatedBrand?.brand_context as any)?.brandBrain;
+            if (updatedBrain?.generatedAt) {
+              const generatedTime = new Date(updatedBrain.generatedAt).getTime();
+              const now = Date.now();
+              // If generated within the last 2 minutes, consider it complete
+              if (now - generatedTime < 120000) {
+                toast({
+                  title: "Brand Brain updated!",
+                  description: "Your brand's visual DNA has been regenerated.",
+                });
+                await refetchBrands();
+                return;
+              }
+            }
+          }
+          
+          toast({
+            title: "Still processing",
+            description: "Brand Brain regeneration is taking longer than expected. Please check back later.",
+          });
+        };
+        
+        // Start polling in background (don't await)
+        pollForCompletion();
+        
+        return null;
+      }
+
       if (data?.brandBrain) {
         // Refresh the brand data
         await refetchBrands();
-        
-        // Check if there are remaining images to analyze
-        if (data.pendingAnalysis && data.remainingImages > 0) {
-          toast({
-            title: `Analyzed ${data.analyzedThisBatch} images`,
-            description: `${data.remainingImages} images remaining. Click Regenerate again to continue.`,
-          });
-        } else {
-          toast({
-            title: "Brand Brain generated",
-            description: "Your brand's visual DNA has been updated",
-          });
-        }
-        
+        toast({
+          title: "Brand Brain generated",
+          description: "Your brand's visual DNA has been updated",
+        });
         return data.brandBrain as BrandBrain;
       }
 

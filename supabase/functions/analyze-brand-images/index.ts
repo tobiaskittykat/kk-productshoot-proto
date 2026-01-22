@@ -173,9 +173,7 @@ Deno.serve(async (req) => {
     if (regenerateBrain) {
       console.log(`Regenerating Brand Brain for brand: ${brandId}`);
 
-      // Batch size to prevent timeout - analyze max 10 images per call
-      const BATCH_SIZE = 10;
-      const PARALLEL_LIMIT = 3;
+      const PARALLEL_LIMIT = 5; // Analyze 5 images concurrently
 
       // Fetch all brand images
       const { data: brandImages, error: imagesError } = await supabase
@@ -199,14 +197,109 @@ Deno.serve(async (req) => {
       });
       
       const totalNeedingAnalysis = unanalyzedImages.length;
-      const imagesToAnalyze = unanalyzedImages.slice(0, BATCH_SIZE);
-      const remainingCount = Math.max(0, totalNeedingAnalysis - BATCH_SIZE);
-      
-      console.log(`Found ${totalNeedingAnalysis} images needing analysis. Processing ${imagesToAnalyze.length} this batch, ${remainingCount} remaining.`);
+      console.log(`Found ${totalNeedingAnalysis} images needing analysis`);
 
-      // Process images in parallel batches for speed
-      for (let i = 0; i < imagesToAnalyze.length; i += PARALLEL_LIMIT) {
-        const batch = imagesToAnalyze.slice(i, i + PARALLEL_LIMIT);
+      // Fetch existing brand context and preserve manual overrides
+      const existingContext = brand.brand_context || {};
+      const existingBrain = (existingContext as any).brandBrain;
+      
+      // Capture manual overrides that should be preserved
+      const manualOverrides = {
+        avoidElements: existingBrain?.visualDNA?.avoidElements,
+      };
+
+      // If there are many images to analyze, use background processing
+      if (totalNeedingAnalysis > 5) {
+        console.log(`Using background processing for ${totalNeedingAnalysis} images`);
+        
+        // Start background task for image analysis and synthesis
+        const backgroundTask = async () => {
+          try {
+            console.log(`Background: Starting analysis of ${totalNeedingAnalysis} images`);
+            
+            // Process all images in parallel batches
+            for (let i = 0; i < unanalyzedImages.length; i += PARALLEL_LIMIT) {
+              const batch = unanalyzedImages.slice(i, i + PARALLEL_LIMIT);
+              console.log(`Background: Processing batch ${Math.floor(i / PARALLEL_LIMIT) + 1}, images ${i + 1}-${Math.min(i + PARALLEL_LIMIT, unanalyzedImages.length)}`);
+              
+              await Promise.all(batch.map(async (img) => {
+                try {
+                  const analysis = await analyzeImage(img.image_url, LOVABLE_API_KEY);
+                  await supabase
+                    .from('brand_images')
+                    .update({ visual_analysis: analysis })
+                    .eq('id', img.id);
+                  img.visual_analysis = analysis;
+                  console.log(`Background: Analyzed image ${img.id}`);
+                } catch (err) {
+                  console.error(`Background: Failed to analyze image ${img.id}:`, err);
+                }
+              }));
+            }
+            
+            console.log(`Background: All images analyzed, synthesizing Brand Brain`);
+            
+            // Re-fetch images with updated analysis
+            const { data: updatedImages } = await supabase
+              .from('brand_images')
+              .select('*')
+              .eq('brand_id', brandId)
+              .eq('user_id', user.id);
+            
+            // Synthesize Brand Brain from all sources
+            const brandBrain = await synthesizeBrandBrain(
+              updatedImages || [],
+              existingContext,
+              brand.name,
+              LOVABLE_API_KEY
+            );
+
+            // Merge back manual overrides if they existed and had content
+            if (manualOverrides.avoidElements && manualOverrides.avoidElements.length > 0) {
+              console.log(`Background: Preserving ${manualOverrides.avoidElements.length} manual avoid elements`);
+              brandBrain.visualDNA.avoidElements = manualOverrides.avoidElements;
+            }
+
+            // Update brand with new Brand Brain
+            const newContext = {
+              ...existingContext,
+              brandBrain,
+            };
+
+            const { error: updateError } = await supabase
+              .from('brands')
+              .update({ brand_context: newContext })
+              .eq('id', brandId);
+
+            if (updateError) {
+              console.error(`Background: Failed to update brand: ${updateError.message}`);
+            } else {
+              console.log(`Background: Brand Brain regeneration complete for brand ${brandId}`);
+            }
+          } catch (err) {
+            console.error(`Background: Error during Brand Brain regeneration:`, err);
+          }
+        };
+
+        // Schedule background task and return immediately
+        EdgeRuntime.waitUntil(backgroundTask());
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            processing: true,
+            message: `Analyzing ${totalNeedingAnalysis} images in background. Brand Brain will update automatically when complete.`,
+            imagesToAnalyze: totalNeedingAnalysis
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // For small number of images, process synchronously
+      console.log(`Processing ${totalNeedingAnalysis} images synchronously`);
+      
+      for (let i = 0; i < unanalyzedImages.length; i += PARALLEL_LIMIT) {
+        const batch = unanalyzedImages.slice(i, i + PARALLEL_LIMIT);
         await Promise.all(batch.map(async (img) => {
           try {
             const analysis = await analyzeImage(img.image_url, LOVABLE_API_KEY);
@@ -221,16 +314,6 @@ Deno.serve(async (req) => {
           }
         }));
       }
-
-      // Fetch existing brand context and preserve manual overrides
-      const existingContext = brand.brand_context || {};
-      const existingBrain = (existingContext as any).brandBrain;
-      
-      // Capture manual overrides that should be preserved
-      const manualOverrides = {
-        avoidElements: existingBrain?.visualDNA?.avoidElements,
-        // Add other fields users might manually edit here
-      };
 
       // Synthesize Brand Brain from all sources
       const brandBrain = await synthesizeBrandBrain(
@@ -265,9 +348,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           brandBrain,
-          pendingAnalysis: remainingCount > 0,
-          remainingImages: remainingCount,
-          analyzedThisBatch: imagesToAnalyze.length
+          analyzedImages: totalNeedingAnalysis
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
