@@ -30,6 +30,15 @@ interface ProductReferencePickerProps {
   isSyncing?: boolean;
 }
 
+// Proxy external Shopify CDN URLs through our edge function to bypass hotlink protection
+const getProxiedUrl = (url: string) => {
+  if (url.includes('cdn.shopify.com') && !url.includes('supabase')) {
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    return `${base}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 export const ProductReferencePicker = ({
   isOpen,
   onClose,
@@ -176,10 +185,10 @@ export const ProductReferencePicker = ({
                           atLimit && "opacity-50 cursor-not-allowed"
                         )}
                       >
-                        {/* Image - now served from our storage, no referrerPolicy needed */}
+                        {/* Image - proxied through edge function to bypass hotlink protection */}
                         {!hasError ? (
                           <img
-                            src={product.thumbnailUrl}
+                            src={getProxiedUrl(product.thumbnailUrl)}
                             alt={product.name}
                             loading="lazy"
                             className="absolute inset-0 w-full h-full object-cover"
