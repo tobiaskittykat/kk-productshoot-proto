@@ -9,17 +9,20 @@ interface SelectionIndicatorsProps {
 interface IndicatorChipProps {
   label: string;
   selected: boolean;
+  isAuto?: boolean;
   onClick: () => void;
 }
 
-const IndicatorChip = ({ label, selected, onClick }: IndicatorChipProps) => (
+const IndicatorChip = ({ label, selected, isAuto, onClick }: IndicatorChipProps) => (
   <button
     type="button"
     onClick={onClick}
     className={cn(
       "flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-sm",
       "hover:text-foreground hover:bg-secondary/50",
-      selected ? "text-accent" : "text-muted-foreground"
+      selected 
+        ? (isAuto ? "text-muted-foreground" : "text-accent")
+        : "text-muted-foreground"
     )}
   >
     {selected && <Check className="w-3 h-3" />}
@@ -47,8 +50,8 @@ export const SelectionIndicators = ({ state }: SelectionIndicatorsProps) => {
 
   // Get shot type label if selected
   const shotLabel = hasShot 
-    ? sampleContextReferences.find(r => r.id === state.contextReference)?.name || 'Shot'
-    : 'Shot';
+    ? sampleContextReferences.find(r => r.id === state.contextReference)?.name || 'Shot Type'
+    : 'Shot Type (auto)';
 
   return (
     <div className="flex items-center gap-0.5">
@@ -77,8 +80,9 @@ export const SelectionIndicators = ({ state }: SelectionIndicatorsProps) => {
       <span className="text-muted-foreground/30">·</span>
       
       <IndicatorChip
-        label={hasShot ? shotLabel : 'Shot'}
-        selected={hasShot}
+        label={shotLabel}
+        selected={true}
+        isAuto={!hasShot}
         onClick={() => scrollToSection('section-shot-type')}
       />
     </div>
