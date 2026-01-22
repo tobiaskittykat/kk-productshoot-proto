@@ -84,6 +84,8 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
             ? refs.contextReferenceUrls 
             : (img.context_reference_url ? [img.context_reference_url] : undefined),
           contextReferenceUrl: img.context_reference_url || undefined,
+          // Generation settings (includes aiModel)
+          settings: settings || undefined,
         };
       });
       setPreviousImages(images);

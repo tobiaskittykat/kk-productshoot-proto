@@ -76,6 +76,17 @@ export const ImageDetailModal = ({
     }
   }, [image?.moodboardId, image?.moodboardUrl]);
 
+  // Format AI model name for display
+  const formatModelName = (model: string): string => {
+    const modelNames: Record<string, string> = {
+      'google/gemini-3-pro-image-preview': 'Gemini 3 Pro',
+      'google/gemini-2.5-flash-image-preview': 'Gemini 2.5 Flash',
+      'google/gemini-3-flash-preview': 'Gemini 3 Flash',
+      'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
+    };
+    return modelNames[model] || model.split('/').pop() || model;
+  };
+
   if (!image) return null;
 
   const handleDownload = async () => {
@@ -359,6 +370,14 @@ export const ImageDetailModal = ({
                 </div>
                 
                 <div className="space-y-2 text-sm">
+                  {/* AI Model */}
+                  {image.settings?.aiModel && (
+                    <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground">Model</span>
+                      <span className="text-xs font-medium">{formatModelName(image.settings.aiModel)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between py-1.5 border-b border-border/50">
                     <span className="text-muted-foreground">Status</span>
                     <span className={cn(
