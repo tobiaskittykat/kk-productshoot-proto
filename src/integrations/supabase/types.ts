@@ -236,6 +236,7 @@ export type Database = {
           objective: string | null
           output_format: string | null
           product_focus: Json | null
+          product_reference_ids: string[] | null
           taglines: string[] | null
           tags: string[] | null
           target_audience: Json | null
@@ -266,6 +267,7 @@ export type Database = {
           objective?: string | null
           output_format?: string | null
           product_focus?: Json | null
+          product_reference_ids?: string[] | null
           taglines?: string[] | null
           tags?: string[] | null
           target_audience?: Json | null
@@ -296,6 +298,7 @@ export type Database = {
           objective?: string | null
           output_format?: string | null
           product_focus?: Json | null
+          product_reference_ids?: string[] | null
           taglines?: string[] | null
           tags?: string[] | null
           target_audience?: Json | null

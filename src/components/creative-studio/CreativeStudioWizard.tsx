@@ -6,10 +6,11 @@ import { CreativeStudioHeader } from "./CreativeStudioHeader";
 import { StepOnePrompt } from "./StepOnePrompt";
 import { StepTwoCustomize } from "./StepTwoCustomize";
 import { UnifiedWorkspace } from "./UnifiedWorkspace";
-import { CreativeStudioState, initialCreativeStudioState, GeneratedImage } from "./types";
+import { CreativeStudioState, initialCreativeStudioState, GeneratedImage, SavedConcept } from "./types";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useBrands } from "@/hooks/useBrands";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CreativeStudioWizardProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   const [previousImages, setPreviousImages] = useState<GeneratedImage[]>([]);
   const navigate = useNavigate();
   const { currentBrand } = useBrands();
+  const { user } = useAuth();
   const { 
     isGeneratingConcepts, 
     isGeneratingImages, 
@@ -93,6 +95,55 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
     fetchPreviousImages();
   }, [fetchPreviousImages]);
 
+  // Fetch saved concepts on mount for Step 1 display
+  useEffect(() => {
+    const fetchSavedConcepts = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('saved_concepts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (data && !error) {
+        const concepts: SavedConcept[] = data.map(row => ({
+          id: row.id,
+          userId: row.user_id,
+          brandId: row.brand_id,
+          title: row.title,
+          description: row.description,
+          tags: row.tags || [],
+          coreIdea: row.core_idea || undefined,
+          consumerInsight: row.consumer_insight || undefined,
+          productFocus: row.product_focus as any || undefined,
+          visualWorld: row.visual_world as any || undefined,
+          taglines: row.taglines || undefined,
+          contentPillars: row.content_pillars as any || undefined,
+          targetAudience: row.target_audience as any || undefined,
+          tonality: row.tonality as any || undefined,
+          presets: {
+            artisticStyle: row.artistic_style || undefined,
+            lightingStyle: row.lighting_style || undefined,
+            cameraAngle: row.camera_angle || undefined,
+            moodboardId: row.moodboard_id || undefined,
+            productIds: (row as any).product_reference_ids || undefined,
+            extraKeywords: row.extra_keywords || undefined,
+            useCase: row.use_case || undefined,
+            aspectRatio: row.aspect_ratio || undefined,
+          },
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        }));
+        
+        handleUpdate({ savedConcepts: concepts });
+      }
+    };
+    
+    fetchSavedConcepts();
+  }, [user?.id]);
+
   // Refetch when new images are generated
   useEffect(() => {
     if (state.generatedImages.length > 0) {
@@ -135,6 +186,33 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
 
   const handleBack = useCallback(() => {
     handleUpdate({ step: 1 });
+  }, [handleUpdate]);
+
+  // Load a saved concept and jump to Step 2 with all presets applied
+  const handleLoadSavedConcept = useCallback((concept: SavedConcept) => {
+    const updates: Partial<CreativeStudioState> = {
+      step: 2,
+      prompt: concept.description,
+      selectedConcept: concept.id,
+      concepts: [concept], // Put saved concept in the list
+      isLoadingConcepts: false,
+      // Apply all saved presets
+      moodboard: concept.presets?.moodboardId || null,
+      productReferences: concept.presets?.productIds || [],
+      displayedMoodboardIds: concept.presets?.moodboardId ? [concept.presets.moodboardId] : [],
+      displayedProductIds: concept.presets?.productIds || [],
+      artisticStyle: concept.presets?.artisticStyle || null,
+      lightingStyle: concept.presets?.lightingStyle || 'auto',
+      cameraAngle: concept.presets?.cameraAngle || 'auto',
+      aspectRatio: concept.presets?.aspectRatio || '1:1',
+      extraKeywords: concept.presets?.extraKeywords || [],
+      useCase: (concept.presets?.useCase as CreativeStudioState['useCase']) || 'lifestyle',
+      // Reset curated options since we have saved selections
+      curatedMoodboards: [],
+      curatedProducts: [],
+    };
+    
+    handleUpdate(updates);
   }, [handleUpdate]);
 
   const handleGenerate = useCallback(async () => {
@@ -324,6 +402,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 <StepOnePrompt 
                   state={state} 
                   onUpdate={handleUpdate}
+                  onLoadSavedConcept={handleLoadSavedConcept}
                 />
                 
                 {/* Step 1 Footer */}

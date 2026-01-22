@@ -371,19 +371,36 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
 
   // Handle concept selection with preset application
   const handleConceptSelect = useCallback((concept: Concept) => {
-    // Reset the smart-match tracker so it will run for the new concept
-    setLastMatchedConcept(null);
+    // Check if this concept has saved presets (moodboard/products)
+    const hasSavedPresets = concept.presets?.moodboardId || (concept.presets?.productIds?.length ?? 0) > 0;
+    
+    // Only reset smart-match tracker if we don't have saved presets
+    if (!hasSavedPresets) {
+      setLastMatchedConcept(null);
+    }
     
     const updates: Partial<CreativeStudioState> = {
       selectedConcept: concept.id,
       // Reset curated options when concept changes (will be repopulated by smart-match)
       curatedMoodboards: [],
       curatedProducts: [],
-      moodboard: null,
-      productReferences: [],
     };
 
-    // Apply presets if the concept has them
+    // If concept has saved presets for moodboard/products, apply them directly (skip smart-match)
+    if (hasSavedPresets) {
+      updates.moodboard = concept.presets?.moodboardId || null;
+      updates.productReferences = concept.presets?.productIds || [];
+      updates.displayedMoodboardIds = concept.presets?.moodboardId ? [concept.presets.moodboardId] : [];
+      updates.displayedProductIds = concept.presets?.productIds || [];
+      // Mark as already matched to skip smart-match
+      setLastMatchedConcept(concept.id);
+    } else {
+      // Reset selections for smart-match to populate
+      updates.moodboard = null;
+      updates.productReferences = [];
+    }
+
+    // Apply other presets if the concept has them
     if (concept.presets) {
       const presets = concept.presets;
       if (presets.artisticStyle) updates.artisticStyle = presets.artisticStyle;
@@ -415,6 +432,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
         lightingStyle: state.lightingStyle !== 'auto' ? state.lightingStyle : undefined,
         cameraAngle: state.cameraAngle !== 'auto' ? state.cameraAngle : undefined,
         moodboardId: state.moodboard || undefined,
+        productIds: state.productReferences.length > 0 ? state.productReferences : undefined,
         extraKeywords: state.extraKeywords.length > 0 ? state.extraKeywords : undefined,
         useCase: state.useCase,
         aspectRatio: state.aspectRatio,
@@ -430,6 +448,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
         lighting_style: presets.lightingStyle || null,
         camera_angle: presets.cameraAngle || null,
         moodboard_id: presets.moodboardId || null,
+        product_reference_ids: presets.productIds || [],
         extra_keywords: presets.extraKeywords || [],
         use_case: presets.useCase || null,
         aspect_ratio: presets.aspectRatio || null,
@@ -494,6 +513,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
           lightingStyle: row.lighting_style || undefined,
           cameraAngle: row.camera_angle || undefined,
           moodboardId: row.moodboard_id || undefined,
+          productIds: (row as any).product_reference_ids || undefined,
           extraKeywords: row.extra_keywords || undefined,
           useCase: row.use_case || undefined,
           aspectRatio: row.aspect_ratio || undefined,

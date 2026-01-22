@@ -1,10 +1,11 @@
-import { Shuffle, Plus } from "lucide-react";
+import { Shuffle, Plus, Bookmark, ImageIcon, Package } from "lucide-react";
 import { useState, useEffect } from "react";
-import { CreativeStudioState } from "./types";
+import { CreativeStudioState, SavedConcept } from "./types";
 
 interface StepOnePromptProps {
   state: CreativeStudioState;
   onUpdate: (updates: Partial<CreativeStudioState>) => void;
+  onLoadSavedConcept?: (concept: SavedConcept) => void;
 }
 
 // Marketing-style briefs for Bandolier - organized by type
@@ -51,7 +52,7 @@ const getRandomBriefs = (typeId: string, count: number = 6): string[] => {
   return shuffled.slice(0, count);
 };
 
-export const StepOnePrompt = ({ state, onUpdate }: StepOnePromptProps) => {
+export const StepOnePrompt = ({ state, onUpdate, onLoadSavedConcept }: StepOnePromptProps) => {
   const [displayedBriefs, setDisplayedBriefs] = useState<string[]>([]);
 
   // Initialize and update briefs when type changes
@@ -73,6 +74,57 @@ export const StepOnePrompt = ({ state, onUpdate }: StepOnePromptProps) => {
 
   return (
     <div className="flex flex-col items-center max-w-3xl mx-auto space-y-6 pt-8">
+      {/* Saved Concepts Section - show when available and prompt is empty */}
+      {!state.prompt.trim() && state.savedConcepts.length > 0 && onLoadSavedConcept && (
+        <div className="w-full space-y-5">
+          {/* Section Header */}
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-sm text-muted-foreground font-medium px-2 flex items-center gap-2">
+              <Bookmark className="w-4 h-4" />
+              Your saved concepts
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+
+          {/* Saved Concept Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {state.savedConcepts.slice(0, 6).map((concept) => (
+              <button
+                key={concept.id}
+                onClick={() => onLoadSavedConcept(concept)}
+                className="group flex flex-col gap-2.5 p-5 rounded-2xl bg-card border border-border hover:border-accent/40 hover:shadow-md transition-all duration-200 text-left"
+                style={{
+                  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <span className="font-medium text-sm text-foreground group-hover:text-accent transition-colors line-clamp-1">
+                  {concept.title}
+                </span>
+                <span className="text-xs text-muted-foreground line-clamp-2">
+                  {concept.description}
+                </span>
+                {/* Show saved assets indicators */}
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {concept.presets?.moodboardId && (
+                    <span className="inline-flex items-center gap-1 text-xs bg-secondary/80 text-muted-foreground px-2 py-0.5 rounded-full">
+                      <ImageIcon className="w-3 h-3" />
+                      Moodboard
+                    </span>
+                  )}
+                  {(concept.presets?.productIds?.length ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs bg-secondary/80 text-muted-foreground px-2 py-0.5 rounded-full">
+                      <Package className="w-3 h-3" />
+                      {concept.presets!.productIds!.length} Product{concept.presets!.productIds!.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Example Briefs Section - only show when prompt is empty */}
       {!state.prompt.trim() && (
       <div className="w-full space-y-5">
