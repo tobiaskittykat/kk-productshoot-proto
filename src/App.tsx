@@ -14,6 +14,7 @@ import CreateImage from "./pages/CreateImage";
 import EditImage from "./pages/EditImage";
 import BatchGenerate from "./pages/BatchGenerate";
 import Settings from "./pages/Settings";
+import Gallery from "./pages/Gallery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gallery"
+                element={
+                  <ProtectedRoute>
+                    <Gallery />
                   </ProtectedRoute>
                 }
               />
