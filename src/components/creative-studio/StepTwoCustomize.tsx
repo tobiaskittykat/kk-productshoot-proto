@@ -679,9 +679,24 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
     
     // If we have stable display IDs, use them directly (maintains order)
     if (displayIds.length > 0) {
-      return displayIds
-        .map(id => customMoodboards.find(m => m.id === id))
+      const resolved = displayIds
+        .map(id => {
+          // Handle both "custom-{uuid}" and raw "{uuid}" formats
+          const rawId = id.startsWith('custom-') ? id.replace('custom-', '') : id;
+          return customMoodboards.find(m => m.id === rawId || m.id === id);
+        })
         .filter(Boolean) as Moodboard[];
+      
+      // Backfill to 3 if we lost any moodboards (deleted, stale ID, etc.)
+      if (resolved.length < 3 && customMoodboards.length > resolved.length) {
+        const resolvedIds = new Set(resolved.map(m => m.id));
+        const backfill = customMoodboards
+          .filter(m => !resolvedIds.has(m.id))
+          .slice(0, 3 - resolved.length);
+        return [...resolved, ...backfill];
+      }
+      
+      return resolved;
     }
     
     // Fallback: use curated or first 3 (initial state before smart-match runs)
