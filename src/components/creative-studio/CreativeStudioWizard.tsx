@@ -404,14 +404,22 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
               
               <button
                 onClick={handleGenerate}
-                disabled={isGeneratingImages || isAgentMatching}
+                disabled={isGeneratingImages || isAgentMatching || isGeneratingConcepts || state.isLoadingConcepts}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
                 style={{
-                  boxShadow: !isGeneratingImages && !isAgentMatching ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                  boxShadow: !isGeneratingImages && !isAgentMatching && !isGeneratingConcepts && !state.isLoadingConcepts 
+                    ? '0 8px 32px rgba(107, 124, 255, 0.25)' 
+                    : undefined
                 }}
               >
                 <Sparkles className="w-5 h-5" />
-                {isAgentMatching ? 'Matching...' : isGeneratingImages ? 'Generating...' : `Generate (${state.imageCount} images)`}
+                {isGeneratingConcepts || state.isLoadingConcepts 
+                  ? 'Creating concepts...' 
+                  : isAgentMatching 
+                    ? 'Matching...' 
+                    : isGeneratingImages 
+                      ? 'Generating...' 
+                      : `Generate (${state.imageCount} images)`}
               </button>
             </div>
           </div>
