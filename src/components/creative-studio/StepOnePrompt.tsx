@@ -1,70 +1,85 @@
-import { Shuffle, Plus, Bookmark } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Shuffle, Plus, Bookmark, RefreshCw } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { CreativeStudioState, SavedConcept } from "./types";
 import { SavedConceptsModal } from "./SavedConceptsModal";
+import { Brand } from "@/hooks/useBrands";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StepOnePromptProps {
   state: CreativeStudioState;
   onUpdate: (updates: Partial<CreativeStudioState>) => void;
+  currentBrand?: Brand;
   onLoadSavedConcept?: (concept: SavedConcept) => void;
   onDeleteSavedConcept?: (conceptId: string) => void;
 }
 
-// Marketing-style briefs - generic examples that work for any brand
-const exampleBriefsByType: Record<string, string[]> = {
-  lifestyle: [
-    // Summer/Travel campaigns
-    "Summer collection launch - effortless getaway vibes, golden hour luxury",
-    "Vacation essentials shoot - poolside to dinner, versatile elegance",
-    "Coastal collection campaign - sun-drenched elegance, ocean blues",
-    
-    // Festival/Desert campaigns
-    "Festival season drop - desert sunset energy, bold and expressive",
-    "Road trip content series - open highways, adventure-ready style",
-    "Southwest-inspired editorial - earthy tones, effortless boho-luxe",
-    
-    // Urban/Street Style campaigns
-    "City essentials campaign - coffee run to cocktail hour, urban chic",
-    "Street style editorial - fashion week energy, sophisticated edge",
-    "Morning routine content - everyday luxury, authentic moments",
-    
-    // Party/Evening campaigns
-    "Holiday party campaign - champagne moments, after-dark glamour",
-    "NYE collection shoot - celebration vibes, sparkle and spontaneity",
-    "Night out content - getting ready together, going out in style",
-    
-    // Floral/Spring campaigns
-    "Spring refresh campaign - garden party meets street style",
-    "Mother's Day gifting shoot - brunch settings, fresh florals, thoughtful luxury",
-    "New arrivals launch - spring color story, bright and optimistic",
-    
-    // Bold/Statement campaigns
-    "Statement print drop - bold patterns, unapologetically confident",
-    "Power accessories editorial - strong silhouettes, confident energy",
-    "Fall fashion campaign - rich tones, texture-forward styling",
-  ],
-  product: [],
-  localization: [],
-  ugc: [],
-};
+// Generic fallback briefs
+const genericFallbackBriefs = [
+  "Summer collection launch - golden hour luxury, effortless elegance",
+  "Festival season drop - desert sunset vibes, bold and expressive",
+  "City essentials campaign - coffee run to cocktail hour, urban chic",
+  "Holiday party shoot - champagne moments, after-dark glamour",
+  "Spring refresh campaign - garden party meets street style",
+  "Street style editorial - fashion week energy, sophisticated edge",
+];
 
-const getRandomBriefs = (typeId: string, count: number = 6): string[] => {
-  const briefs = exampleBriefsByType[typeId] || exampleBriefsByType.product;
-  const shuffled = [...briefs].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-};
-
-export const StepOnePrompt = ({ state, onUpdate, onLoadSavedConcept, onDeleteSavedConcept }: StepOnePromptProps) => {
+export const StepOnePrompt = ({ state, onUpdate, currentBrand, onLoadSavedConcept, onDeleteSavedConcept }: StepOnePromptProps) => {
   const [displayedBriefs, setDisplayedBriefs] = useState<string[]>([]);
+  const [cachedBriefs, setCachedBriefs] = useState<string[]>([]);
+  const [isLoadingBriefs, setIsLoadingBriefs] = useState(false);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastBrandIdRef = useRef<string | null>(null);
 
-  // Initialize and update briefs when type changes
+  // Fetch brand-specific briefs from AI
+  const fetchBrandBriefs = useCallback(async (brand: Brand) => {
+    setIsLoadingBriefs(true);
+    
+    try {
+      const brandContext = brand.brand_context as Record<string, any> | null;
+      const brandBrain = brandContext?.brandBrain;
+      
+      const { data, error } = await supabase.functions.invoke('generate-brief-suggestions', {
+        body: {
+          brandName: brand.name,
+          industry: brand.industry,
+          personality: brand.personality,
+          brandBrain: brandBrain,
+          count: 18
+        }
+      });
+
+      if (error) {
+        console.error('Error fetching briefs:', error);
+        setCachedBriefs(genericFallbackBriefs);
+        setDisplayedBriefs(genericFallbackBriefs);
+      } else {
+        const briefs = data?.briefs || genericFallbackBriefs;
+        setCachedBriefs(briefs);
+        setDisplayedBriefs(briefs.slice(0, 6));
+      }
+    } catch (err) {
+      console.error('Failed to fetch brand briefs:', err);
+      setCachedBriefs(genericFallbackBriefs);
+      setDisplayedBriefs(genericFallbackBriefs);
+    } finally {
+      setIsLoadingBriefs(false);
+    }
+  }, []);
+
+  // Fetch briefs when brand changes
   useEffect(() => {
-    const typeId = state.selectedTypeCard || 'product';
-    setDisplayedBriefs(getRandomBriefs(typeId));
-  }, [state.selectedTypeCard]);
+    if (currentBrand?.id && currentBrand.id !== lastBrandIdRef.current) {
+      lastBrandIdRef.current = currentBrand.id;
+      fetchBrandBriefs(currentBrand);
+    } else if (!currentBrand) {
+      // No brand - use generic fallbacks
+      setCachedBriefs(genericFallbackBriefs);
+      setDisplayedBriefs(genericFallbackBriefs);
+    }
+  }, [currentBrand?.id, fetchBrandBriefs]);
 
   // Smooth transition when prompt changes
   useEffect(() => {
@@ -76,8 +91,21 @@ export const StepOnePrompt = ({ state, onUpdate, onLoadSavedConcept, onDeleteSav
   }, [state.prompt]);
 
   const handleShuffle = () => {
-    const typeId = state.selectedTypeCard || 'product';
-    setDisplayedBriefs(getRandomBriefs(typeId));
+    if (cachedBriefs.length <= 6) {
+      // Not enough cached, just shuffle what we have
+      const shuffled = [...cachedBriefs].sort(() => Math.random() - 0.5);
+      setDisplayedBriefs(shuffled.slice(0, 6));
+    } else {
+      // Pick 6 random from cache
+      const shuffled = [...cachedBriefs].sort(() => Math.random() - 0.5);
+      setDisplayedBriefs(shuffled.slice(0, 6));
+    }
+  };
+
+  const handleRegenerate = () => {
+    if (currentBrand) {
+      fetchBrandBriefs(currentBrand);
+    }
   };
 
   const handleBriefClick = (brief: string) => {
@@ -107,21 +135,35 @@ export const StepOnePrompt = ({ state, onUpdate, onLoadSavedConcept, onDeleteSav
 
         {/* Brief Cards Grid - KittyKat style */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {displayedBriefs.map((brief, index) => (
-            <button
-              key={index}
-              onClick={() => handleBriefClick(brief)}
-              className="group flex items-start gap-3 p-5 rounded-2xl bg-card border border-border hover:border-accent/40 hover:shadow-md transition-all duration-200 text-left"
-              style={{
-                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
-              }}
-            >
-              <span className="text-muted-foreground text-sm leading-relaxed flex-1 group-hover:text-foreground transition-colors">
-                {brief}
-              </span>
-              <Plus className="w-4 h-4 text-muted-foreground/40 group-hover:text-accent transition-colors shrink-0 mt-0.5" />
-            </button>
-          ))}
+          {isLoadingBriefs ? (
+            // Loading skeletons
+            Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="p-5 rounded-2xl bg-card border border-border"
+                style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)' }}
+              >
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ))
+          ) : (
+            displayedBriefs.map((brief, index) => (
+              <button
+                key={index}
+                onClick={() => handleBriefClick(brief)}
+                className="group flex items-start gap-3 p-5 rounded-2xl bg-card border border-border hover:border-accent/40 hover:shadow-md transition-all duration-200 text-left"
+                style={{
+                  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <span className="text-muted-foreground text-sm leading-relaxed flex-1 group-hover:text-foreground transition-colors">
+                  {brief}
+                </span>
+                <Plus className="w-4 h-4 text-muted-foreground/40 group-hover:text-accent transition-colors shrink-0 mt-0.5" />
+              </button>
+            ))
+          )}
         </div>
 
         {/* Action Buttons Row */}
@@ -129,9 +171,19 @@ export const StepOnePrompt = ({ state, onUpdate, onLoadSavedConcept, onDeleteSav
           <button
             onClick={handleShuffle}
             className="action-chip"
+            disabled={isLoadingBriefs}
           >
             <Shuffle className="w-4 h-4" />
             Shuffle
+          </button>
+          
+          <button
+            onClick={handleRegenerate}
+            className="action-chip"
+            disabled={isLoadingBriefs}
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingBriefs ? 'animate-spin' : ''}`} />
+            {isLoadingBriefs ? 'Generating...' : 'New ideas'}
           </button>
           
           {state.savedConcepts.length > 0 && onLoadSavedConcept && (

@@ -452,6 +452,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 <StepOnePrompt 
                   state={state} 
                   onUpdate={handleUpdate}
+                  currentBrand={currentBrand}
                   onLoadSavedConcept={handleLoadSavedConcept}
                   onDeleteSavedConcept={handleDeleteSavedConcept}
                 />
