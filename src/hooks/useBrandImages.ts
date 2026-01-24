@@ -422,10 +422,58 @@ export function useBrandImages() {
     }
   }, [user, currentBrand, fetchImages, toast]);
 
-  // Get the first logo image for the current brand
+  // Get the primary logo ID from brand context
+  const getPrimaryLogoId = useCallback((): string | null => {
+    if (!currentBrand?.brand_context) return null;
+    return (currentBrand.brand_context as any)?.primary_logo_id || null;
+  }, [currentBrand]);
+
+  // Set the primary logo ID in brand context
+  const setPrimaryLogo = useCallback(async (imageId: string) => {
+    if (!currentBrand) return false;
+
+    try {
+      const existingContext = currentBrand.brand_context || {};
+      const newContext = {
+        ...existingContext,
+        primary_logo_id: imageId,
+      };
+
+      const { error } = await updateBrand(currentBrand.id, {
+        brand_context: newContext,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Primary logo updated",
+      });
+      return true;
+    } catch (err) {
+      console.error("Error setting primary logo:", err);
+      toast({
+        title: "Failed to set primary logo",
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [currentBrand, updateBrand, toast]);
+
+  // Get the primary logo image for the current brand
   const getBrandLogo = useCallback((): BrandImage | null => {
-    return images.find(img => img.category === 'logo') || null;
-  }, [images]);
+    const logoImages = images.filter(img => img.category === 'logo');
+    if (logoImages.length === 0) return null;
+
+    // Check for designated primary
+    const primaryId = (currentBrand?.brand_context as any)?.primary_logo_id;
+    if (primaryId) {
+      const primary = logoImages.find(img => img.id === primaryId);
+      if (primary) return primary;
+    }
+
+    // Fall back to most recently uploaded (first in array since sorted desc)
+    return logoImages[0];
+  }, [images, currentBrand]);
 
   return {
     images,
@@ -441,5 +489,7 @@ export function useBrandImages() {
     updateBrandBrain,
     scrapeFromWebsite,
     getBrandLogo,
+    getPrimaryLogoId,
+    setPrimaryLogo,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { 
@@ -29,6 +29,7 @@ import {
   Brain
 } from "lucide-react";
 import { BrandBrainSection } from "@/components/settings/BrandBrainSection";
+import { LogoUploadSection } from "@/components/brand/LogoUploadSection";
 import {
   Select,
   SelectContent,
@@ -37,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBrands } from "@/hooks/useBrands";
+import { useBrandImages } from "@/hooks/useBrandImages";
 import BrandSelector from "@/components/BrandSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -128,6 +130,15 @@ const platformIcons: Record<string, React.ReactNode> = {
 const BrandSection = ({ brandRef }: BrandSectionProps) => {
   const navigate = useNavigate();
   const { currentBrand, updateBrand } = useBrands();
+  const { 
+    images, 
+    fetchImages, 
+    uploadImage, 
+    deleteImage, 
+    isUploading,
+    getPrimaryLogoId,
+    setPrimaryLogo 
+  } = useBrandImages();
   const [activeTab, setActiveTab] = useState("overview");
   const [isOpen, setIsOpen] = useState(true);
   
@@ -139,6 +150,13 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
   const [newPlatformUrl, setNewPlatformUrl] = useState("");
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
   const [editPlatformUrl, setEditPlatformUrl] = useState("");
+
+  // Fetch brand images when brand changes
+  useEffect(() => {
+    if (currentBrand) {
+      fetchImages();
+    }
+  }, [currentBrand?.id, fetchImages]);
 
   // All available platforms
   const allPlatforms = ["website", "instagram", "pinterest", "youtube", "facebook", "linkedin", "twitter", "tiktok"];
@@ -379,6 +397,16 @@ const BrandSection = ({ brandRef }: BrandSectionProps) => {
 
           {/* Identity Tab */}
           <TabsContent value="identity" className="space-y-6">
+            {/* Brand Logos - NEW */}
+            <LogoUploadSection
+              logos={images.filter(img => img.category === 'logo')}
+              primaryLogoId={getPrimaryLogoId()}
+              onUpload={(file) => uploadImage(file, 'logo')}
+              onDelete={deleteImage}
+              onSetPrimary={setPrimaryLogo}
+              isUploading={isUploading}
+            />
+
             {/* Colors */}
             <div className="glass-card p-6">
               <h3 className="font-semibold mb-4">Brand Colors</h3>

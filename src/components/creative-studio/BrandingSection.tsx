@@ -66,7 +66,7 @@ export const BrandingSection = ({ logoPlacement, onUpdate }: BrandingSectionProp
             <div className="text-xs text-muted-foreground">
               <p className="font-medium text-warning mb-1">No logo uploaded yet</p>
               <p>
-                Go to <span className="font-medium">Settings → Brand Brain</span> and upload an image with category "Logo" to enable this feature.
+                Go to <span className="font-medium">Brand → Brand DNA</span> tab to upload your logo.
               </p>
             </div>
           </div>
