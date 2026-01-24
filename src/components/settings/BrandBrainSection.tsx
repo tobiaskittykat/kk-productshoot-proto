@@ -10,8 +10,8 @@ import { useBrandImages, BrandBrain, VisualDNA, ColorPalette, ModelStyling } fro
 import { useBrands } from "@/hooks/useBrands";
 import { cn } from "@/lib/utils";
 
+// Logo is now managed in Brand DNA tab - removed from here
 const IMAGE_CATEGORIES = [
-  { value: "logo", label: "Logo" },
   { value: "campaign", label: "Campaign" },
   { value: "product", label: "Product" },
   { value: "lifestyle", label: "Lifestyle" },
