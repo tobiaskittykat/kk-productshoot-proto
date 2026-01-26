@@ -75,22 +75,30 @@ serve(async (req) => {
   }
 
   try {
-    const { concept, moodboards, products } = await req.json() as {
-      concept: ConceptInput;
-      moodboards: MoodboardInput[];
-      products: ProductInput[];
+    const body = await req.json();
+    const { concept, moodboards = [], products = [] } = body as {
+      concept?: ConceptInput;
+      moodboards?: MoodboardInput[];
+      products?: ProductInput[];
     };
+
+    // Validate concept exists BEFORE accessing properties
+    if (!concept || !concept.title) {
+      console.log('Smart match called without valid concept');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No concept provided',
+          rankedMoodboards: [],
+          rankedProducts: [],
+          matchReason: 'No concept to match against'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log('Smart matching for concept:', concept.title);
     console.log('Available moodboards:', moodboards.length);
     console.log('Available products:', products.length);
-
-    if (!concept) {
-      return new Response(
-        JSON.stringify({ error: 'No concept provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Build the matching prompt
     const conceptDescription = [
