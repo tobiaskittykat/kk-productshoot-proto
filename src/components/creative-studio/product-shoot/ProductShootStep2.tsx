@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Paintbrush, ImageIcon, User, Camera, Package } from "lucide-react";
+import { ChevronDown, ChevronRight, ImageIcon, User, Camera, Package } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BackgroundSelector } from "./BackgroundSelector";
 import { ModelConfigurator } from "./ModelConfigurator";
-import { ProductRecolorModal } from "./ProductRecolorModal";
 import { ProductSKUPicker, ProductSKU } from "./ProductSKUPicker";
 import { CreateSKUModal } from "./CreateSKUModal";
 import { ShotTypeVisualSelector } from "./ShotTypeVisualSelector";
@@ -11,7 +10,6 @@ import {
   ProductShootState, 
   ProductShotType,
   initialProductShootState,
-  RecolorOption,
 } from "./types";
 
 interface ProductShootStep2Props {
@@ -39,7 +37,6 @@ export const ProductShootStep2 = ({
     shotType: true,
   });
   
-  const [showRecolorModal, setShowRecolorModal] = useState(false);
   const [showCreateSKUModal, setShowCreateSKUModal] = useState(false);
   const [selectedSku, setSelectedSku] = useState<ProductSKU | null>(null);
 
@@ -50,21 +47,6 @@ export const ProductShootStep2 = ({
   // Check if shot type needs a model
   const needsModel = !['flat-lay', 'product-focus'].includes(state.productShotType);
 
-  const handleRecolor = async (option: RecolorOption, color: string): Promise<string | null> => {
-    onStateChange({
-      productRecolorOption: option,
-      productTargetColor: color,
-    });
-    
-    if (option === 'pre-generation') {
-      onStateChange({ isRecoloring: true });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      onStateChange({ isRecoloring: false });
-      return null;
-    }
-    
-    return null;
-  };
 
   const handleSkuSelect = (sku: ProductSKU | null) => {
     setSelectedSku(sku);
@@ -161,12 +143,6 @@ export const ProductShootStep2 = ({
                       alt={currentProductName || 'Product'}
                       className="w-full h-full object-cover"
                     />
-                    {state.productTargetColor && state.productRecolorOption !== 'none' && (
-                      <div 
-                        className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white"
-                        style={{ backgroundColor: state.productTargetColor }}
-                      />
-                    )}
                     {selectedSku && selectedSku.angles.length > 1 && (
                       <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
                         {selectedSku.angles.length} angles
@@ -178,30 +154,16 @@ export const ProductShootStep2 = ({
                     {selectedSku?.sku_code && (
                       <div className="text-xs text-muted-foreground">{selectedSku.sku_code}</div>
                     )}
-                    {state.productTargetColor && (
-                      <div className="text-xs text-muted-foreground">
-                        Recolor: {state.productTargetColor}
-                      </div>
-                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowRecolorModal(true)}
-                      className="action-chip"
-                    >
-                      <Paintbrush className="w-4 h-4" />
-                      Recolor
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedSku(null);
-                        onStateChange({ selectedProductId: undefined, recoloredProductUrl: undefined });
-                      }}
-                      className="action-chip"
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedSku(null);
+                      onStateChange({ selectedProductId: undefined, recoloredProductUrl: undefined });
+                    }}
+                    className="action-chip"
+                  >
+                    Clear
+                  </button>
                 </div>
               )}
 
@@ -282,18 +244,6 @@ export const ProductShootStep2 = ({
         </div>
       </Collapsible>
 
-      {/* Recolor Modal */}
-      {currentProductImage && currentProductName && (
-        <ProductRecolorModal
-          isOpen={showRecolorModal}
-          onClose={() => setShowRecolorModal(false)}
-          productImageUrl={currentProductImage}
-          productName={currentProductName}
-          onRecolor={handleRecolor}
-          currentOption={state.productRecolorOption}
-          currentColor={state.productTargetColor}
-        />
-      )}
 
       {/* Create SKU Modal */}
       <CreateSKUModal
