@@ -722,112 +722,103 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
           </div>
 
           <CollapsibleContent>
-            {state.step === 1 ? (
-              <div className="glass-card p-6">
-                <CreativeStudioHeader
-                  state={state}
-                  onUpdate={handleUpdate}
-                  onRegenerate={handleContinue}
-                  showRegenerate={false}
-                />
-                <StepOnePrompt 
-                  state={state} 
-                  onUpdate={handleUpdate}
-                  onLoadSavedConcept={handleLoadSavedConcept}
-                  onDeleteSavedConcept={handleDeleteSavedConcept}
-                />
-                
-                {/* Step 1 Footer */}
-                <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
-                  </div>
-                  <button
-                    onClick={handleContinue}
-                    disabled={!state.prompt.trim() || isGeneratingConcepts}
-                    className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg group"
-                    style={{
-                      boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
-                    }}
-                  >
-                    <Sparkles className={`w-5 h-5 transition-all ${
-                      state.prompt.trim() && !isGeneratingConcepts 
-                        ? 'animate-sparkle' 
-                        : ''
-                    }`} />
-                    {isGeneratingConcepts ? 'Generating...' : 'Create Concepts'}
-                  </button>
-                </div>
-              </div>
-            ) : (
+            {/* PRODUCT SHOT FLOW - Completely different experience */}
+            {state.useCase === 'product' ? (
               <div ref={step2CardRef} className="glass-card p-6">
                 <CreativeStudioHeader
                   state={state}
                   onUpdate={handleUpdate}
-                  onRegenerate={handleContinue}
-                  showRegenerate={true}
+                  onRegenerate={() => handleProductShootUpdate({ shootMode: undefined as any })}
+                  showRegenerate={!!state.productShoot.shootMode}
                 />
                 
                 <div style={{ paddingBottom: footerHeight + 24 }}>
-                  {/* PRODUCT SHOT FLOW */}
-                  {state.useCase === 'product' ? (
-                    <>
-                      {/* Show subtype selector if shoot mode not yet chosen */}
-                      {!state.productShoot.shootMode || state.productShoot.shootMode === 'new' ? (
-                        state.productShoot.shootMode !== 'new' ? (
-                          <ProductShootSubtypeSelector
-                            onSelectMode={(mode) => handleProductShootUpdate({ shootMode: mode })}
-                          />
-                        ) : (
-                          <ProductShootStep2
-                            state={state.productShoot}
-                            onStateChange={handleProductShootUpdate}
-                            selectedProduct={
-                              state.productReferences.length > 0
-                                ? {
-                                    id: state.productReferences[0],
-                                    name: 'Selected Product',
-                                    thumbnailUrl: state.displayedProductIds.length > 0 
-                                      ? state.displayedProductIds[0] 
-                                      : '',
-                                  }
-                                : undefined
-                            }
-                            onProductSelect={() => {
-                              // Trigger the product reference modal by updating state
-                              // The StepTwoCustomize handles this via product reference picker
-                            }}
-                          />
-                        )
-                      ) : (
-                        // Remix mode - show ProductShootStep2 with remix context
-                        <ProductShootStep2
-                          state={state.productShoot}
-                          onStateChange={handleProductShootUpdate}
-                          selectedProduct={
-                            state.productReferences.length > 0
-                              ? {
-                                  id: state.productReferences[0],
-                                  name: 'Selected Product',
-                                  thumbnailUrl: state.displayedProductIds.length > 0 
-                                    ? state.displayedProductIds[0] 
-                                    : '',
-                                }
-                              : undefined
-                          }
-                        />
-                      )}
-                    </>
+                  {/* Show subtype selector if shoot mode not yet chosen */}
+                  {!state.productShoot.shootMode ? (
+                    <ProductShootSubtypeSelector
+                      onSelectMode={(mode) => handleProductShootUpdate({ shootMode: mode })}
+                    />
                   ) : (
-                    /* LIFESTYLE FLOW (existing) */
-                    <StepTwoCustomize
-                      state={state}
-                      onUpdate={handleUpdate}
-                      onMatchingStateChange={setIsAgentMatching}
+                    <ProductShootStep2
+                      state={state.productShoot}
+                      onStateChange={handleProductShootUpdate}
+                      selectedProduct={
+                        state.productReferences.length > 0
+                          ? {
+                              id: state.productReferences[0],
+                              name: 'Selected Product',
+                              thumbnailUrl: state.displayedProductIds.length > 0 
+                                ? state.displayedProductIds[0] 
+                                : '',
+                            }
+                          : undefined
+                      }
+                      onProductSelect={() => {
+                        // Will integrate with product picker modal
+                      }}
                     />
                   )}
                 </div>
               </div>
+            ) : (
+              /* LIFESTYLE/OTHER FLOWS - Keep existing step 1 → step 2 */
+              <>
+                {state.step === 1 ? (
+                  <div className="glass-card p-6">
+                    <CreativeStudioHeader
+                      state={state}
+                      onUpdate={handleUpdate}
+                      onRegenerate={handleContinue}
+                      showRegenerate={false}
+                    />
+                    <StepOnePrompt 
+                      state={state} 
+                      onUpdate={handleUpdate}
+                      onLoadSavedConcept={handleLoadSavedConcept}
+                      onDeleteSavedConcept={handleDeleteSavedConcept}
+                    />
+                    
+                    {/* Step 1 Footer */}
+                    <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {state.prompt ? '✨ Ready to generate concepts' : 'Enter a brief to continue'}
+                      </div>
+                      <button
+                        onClick={handleContinue}
+                        disabled={!state.prompt.trim() || isGeneratingConcepts}
+                        className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg group"
+                        style={{
+                          boxShadow: state.prompt.trim() ? '0 8px 32px rgba(107, 124, 255, 0.25)' : undefined
+                        }}
+                      >
+                        <Sparkles className={`w-5 h-5 transition-all ${
+                          state.prompt.trim() && !isGeneratingConcepts 
+                            ? 'animate-sparkle' 
+                            : ''
+                        }`} />
+                        {isGeneratingConcepts ? 'Generating...' : 'Create Concepts'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div ref={step2CardRef} className="glass-card p-6">
+                    <CreativeStudioHeader
+                      state={state}
+                      onUpdate={handleUpdate}
+                      onRegenerate={handleContinue}
+                      showRegenerate={true}
+                    />
+                    
+                    <div style={{ paddingBottom: footerHeight + 24 }}>
+                      <StepTwoCustomize
+                        state={state}
+                        onUpdate={handleUpdate}
+                        onMatchingStateChange={setIsAgentMatching}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CollapsibleContent>
         </Collapsible>
@@ -884,8 +875,8 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
           />
         </div>
         
-        {/* Floating Footer for Step 2 */}
-        {floating.active && state.step === 2 && (
+        {/* Floating Footer - Show for Product Shot flow OR Step 2 of other flows */}
+        {floating.active && (state.useCase === 'product' ? state.productShoot.shootMode : state.step === 2) && (
           <div
             ref={footerRef}
             className="fixed bottom-4 z-50 bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-xl px-6 py-4"
@@ -896,27 +887,51 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
           >
             <div className="flex items-center justify-between">
               <button
-                onClick={handleBack}
+                onClick={() => {
+                  if (state.useCase === 'product') {
+                    // Go back to subtype selector
+                    handleProductShootUpdate({ shootMode: undefined as any });
+                  } else {
+                    handleBack();
+                  }
+                }}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent hover:border-border transition-all"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
               
-              <SelectionIndicators state={state} />
+              {/* Show selection indicators only for non-product flows */}
+              {state.useCase !== 'product' && (
+                <SelectionIndicators state={state} />
+              )}
               
-              {/* Discovery Mode Toggle */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/80 border border-border">
-                <Compass className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Discovery</span>
-                <Switch
-                  checked={state.discoveryMode}
-                  onCheckedChange={handleToggleDiscoveryMode}
-                />
-              </div>
+              {/* Product Shot specific info */}
+              {state.useCase === 'product' && (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="px-2 py-1 rounded bg-secondary">
+                    {state.productShoot.productShotType || 'Lifestyle'}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-secondary">
+                    {state.productShoot.settingType === 'auto' ? 'Auto background' : state.productShoot.settingType}
+                  </span>
+                </div>
+              )}
+              
+              {/* Discovery Mode Toggle - Only for non-product flows */}
+              {state.useCase !== 'product' && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/80 border border-border">
+                  <Compass className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Discovery</span>
+                  <Switch
+                    checked={state.discoveryMode}
+                    onCheckedChange={handleToggleDiscoveryMode}
+                  />
+                </div>
+              )}
               
               <button
-                onClick={state.discoveryMode ? handleStartDiscovery : handleGenerate}
+                onClick={state.useCase === 'product' ? handleGenerate : (state.discoveryMode ? handleStartDiscovery : handleGenerate)}
                 disabled={isGeneratingImages || isAgentMatching || isGeneratingConcepts || state.isLoadingConcepts || state.isDiscoveryGenerating}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-coral to-primary text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
                 style={{
@@ -926,17 +941,19 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 }}
               >
                 <Sparkles className="w-5 h-5" />
-                {isGeneratingConcepts || state.isLoadingConcepts 
-                  ? 'Creating concepts...' 
-                  : isAgentMatching 
-                    ? 'Matching...' 
-                    : state.isDiscoveryGenerating
-                      ? 'Discovering...'
-                      : isGeneratingImages 
-                        ? 'Generating...' 
-                        : state.discoveryMode
-                          ? 'Start Discovery (12 images)'
-                          : `Generate (${state.imageCount} images)`}
+                {isGeneratingImages 
+                  ? 'Generating...' 
+                  : state.useCase === 'product'
+                    ? `Generate Product Shot`
+                    : isGeneratingConcepts || state.isLoadingConcepts 
+                      ? 'Creating concepts...' 
+                      : isAgentMatching 
+                        ? 'Matching...' 
+                        : state.isDiscoveryGenerating
+                          ? 'Discovering...'
+                          : state.discoveryMode
+                            ? 'Start Discovery (12 images)'
+                            : `Generate (${state.imageCount} images)`}
               </button>
             </div>
           </div>
