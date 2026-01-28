@@ -1,23 +1,23 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Paintbrush, ImageIcon, User, Camera } from "lucide-react";
+import { ChevronDown, ChevronRight, Paintbrush, ImageIcon, User, Camera, Package } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BackgroundSelector } from "./BackgroundSelector";
 import { ModelConfigurator } from "./ModelConfigurator";
 import { ProductRecolorModal } from "./ProductRecolorModal";
+import { ProductSKUPicker, ProductSKU } from "./ProductSKUPicker";
+import { CreateSKUModal } from "./CreateSKUModal";
+import { ShotTypeVisualSelector } from "./ShotTypeVisualSelector";
 import { 
   ProductShootState, 
-  productShotTypes, 
   ProductShotType,
   initialProductShootState,
-  ModelConfig,
-  SettingType,
   RecolorOption,
 } from "./types";
 
 interface ProductShootStep2Props {
   state: ProductShootState;
   onStateChange: (updates: Partial<ProductShootState>) => void;
-  // Product selection from parent
+  // Product selection from parent (legacy single image)
   selectedProduct?: {
     id: string;
     name: string;
@@ -40,6 +40,8 @@ export const ProductShootStep2 = ({
   });
   
   const [showRecolorModal, setShowRecolorModal] = useState(false);
+  const [showCreateSKUModal, setShowCreateSKUModal] = useState(false);
+  const [selectedSku, setSelectedSku] = useState<ProductSKU | null>(null);
 
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -55,16 +57,33 @@ export const ProductShootStep2 = ({
     });
     
     if (option === 'pre-generation') {
-      // TODO: Call recolor-product edge function
-      // For now, return null (skeleton)
       onStateChange({ isRecoloring: true });
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       onStateChange({ isRecoloring: false });
       return null;
     }
     
     return null;
+  };
+
+  const handleSkuSelect = (sku: ProductSKU | null) => {
+    setSelectedSku(sku);
+    if (sku) {
+      onStateChange({
+        selectedProductId: sku.id,
+        // Use composite URL if available, otherwise first angle
+        recoloredProductUrl: sku.composite_image_url || sku.angles[0]?.thumbnail_url,
+      });
+    } else {
+      onStateChange({
+        selectedProductId: undefined,
+        recoloredProductUrl: undefined,
+      });
+    }
+  };
+
+  const handleSkuCreated = (skuId: string) => {
+    // Will refetch via query invalidation
   };
 
   const SectionHeader = ({ 
@@ -101,25 +120,45 @@ export const ProductShootStep2 = ({
     </CollapsibleTrigger>
   );
 
+  // Get display info for product section badge
+  const getProductBadge = () => {
+    if (selectedSku) return selectedSku.name;
+    if (selectedProduct) return selectedProduct.name;
+    return undefined;
+  };
+
+  // Get the current product image URL for display
+  const getCurrentProductImage = () => {
+    if (state.recoloredProductUrl) return state.recoloredProductUrl;
+    if (selectedSku?.composite_image_url) return selectedSku.composite_image_url;
+    if (selectedSku?.angles[0]?.thumbnail_url) return selectedSku.angles[0].thumbnail_url;
+    if (selectedProduct?.thumbnailUrl) return selectedProduct.thumbnailUrl;
+    return null;
+  };
+
+  const currentProductImage = getCurrentProductImage();
+  const currentProductName = selectedSku?.name || selectedProduct?.name;
+
   return (
     <div className="space-y-4">
-      {/* Product Selection with Recolor */}
+      {/* Product Selection with SKU Picker */}
       <Collapsible open={openSections.product}>
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <SectionHeader 
-            icon={ImageIcon} 
+            icon={Package} 
             title="Product" 
             section="product"
-            badge={selectedProduct?.name}
+            badge={getProductBadge()}
           />
           <CollapsibleContent>
-            <div className="px-4 pb-4 space-y-3">
-              {selectedProduct ? (
-                <div className="flex items-center gap-4">
+            <div className="px-4 pb-4 space-y-4">
+              {/* Selected Product Preview */}
+              {(selectedSku || selectedProduct) && currentProductImage && (
+                <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/50">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted relative">
                     <img 
-                      src={state.recoloredProductUrl || selectedProduct.thumbnailUrl}
-                      alt={selectedProduct.name}
+                      src={currentProductImage}
+                      alt={currentProductName || 'Product'}
                       className="w-full h-full object-cover"
                     />
                     {state.productTargetColor && state.productRecolorOption !== 'none' && (
@@ -128,9 +167,17 @@ export const ProductShootStep2 = ({
                         style={{ backgroundColor: state.productTargetColor }}
                       />
                     )}
+                    {selectedSku && selectedSku.angles.length > 1 && (
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
+                        {selectedSku.angles.length} angles
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-foreground">{selectedProduct.name}</div>
+                    <div className="font-medium text-foreground">{currentProductName}</div>
+                    {selectedSku?.sku_code && (
+                      <div className="text-xs text-muted-foreground">{selectedSku.sku_code}</div>
+                    )}
                     {state.productTargetColor && (
                       <div className="text-xs text-muted-foreground">
                         Recolor: {state.productTargetColor}
@@ -146,55 +193,43 @@ export const ProductShootStep2 = ({
                       Recolor
                     </button>
                     <button
-                      onClick={onProductSelect}
+                      onClick={() => {
+                        setSelectedSku(null);
+                        onStateChange({ selectedProductId: undefined, recoloredProductUrl: undefined });
+                      }}
                       className="action-chip"
                     >
-                      Change
+                      Clear
                     </button>
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={onProductSelect}
-                  className="w-full p-6 rounded-xl border-2 border-dashed border-border hover:border-accent/40 transition-colors text-center"
-                >
-                  <ImageIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                  <div className="text-sm text-muted-foreground">Select a product</div>
-                </button>
               )}
+
+              {/* SKU Picker */}
+              <ProductSKUPicker
+                selectedSkuId={selectedSku?.id || null}
+                onSelectSku={handleSkuSelect}
+                onCreateNew={() => setShowCreateSKUModal(true)}
+              />
             </div>
           </CollapsibleContent>
         </div>
       </Collapsible>
 
-      {/* Shot Type */}
+      {/* Shot Type - Visual Selector */}
       <Collapsible open={openSections.shotType}>
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <SectionHeader 
             icon={Camera} 
             title="Shot Type" 
             section="shotType"
-            badge={productShotTypes.find(s => s.id === state.productShotType)?.name}
           />
           <CollapsibleContent>
             <div className="px-4 pb-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {productShotTypes.map((shot) => (
-                  <button
-                    key={shot.id}
-                    onClick={() => onStateChange({ productShotType: shot.id })}
-                    className={`p-3 rounded-xl border-2 transition-all text-left ${
-                      state.productShotType === shot.id
-                        ? 'border-accent bg-accent/10'
-                        : 'border-border hover:border-accent/40'
-                    }`}
-                  >
-                    <div className="text-xl mb-1">{shot.icon}</div>
-                    <div className="font-medium text-sm text-foreground">{shot.name}</div>
-                    <div className="text-xs text-muted-foreground">{shot.description}</div>
-                  </button>
-                ))}
-              </div>
+              <ShotTypeVisualSelector
+                selectedType={state.productShotType}
+                onSelect={(type) => onStateChange({ productShotType: type })}
+              />
             </div>
           </CollapsibleContent>
         </div>
@@ -248,17 +283,24 @@ export const ProductShootStep2 = ({
       </Collapsible>
 
       {/* Recolor Modal */}
-      {selectedProduct && (
+      {currentProductImage && currentProductName && (
         <ProductRecolorModal
           isOpen={showRecolorModal}
           onClose={() => setShowRecolorModal(false)}
-          productImageUrl={selectedProduct.thumbnailUrl}
-          productName={selectedProduct.name}
+          productImageUrl={currentProductImage}
+          productName={currentProductName}
           onRecolor={handleRecolor}
           currentOption={state.productRecolorOption}
           currentColor={state.productTargetColor}
         />
       )}
+
+      {/* Create SKU Modal */}
+      <CreateSKUModal
+        open={showCreateSKUModal}
+        onClose={() => setShowCreateSKUModal(false)}
+        onCreated={handleSkuCreated}
+      />
     </div>
   );
 };

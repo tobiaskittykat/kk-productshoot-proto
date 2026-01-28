@@ -264,6 +264,53 @@ export type Database = {
           },
         ]
       }
+      product_skus: {
+        Row: {
+          brand_id: string | null
+          category: string | null
+          composite_image_url: string | null
+          created_at: string | null
+          description: Json | null
+          id: string
+          name: string
+          sku_code: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          brand_id?: string | null
+          category?: string | null
+          composite_image_url?: string | null
+          created_at?: string | null
+          description?: Json | null
+          id?: string
+          name: string
+          sku_code?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          brand_id?: string | null
+          category?: string | null
+          composite_image_url?: string | null
+          created_at?: string | null
+          description?: Json | null
+          id?: string
+          name?: string
+          sku_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_skus_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_concepts: {
         Row: {
           artistic_style: string | null
@@ -370,6 +417,7 @@ export type Database = {
       }
       scraped_products: {
         Row: {
+          angle: string | null
           brand_id: string | null
           category: string | null
           collection: string | null
@@ -379,11 +427,13 @@ export type Database = {
           full_url: string
           id: string
           name: string
+          sku_id: string | null
           storage_path: string | null
           thumbnail_url: string
           user_id: string
         }
         Insert: {
+          angle?: string | null
           brand_id?: string | null
           category?: string | null
           collection?: string | null
@@ -393,11 +443,13 @@ export type Database = {
           full_url: string
           id?: string
           name: string
+          sku_id?: string | null
           storage_path?: string | null
           thumbnail_url: string
           user_id: string
         }
         Update: {
+          angle?: string | null
           brand_id?: string | null
           category?: string | null
           collection?: string | null
@@ -407,6 +459,7 @@ export type Database = {
           full_url?: string
           id?: string
           name?: string
+          sku_id?: string | null
           storage_path?: string | null
           thumbnail_url?: string
           user_id?: string
@@ -417,6 +470,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraped_products_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "product_skus"
             referencedColumns: ["id"]
           },
         ]
