@@ -1,125 +1,252 @@
 
-# Fix: AI-Built Moodboard Images Not Properly Combined
+# Multi-Brand Support for Creative Studio Module
 
-## Problem Summary
+## Current State Analysis
 
-When you build a moodboard with the AI tool, you carefully select 9 images that work together. However:
+After exploring the codebase, I found that the database schema **already supports multi-brand**, but the **application code does not filter by brand**. Here's what exists:
 
-1. **Display Issue**: The moodboard thumbnail only shows 1 of your 9 images - not the full collection
-2. **Generation Issue**: When generating images, only that single thumbnail is sent to the AI - losing the other 8 reference images you selected
+### Database Tables with `brand_id` Column
+| Table | `brand_id` | Currently Filtered? |
+|-------|-----------|---------------------|
+| `brands` | Primary table | N/A (is the brand) |
+| `brand_images` | YES | YES - via `useBrandImages` |
+| `generated_images` | YES (nullable) | NO - only filters by `user_id` |
+| `custom_moodboards` | YES (nullable) | NO - only filters by `user_id` |
+| `scraped_products` | YES (nullable) | NO - only filters by `user_id` |
+| `saved_concepts` | YES (nullable) | NO - only filters by `user_id` |
 
-This means your curated moodboard aesthetic is reduced to just one image, which explains why results don't capture the full mood you intended.
-
----
-
-## Current Behavior
-
-```text
-You select 9 beautiful Mediterranean images:
-  [Image1] [Image2] [Image3]
-  [Image4] [Image5] [Image6]
-  [Image7] [Image8] [Image9]
-
-But the system only uses Image1 as the moodboard thumbnail and reference.
-The other 8 images are stored in the database but never used.
-```
+### Current Problems
+1. **Products are user-level, not brand-level** - All products show for all brands
+2. **Moodboards are user-level** - All moodboards show regardless of selected brand
+3. **Generated images are user-level** - Gallery shows all images from all brands
+4. **Image generation doesn't associate images with current brand** - New images have `brand_id = null`
+5. **Brand context fetch assumes single brand** - `useImageGeneration.ts` fetches first brand, not current brand
 
 ---
 
 ## Solution Overview
 
-**Two-Part Fix:**
-
-1. **Create a Collage Thumbnail** - When saving an AI-built moodboard, create a composite 3x3 grid image showing all selected images. This gives users a proper visual representation.
-
-2. **Pass All Images to Generation** - When generating images, if the moodboard has multiple `imageUrls` in its visual analysis, pass ALL of them to the AI as style references (up to 4-5 for token limits).
+Implement proper brand isolation by:
+1. Passing `currentBrand.id` to all queries and inserts
+2. Filtering all data fetches by `brand_id`
+3. Associating all new records with `currentBrand.id`
 
 ---
 
-## Technical Implementation
+## Implementation Plan
 
-### Part 1: Collage Thumbnail Creation
+### 1. Update State Management
 
-**File: `src/components/creative-studio/MoodboardBuilder.tsx`**
+**File: `src/components/creative-studio/types.ts`**
 
-Add a function to create a 3x3 collage using HTML Canvas:
-
+Add `selectedBrand` to `CreativeStudioState` if not already present:
 ```typescript
-// Create a 3x3 collage from selected images
-async function createMoodboardCollage(imageUrls: string[]): Promise<Blob> {
-  const canvas = document.createElement('canvas');
-  const gridSize = Math.min(3, Math.ceil(Math.sqrt(imageUrls.length)));
-  const cellSize = 400; // Each cell is 400x400
-  canvas.width = gridSize * cellSize;
-  canvas.height = gridSize * cellSize;
-  
-  const ctx = canvas.getContext('2d');
-  // Load and draw each image into grid cells
-  // ... (detailed implementation)
-  
-  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+export interface CreativeStudioState {
+  // ...existing fields...
+  selectedBrand?: string;  // Current brand ID for all operations
 }
 ```
 
-Then in `handleSave`:
-1. Create the collage from selected images
-2. Upload to storage
-3. Use the uploaded collage URL as `thumbnail_url`
+### 2. Products - Filter by Brand
 
-### Part 2: Pass Multiple Images to Generation
+**File: `src/components/creative-studio/StepTwoCustomize.tsx`**
 
-**File: `supabase/functions/generate-image/index.ts`**
-
-Update the moodboard attachment logic (around line 726):
-
+Update the `scraped_products` query (lines 104-129):
 ```typescript
-// Check if moodboard has multiple curated images
-const moodboardImageUrls = moodboardAnalysis?.imageUrls as string[] | undefined;
+// Before
+.eq('user_id', user.id)
 
-if (moodboardImageUrls && moodboardImageUrls.length > 1) {
-  // AI-built moodboard - attach multiple reference images (up to 4)
-  const refUrls = moodboardImageUrls.slice(0, 4);
-  for (const url of refUrls) {
-    messageContent.push({
-      type: "image_url",
-      image_url: { url }
-    });
-  }
-  messageContent.push({
-    type: "text",
-    text: `PRIMARY STYLE REFERENCE: These ${refUrls.length} moodboard images define the visual aesthetic...`
-  });
-} else if (moodboardUrl) {
-  // Single-image moodboard (uploaded) - existing logic
-  messageContent.push({
-    type: "image_url", 
-    image_url: { url: moodboardUrl }
-  });
-  // ...
-}
+// After
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+```
+
+Update product upload/sync to include `brand_id`:
+```typescript
+.insert({
+  user_id: user.id,
+  brand_id: currentBrand?.id,  // Associate with current brand
+  // ...other fields
+})
+```
+
+**File: `src/components/creative-studio/CreativeStudioWizard.tsx`**
+
+Update the `scraped_products` query (line 399-403):
+```typescript
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+```
+
+### 3. Moodboards - Filter by Brand
+
+**File: `src/components/creative-studio/StepTwoCustomize.tsx`**
+
+Update the `custom_moodboards` query (lines 705-726):
+```typescript
+// Before
+.eq('user_id', user.id)
+
+// After
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+```
+
+**File: `src/components/creative-studio/MoodboardModal.tsx`**
+
+Update the moodboards query (lines 67-89):
+```typescript
+queryKey: ['custom-moodboards', user?.id, currentBrand?.id],  // Include brand in cache key
+// ...
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+```
+
+Update moodboard upload/insert (line 133-140):
+```typescript
+.insert({
+  user_id: user.id,
+  brand_id: currentBrand?.id,  // Associate with current brand
+  // ...other fields
+})
+```
+
+**File: `src/components/creative-studio/MoodboardBuilder.tsx`**
+
+Update moodboard save (lines 133-151):
+```typescript
+.insert({
+  user_id: user.id,
+  brand_id: currentBrand?.id,  // Associate with current brand
+  // ...other fields
+})
+```
+
+### 4. Generated Images - Filter by Brand
+
+**File: `src/pages/Gallery.tsx`**
+
+Update the gallery queries (lines 34-37, 51-56):
+```typescript
+// Fetch count
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+
+// Fetch images
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
+```
+
+Add brand selector to Gallery page header for filtering.
+
+**File: `src/components/creative-studio/CreativeStudioWizard.tsx`**
+
+Update previous images fetch (lines 73-78):
+```typescript
+.eq('user_id', user.id)
+.eq('brand_id', currentBrand?.id)  // Add brand filter
 ```
 
 **File: `src/hooks/useImageGeneration.ts`**
 
-Update to pass the full `visual_analysis` including `imageUrls` to the generation function.
+Update image generation to store `brand_id` (passed in request body):
+```typescript
+// In generateImages function (around line 227)
+body: {
+  // ...existing fields...
+  brandId: currentBrand?.id,  // Pass to edge function for storage
+}
+```
 
----
+Update the brand fetch (lines 177-200) to use passed `brandId` instead of first user brand:
+```typescript
+// Pass brandId as parameter to generateImages
+const generateImages = useCallback(async (
+  state: CreativeStudioState,
+  logoUrl?: string,
+  brandId?: string  // Add optional brandId parameter
+): Promise<GeneratedImage[]> => {
+  // ...
+  if (brandId) {
+    const { data: brand } = await supabase
+      .from('brands')
+      .select('name, personality, brand_context')
+      .eq('id', brandId)  // Use specific brand, not first
+      .single();
+    // ...
+  }
+}
+```
 
-## Display Improvements
+### 5. Saved Concepts - Filter by Brand
 
-**File: `src/components/creative-studio/MoodboardThumbnail.tsx`**
+**File: `src/components/creative-studio/StepTwoCustomize.tsx`**
 
-For AI-built moodboards, optionally show a mini-grid preview in the full-view dialog:
+The `saved_concepts` query already has `brand_id` in insert (line 492) but needs filtering on read:
+```typescript
+// When loading saved concepts, filter by brand
+.eq('brand_id', currentBrand?.id)
+```
+
+### 6. Edge Function Updates
+
+**File: `supabase/functions/generate-image/index.ts`**
+
+Accept `brandId` in request body and pass to database insert:
+```typescript
+const { brandId } = await req.json();
+
+// When inserting generated_images record
+.insert({
+  user_id: userId,
+  brand_id: brandId,  // Associate with brand
+  // ...other fields
+})
+```
+
+### 7. Add Brand Context to Hooks
+
+**File: `src/components/creative-studio/MoodboardModal.tsx`**
+
+Add `useBrands` hook:
+```typescript
+import { useBrands } from "@/hooks/useBrands";
+// ...
+const { currentBrand } = useBrands();
+```
+
+**File: `src/components/creative-studio/MoodboardBuilder.tsx`**
+
+Add `useBrands` hook:
+```typescript
+import { useBrands } from "@/hooks/useBrands";
+// ...
+const { currentBrand } = useBrands();
+```
+
+**File: `src/pages/Gallery.tsx`**
+
+Add brand selector and filter:
+```typescript
+import { useBrands } from "@/hooks/useBrands";
+import BrandSelector from "@/components/BrandSelector";
+// ...
+const { currentBrand } = useBrands();
+```
+
+### 8. Update Query Cache Keys
+
+All react-query cache keys should include `currentBrand?.id` to properly invalidate when brand changes:
 
 ```typescript
-// In the full view dialog, show all images in a grid
-{moodboard.visualAnalysis?.imageUrls?.length > 0 && (
-  <div className="grid grid-cols-3 gap-2 mt-4">
-    {moodboard.visualAnalysis.imageUrls.map((url, i) => (
-      <img key={i} src={url} className="aspect-square object-cover rounded" />
-    ))}
-  </div>
-)}
+// Products
+queryKey: ['scraped-products', user?.id, currentBrand?.id]
+
+// Moodboards
+queryKey: ['custom-moodboards', user?.id, currentBrand?.id]
+
+// Saved concepts
+queryKey: ['saved-concepts', user?.id, currentBrand?.id]
 ```
 
 ---
@@ -128,30 +255,42 @@ For AI-built moodboards, optionally show a mini-grid preview in the full-view di
 
 | File | Changes |
 |------|---------|
-| `src/components/creative-studio/MoodboardBuilder.tsx` | Add collage creation function, upload composite on save |
-| `src/lib/imageCompositing.ts` | Add `createMoodboardCollage()` utility function |
-| `supabase/functions/generate-image/index.ts` | Check for `imageUrls` array and attach multiple references |
-| `src/hooks/useImageGeneration.ts` | Ensure `visual_analysis` with `imageUrls` is passed through |
-| `src/components/creative-studio/MoodboardThumbnail.tsx` | Show all images in full-view dialog for AI-built moodboards |
+| `src/components/creative-studio/StepTwoCustomize.tsx` | Filter products & moodboards by brand; include `brand_id` in uploads |
+| `src/components/creative-studio/CreativeStudioWizard.tsx` | Filter discovery queries by brand; pass `brandId` to generation |
+| `src/components/creative-studio/MoodboardModal.tsx` | Add `useBrands`, filter by brand, include `brand_id` in uploads |
+| `src/components/creative-studio/MoodboardBuilder.tsx` | Add `useBrands`, include `brand_id` in save |
+| `src/hooks/useImageGeneration.ts` | Accept `brandId` param, use specific brand context |
+| `src/pages/Gallery.tsx` | Add brand selector, filter images by brand |
+| `supabase/functions/generate-image/index.ts` | Accept `brandId`, store in `generated_images` |
 
 ---
 
-## Expected Results
+## Data Migration Consideration
 
-| Before | After |
-|--------|-------|
-| Thumbnail shows 1 image | Thumbnail shows 3x3 collage of all 9 images |
-| Generation uses 1 reference | Generation uses up to 4 curated references |
-| Moodboard mood is lost | Full aesthetic captured in generation |
-| Dialog shows single image | Dialog shows full image grid |
+Existing records have `brand_id = null`. Two options:
+
+**Option A (Recommended)**: Show both brand-specific AND unassigned records
+```sql
+.or(`brand_id.eq.${currentBrand.id},brand_id.is.null`)
+```
+This allows gradual migration as users re-sync/re-upload.
+
+**Option B**: Run a migration to assign existing records to first brand
+```sql
+UPDATE scraped_products SET brand_id = (
+  SELECT id FROM brands WHERE user_id = scraped_products.user_id LIMIT 1
+) WHERE brand_id IS NULL;
+```
 
 ---
 
 ## Summary
 
-The fix ensures your carefully curated 9-image moodboard:
-1. Displays as a proper visual collage (not just one image)
-2. Passes multiple reference images to the AI during generation
-3. Shows all images when you view the moodboard details
+This implementation ensures:
 
-This will dramatically improve the quality and consistency of generated images matching your intended mood.
+1. **Products are brand-specific** - Each brand has its own product library
+2. **Moodboards are brand-specific** - Each brand has its own moodboard collection
+3. **Generated images are brand-specific** - Gallery filters by selected brand
+4. **Saved concepts are brand-specific** - Campaign concepts belong to a brand
+5. **Brand Brain is correctly applied** - Uses the selected brand's visual identity
+6. **Switching brands shows relevant data** - All queries respect `currentBrand.id`
