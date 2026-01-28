@@ -146,12 +146,54 @@ interface GenerateImageRequest {
   
   // Logo placement for compositing
   logoPlacement?: LogoPlacement | null;
+  
+  // Product Shoot configuration
+  productShootConfig?: {
+    shotType?: string;
+    settingType?: 'studio' | 'outdoor' | 'auto';
+    backgroundId?: string;
+    customBackgroundPrompt?: string;
+    modelConfig?: {
+      gender?: string;
+      ethnicity?: string;
+      clothing?: string;
+      useOnBrandDefaults?: boolean;
+    };
+  };
 }
 
 // AI model mapping
 const modelMap: Record<string, string> = {
   'auto': 'google/gemini-3-pro-image-preview',
   'nano-banana': 'google/gemini-2.5-flash-image-preview',
+};
+
+// Background presets lookup (copy of frontend presets for server-side prompt building)
+const backgroundPresets: Record<string, string> = {
+  // Studio backgrounds
+  'studio-white': 'clean white studio cyclorama background, professional product photography lighting, seamless white backdrop',
+  'studio-black': 'deep black studio background, dramatic rim lighting, high contrast product photography',
+  'studio-gradient-warm': 'soft warm gradient background, pink to orange tones, fashion photography lighting',
+  'studio-gradient-cool': 'soft cool gradient background, blue to purple tones, modern studio lighting',
+  'studio-concrete': 'polished concrete floor studio, industrial chic, soft window light',
+  'studio-marble': 'white marble surface with grey veining, luxury product photography, elegant studio setting',
+  'studio-fabric': 'soft linen fabric backdrop, natural texture, diffused lighting, tactile feel',
+  'studio-wood': 'warm honey oak wood surface, natural grain, soft natural lighting',
+  'studio-terrazzo': 'terrazzo surface with colorful chips, modern aesthetic, clean product photography',
+  'studio-paper': 'seamless paper backdrop, soft shadows, classic product photography setup',
+  // Outdoor backgrounds
+  'outdoor-beach': 'soft sandy beach background, golden hour sunlight, ocean in distance, relaxed coastal vibe',
+  'outdoor-urban': 'urban city street background, modern architecture, stylish metropolitan setting',
+  'outdoor-park': 'lush green park setting, dappled sunlight through trees, natural fresh atmosphere',
+  'outdoor-cafe': 'charming European café terrace, cobblestone street, bistro chairs, warm afternoon light',
+  'outdoor-desert': 'dramatic desert landscape, sand dunes, warm golden hour light, minimalist vast backdrop',
+  'outdoor-forest': 'serene forest path, filtered sunlight through trees, natural earthy tones, peaceful setting',
+  'outdoor-rooftop': 'modern rooftop setting, city skyline in background, golden hour, urban lifestyle',
+  'outdoor-pool': 'luxury poolside setting, turquoise water, white deck, resort vibes, bright daylight',
+  'outdoor-mountain': 'mountain hiking trail, scenic overlook, adventurous outdoor setting, natural beauty',
+  'outdoor-vineyard': 'rolling vineyard hills, golden afternoon light, Tuscan countryside aesthetic, sophisticated',
+  'outdoor-boardwalk': 'wooden boardwalk by the sea, coastal breeze, vacation vibes, relaxed summer setting',
+  'outdoor-market': 'vibrant street market, colorful stalls, bustling atmosphere, authentic local setting',
 };
 
 // Call the prompt agent to craft a refined prompt (now MULTIMODAL - can see products)
@@ -361,6 +403,42 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       sections.push("=== MUST AVOID ===");
       sections.push(request.negativePrompt);
       sections.push("");
+    }
+    
+    // === PRODUCT SHOOT CONFIGURATION ===
+    // Add background and model direction from product shoot settings
+    if (request.productShootConfig) {
+      const config = request.productShootConfig;
+      
+      // Background direction
+      if (config.customBackgroundPrompt) {
+        sections.push("=== BACKGROUND/SETTING ===");
+        sections.push(config.customBackgroundPrompt);
+        sections.push("");
+      } else if (config.backgroundId && backgroundPresets[config.backgroundId]) {
+        sections.push("=== BACKGROUND/SETTING ===");
+        sections.push(backgroundPresets[config.backgroundId]);
+        sections.push("");
+      }
+      
+      // Model direction (if not product-focus shot type)
+      if (config.shotType !== 'product-focus' && config.modelConfig) {
+        const modelParts: string[] = [];
+        if (config.modelConfig.gender && config.modelConfig.gender !== 'auto') {
+          modelParts.push(`${config.modelConfig.gender} model`);
+        }
+        if (config.modelConfig.ethnicity && config.modelConfig.ethnicity !== 'auto') {
+          modelParts.push(config.modelConfig.ethnicity);
+        }
+        if (config.modelConfig.clothing && config.modelConfig.clothing !== 'auto') {
+          modelParts.push(`${config.modelConfig.clothing} outfit`);
+        }
+        if (modelParts.length > 0) {
+          sections.push("=== MODEL DIRECTION ===");
+          sections.push(`Feature a ${modelParts.join(', ')}`);
+          sections.push("");
+        }
+      }
     }
     
     const creativeBrief = sections.join("\n");

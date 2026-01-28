@@ -10,6 +10,7 @@ import {
   sampleProductReferences,
   sampleContextReferences
 } from '@/components/creative-studio/types';
+import { visualShotTypes } from '@/components/creative-studio/product-shoot/ShotTypeVisualSelector';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditLog } from '@/hooks/useAuditLog';
@@ -270,14 +271,25 @@ export function useImageGeneration() {
       }
 
       // Extract single shot type prompt (text guidance, not image URL)
-      const shotTypePrompt = state.contextReference
-        ? sampleContextReferences.find(r => r.id === state.contextReference)?.shotPrompt || null
-        : null;
+      // For product shoot flow, use the visual shot type's promptHint
+      let shotTypePrompt: string | null = null;
+      
+      if (state.useCase === 'product' && state.productShoot?.productShotType) {
+        // Product Shoot flow - get promptHint from the visual shot type
+        const selectedShotType = visualShotTypes.find(s => s.id === state.productShoot!.productShotType);
+        if (selectedShotType) {
+          shotTypePrompt = selectedShotType.promptHint;
+        }
+      } else if (state.contextReference) {
+        // Lifestyle flow - use context reference's shot prompt
+        shotTypePrompt = sampleContextReferences.find(r => r.id === state.contextReference)?.shotPrompt || null;
+      }
       
       console.log('Generating with references:', {
         moodboardUrl,
         productReferenceUrls,
-        shotTypePrompt
+        shotTypePrompt,
+        productShootConfig: state.productShoot
       });
 
       // Track when we started to find newly generated images if timeout occurs
