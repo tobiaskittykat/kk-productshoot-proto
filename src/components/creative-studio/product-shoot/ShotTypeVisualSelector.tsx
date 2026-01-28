@@ -1,0 +1,93 @@
+import React from 'react';
+import { Check } from 'lucide-react';
+import { ProductShotType } from './types';
+
+// Import example images
+import productFocusImg from '@/assets/shot-references/product-focus.jpg';
+import productOnModelImg from '@/assets/shot-references/product-on-model.jpg';
+import productInHandImg from '@/assets/shot-references/product-in-hand.jpg';
+
+export interface VisualShotType {
+  id: ProductShotType;
+  name: string;
+  description: string;
+  exampleImage: string | null;
+  promptHint: string;
+}
+
+export const visualShotTypes: VisualShotType[] = [
+  {
+    id: 'product-focus',
+    name: 'Product Focus',
+    description: 'Close-up, no model',
+    exampleImage: productFocusImg,
+    promptHint: 'product only, detailed close-up, no model, studio lighting',
+  },
+  {
+    id: 'on-foot',
+    name: 'On Foot - Shoe Focus',
+    description: 'Model wearing shoes, camera on product',
+    exampleImage: null, // Placeholder needed
+    promptHint: 'shoes on model feet, product as focal point, cropped view, lifestyle',
+  },
+  {
+    id: 'lifestyle',
+    name: 'Full Body on Model',
+    description: 'Full outfit with product',
+    exampleImage: productOnModelImg,
+    promptHint: 'full body fashion shot, lifestyle, product visible, editorial style',
+  },
+];
+
+interface ShotTypeVisualSelectorProps {
+  selectedType: ProductShotType;
+  onSelect: (type: ProductShotType) => void;
+}
+
+export function ShotTypeVisualSelector({ selectedType, onSelect }: ShotTypeVisualSelectorProps) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {visualShotTypes.map((shot) => (
+        <button
+          key={shot.id}
+          type="button"
+          onClick={() => onSelect(shot.id)}
+          className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${
+            selectedType === shot.id
+              ? 'border-accent ring-2 ring-accent/30'
+              : 'border-border hover:border-accent/40'
+          }`}
+        >
+          {/* Example Image */}
+          <div className="aspect-[4/5] bg-muted">
+            {shot.exampleImage ? (
+              <img
+                src={shot.exampleImage}
+                alt={shot.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <span className="text-4xl">📷</span>
+                <span className="text-xs">Coming soon</span>
+              </div>
+            )}
+          </div>
+
+          {/* Label Overlay */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 pt-8">
+            <div className="font-medium text-white text-sm">{shot.name}</div>
+            <div className="text-xs text-white/70">{shot.description}</div>
+          </div>
+
+          {/* Selected Checkmark */}
+          {selectedType === shot.id && (
+            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-accent flex items-center justify-center">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}

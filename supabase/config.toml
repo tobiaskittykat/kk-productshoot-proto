@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.build-moodboard]
 verify_jwt = false
+
+[functions.composite-product-images]
+verify_jwt = false

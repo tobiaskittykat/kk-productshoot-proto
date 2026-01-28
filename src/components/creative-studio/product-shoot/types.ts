@@ -13,14 +13,11 @@ export type SettingType = 'studio' | 'outdoor' | 'auto';
 export type ModelGender = 'female' | 'male' | 'nonbinary' | 'auto';
 export type ModelClothing = 'casual' | 'smart-casual' | 'formal' | 'athletic' | 'bohemian' | 'auto';
 
-// Product-specific shot types
+// Product-specific shot types (updated for visual selector)
 export type ProductShotType = 
-  | 'flat-lay' 
-  | 'on-foot' 
-  | 'in-hand' 
-  | 'lifestyle' 
   | 'product-focus' 
-  | 'paired-outfit';
+  | 'on-foot' 
+  | 'lifestyle';
 
 // Remix change options
 export interface RemixChanges {
@@ -38,6 +35,20 @@ export interface ModelConfig {
   useOnBrandDefaults: boolean;
 }
 
+// Product SKU for multi-angle grouping
+export interface ProductSKUData {
+  id: string;
+  name: string;
+  skuCode: string | null;
+  compositeImageUrl: string | null;
+  brandId: string | null;
+  angles: Array<{
+    id: string;
+    thumbnailUrl: string;
+    angle: string | null;
+  }>;
+}
+
 // Product Shoot State - extends creative studio state
 export interface ProductShootState {
   // Mode
@@ -47,8 +58,9 @@ export interface ProductShootState {
   remixSourceImage?: string;
   remixChanges: RemixChanges;
   
-  // Product with recolor
+  // Product with recolor (now supports SKU)
   selectedProductId?: string;
+  selectedSkuId?: string;
   productRecolorOption: RecolorOption;
   productTargetColor?: string;
   recoloredProductUrl?: string;
@@ -102,49 +114,72 @@ export const initialProductShootState: ProductShootState = {
   productShotType: 'lifestyle',
 };
 
-// Product shot type definitions with icons and descriptions
-export const productShotTypes = [
+// LEGACY: Old shot types with emojis (kept for reference)
+export const legacyProductShotTypes = [
   { 
-    id: 'flat-lay' as ProductShotType, 
+    id: 'flat-lay' as const, 
     name: 'Flat Lay', 
     icon: '📐',
     description: 'Product on surface, overhead angle',
     promptHint: 'flat lay photography, overhead shot, product on surface'
   },
   { 
-    id: 'on-foot' as ProductShotType, 
+    id: 'on-foot' as const, 
     name: 'On Foot', 
     icon: '👟',
     description: 'Model wearing the shoes',
     promptHint: 'shoes on model feet, wearing product'
   },
   { 
-    id: 'in-hand' as ProductShotType, 
+    id: 'in-hand' as const, 
     name: 'In Hand', 
     icon: '🤲',
     description: 'Model holding the shoes',
     promptHint: 'hands holding product, close-up detail'
   },
   { 
-    id: 'lifestyle' as ProductShotType, 
+    id: 'lifestyle' as const, 
     name: 'Lifestyle', 
     icon: '🚶',
     description: 'Full body with shoes as hero',
     promptHint: 'lifestyle photography, full body shot, product as focal point'
   },
   { 
-    id: 'product-focus' as ProductShotType, 
+    id: 'product-focus' as const, 
     name: 'Product Focus', 
     icon: '🎯',
     description: 'Close-up, no model',
     promptHint: 'product only, detailed close-up, no model'
   },
   { 
-    id: 'paired-outfit' as ProductShotType, 
+    id: 'paired-outfit' as const, 
     name: 'Paired with Outfit', 
     icon: '👔',
     description: 'Full look styling',
     promptHint: 'styled outfit, fashion editorial, complete look'
+  },
+];
+
+// New simplified shot types for visual selector
+// These match the ShotTypeVisualSelector component
+export const productShotTypes = [
+  { 
+    id: 'product-focus' as ProductShotType, 
+    name: 'Product Focus', 
+    description: 'Close-up, no model',
+    promptHint: 'product only, detailed close-up, no model, studio lighting'
+  },
+  { 
+    id: 'on-foot' as ProductShotType, 
+    name: 'On Foot - Shoe Focus', 
+    description: 'Model wearing shoes, camera on product',
+    promptHint: 'shoes on model feet, product as focal point, cropped view, lifestyle'
+  },
+  { 
+    id: 'lifestyle' as ProductShotType, 
+    name: 'Full Body on Model', 
+    description: 'Full outfit with product',
+    promptHint: 'full body fashion shot, lifestyle, product visible, editorial style'
   },
 ];
 
