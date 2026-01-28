@@ -11,7 +11,7 @@ import { SelectionIndicators } from "./SelectionIndicators";
 import { DiscoveryModeGallery } from "./DiscoveryModeGallery";
 import { DiscoverySwipeView } from "./DiscoverySwipeView";
 import { CampaignStyleSummary } from "./CampaignStyleSummary";
-import { CreativeStudioState, initialCreativeStudioState, GeneratedImage, SavedConcept, UserPreference, CampaignStyle } from "./types";
+import { CreativeStudioState, initialCreativeStudioState, GeneratedImage, SavedConcept, UserPreference, CampaignStyle, ProductShootState } from "./types";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useBrands } from "@/hooks/useBrands";
 import { useBrandImages } from "@/hooks/useBrandImages";
@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { smoothScrollTo } from "@/lib/utils";
+import { ProductShootSubtypeSelector, ProductShootStep2 } from "./product-shoot";
 
 interface CreativeStudioWizardProps {
   isOpen: boolean;
@@ -188,6 +189,14 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
 
   const handleUpdate = useCallback((updates: Partial<CreativeStudioState>) => {
     setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  // Handler for Product Shoot state updates
+  const handleProductShootUpdate = useCallback((updates: Partial<ProductShootState>) => {
+    setState(prev => ({
+      ...prev,
+      productShoot: { ...prev.productShoot, ...updates }
+    }));
   }, []);
 
   const handleContinue = useCallback(async () => {
@@ -760,11 +769,63 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 />
                 
                 <div style={{ paddingBottom: footerHeight + 24 }}>
-                  <StepTwoCustomize
-                    state={state}
-                    onUpdate={handleUpdate}
-                    onMatchingStateChange={setIsAgentMatching}
-                  />
+                  {/* PRODUCT SHOT FLOW */}
+                  {state.useCase === 'product' ? (
+                    <>
+                      {/* Show subtype selector if shoot mode not yet chosen */}
+                      {!state.productShoot.shootMode || state.productShoot.shootMode === 'new' ? (
+                        state.productShoot.shootMode !== 'new' ? (
+                          <ProductShootSubtypeSelector
+                            onSelectMode={(mode) => handleProductShootUpdate({ shootMode: mode })}
+                          />
+                        ) : (
+                          <ProductShootStep2
+                            state={state.productShoot}
+                            onStateChange={handleProductShootUpdate}
+                            selectedProduct={
+                              state.productReferences.length > 0
+                                ? {
+                                    id: state.productReferences[0],
+                                    name: 'Selected Product',
+                                    thumbnailUrl: state.displayedProductIds.length > 0 
+                                      ? state.displayedProductIds[0] 
+                                      : '',
+                                  }
+                                : undefined
+                            }
+                            onProductSelect={() => {
+                              // Trigger the product reference modal by updating state
+                              // The StepTwoCustomize handles this via product reference picker
+                            }}
+                          />
+                        )
+                      ) : (
+                        // Remix mode - show ProductShootStep2 with remix context
+                        <ProductShootStep2
+                          state={state.productShoot}
+                          onStateChange={handleProductShootUpdate}
+                          selectedProduct={
+                            state.productReferences.length > 0
+                              ? {
+                                  id: state.productReferences[0],
+                                  name: 'Selected Product',
+                                  thumbnailUrl: state.displayedProductIds.length > 0 
+                                    ? state.displayedProductIds[0] 
+                                    : '',
+                                }
+                              : undefined
+                          }
+                        />
+                      )}
+                    </>
+                  ) : (
+                    /* LIFESTYLE FLOW (existing) */
+                    <StepTwoCustomize
+                      state={state}
+                      onUpdate={handleUpdate}
+                      onMatchingStateChange={setIsAgentMatching}
+                    />
+                  )}
                 </div>
               </div>
             )}

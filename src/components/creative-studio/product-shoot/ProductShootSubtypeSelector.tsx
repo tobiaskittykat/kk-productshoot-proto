@@ -2,14 +2,26 @@ import { Sparkles, RefreshCw } from "lucide-react";
 import { ShootMode } from "./types";
 
 interface ProductShootSubtypeSelectorProps {
-  selectedMode: ShootMode;
-  onModeSelect: (mode: ShootMode) => void;
+  // New API: onSelectMode callback for integration with wizard
+  onSelectMode?: (mode: ShootMode) => void;
+  // Legacy API: controlled mode
+  selectedMode?: ShootMode;
+  onModeSelect?: (mode: ShootMode) => void;
 }
 
 export const ProductShootSubtypeSelector = ({ 
+  onSelectMode,
   selectedMode, 
   onModeSelect 
 }: ProductShootSubtypeSelectorProps) => {
+  // Use new callback if provided, otherwise fall back to legacy
+  const handleSelect = (mode: ShootMode) => {
+    if (onSelectMode) {
+      onSelectMode(mode);
+    } else if (onModeSelect) {
+      onModeSelect(mode);
+    }
+  };
   return (
     <div className="flex flex-col items-center gap-6 py-8">
       <div className="text-center space-y-2">
@@ -24,7 +36,7 @@ export const ProductShootSubtypeSelector = ({
       <div className="flex gap-4 w-full max-w-lg">
         {/* New Shoot Card */}
         <button
-          onClick={() => onModeSelect('new')}
+          onClick={() => handleSelect('new')}
           className={`flex-1 p-6 rounded-2xl border-2 transition-all duration-200 text-left group ${
             selectedMode === 'new'
               ? 'border-accent bg-accent/10 shadow-md'
@@ -46,7 +58,7 @@ export const ProductShootSubtypeSelector = ({
         
         {/* Remix Existing Card */}
         <button
-          onClick={() => onModeSelect('remix')}
+          onClick={() => handleSelect('remix')}
           className={`flex-1 p-6 rounded-2xl border-2 transition-all duration-200 text-left group ${
             selectedMode === 'remix'
               ? 'border-accent bg-accent/10 shadow-md'
