@@ -1,82 +1,185 @@
 
-# Fix "Reset to Default" Button in AI Settings
+# Fix Generate Variations Missing Product References
 
-## Summary
+## Problem Summary
 
-The "Reset to Default" buttons in the AI Settings page are not working correctly. The issue is that the prompt state variables are initialized with empty strings (`""`), but the disabled state comparison checks against the default prompt constants. This creates a timing issue during initial load.
-
----
+When you click "Generate Variations" on an existing image, the product reference images are not being sent to the AI generator. This causes:
+1. **Wrong color** - The AI guesses the product color instead of matching your reference images
+2. **Missing details** (like straps behind the heels) - The AI doesn't know the exact product construction
 
 ## Root Cause
 
-| Issue | Current Code | Problem |
-|-------|-------------|---------|
-| Initial state | `useState("")` | Empty strings don't match defaults |
-| Disabled check | `disabled={prompt === DEFAULT_*}` | Always `false` initially |
-| Effect timing | Sets defaults in `useEffect` | Race condition with renders |
+The `generateVariations` function in `src/hooks/useImageGeneration.ts` receives the `sourceImage` parameter but **completely ignores it**:
 
-When the page loads:
-1. State initializes to `""`
-2. Component renders with button enabled (since `"" !== DEFAULT_*`)
-3. Effect runs and sets state to default
-4. Button should now be disabled
+```typescript
+const generateVariations = useCallback(async (
+  state: CreativeStudioState,
+  sourceImage: GeneratedImage  // <-- RECEIVED BUT NEVER USED!
+): Promise<GeneratedImage[]> => {
+  const variationState = {
+    ...state,  // <-- Uses current wizard state (often empty!)
+    imageCount: 1,
+    seed: Math.floor(Math.random() * 1000000),
+  };
+  
+  return generateImages(variationState);  // No product data!
+}, [generateImages]);
+```
 
-But if the user clicks before step 3 completes, or if the comparison fails due to the initial empty state, the button appears clickable when it shouldn't be.
-
----
+The original image has all the product references stored in `sourceImage.settings.references.productReferenceUrls`, but this data is never extracted and passed to the new generation.
 
 ## Solution
 
-Initialize all prompt state variables with their default values instead of empty strings. This ensures:
-1. Buttons are correctly disabled from the first render
-2. No race condition with useEffect
-3. Consistent behavior regardless of timing
+Update `generateVariations` to extract the original generation parameters from `sourceImage.settings` and pass them directly to the `generate-image` edge function (bypassing the state-based `generateImages` wrapper).
 
----
+## Technical Changes
 
-## Changes
+### File: `src/hooks/useImageGeneration.ts`
 
-### File: `src/pages/Settings.tsx`
+**Lines 597-610 - Rewrite `generateVariations` function:**
 
-**Lines 34-40 - Update initial state:**
+Extract from `sourceImage.settings`:
+- `productReferenceUrls` - All the product reference images
+- `moodboardId` / `moodboardUrl` - The original moodboard
+- `shotTypePrompt` - The original shot type configuration
+- `artisticStyle`, `lightingStyle`, `cameraAngle` - Technical settings
+- `resolution`, `aspectRatio`, `aiModel` - Generation settings
+
+Then call `generate-image` directly with these preserved parameters plus a new random seed.
+
+**New implementation:**
 
 ```typescript
-// Before
-const [conceptPrompt, setConceptPrompt] = useState("");
-const [promptAgentPrompt, setPromptAgentPrompt] = useState("");
-const [onFootPrompt, setOnFootPrompt] = useState("");
-const [lifestylePrompt, setLifestylePrompt] = useState("");
-const [productFocusPrompt, setProductFocusPrompt] = useState("");
+const generateVariations = useCallback(async (
+  state: CreativeStudioState,
+  sourceImage: GeneratedImage
+): Promise<GeneratedImage[]> => {
+  setIsGeneratingImages(true);
+  
+  try {
+    // Extract original generation data from sourceImage.settings
+    const settings = sourceImage.settings || {};
+    const refs = settings.references || {};
+    
+    // Get product references from original image
+    const productReferenceUrls = refs.productReferenceUrls || 
+      (sourceImage.productReferenceUrls) || 
+      (sourceImage.productReferenceUrl ? [sourceImage.productReferenceUrl] : []);
+    
+    const { data, error } = await supabase.functions.invoke('generate-image', {
+      body: {
+        // Use refined prompt from original or fallback to prompt
+        prompt: sourceImage.refinedPrompt || sourceImage.prompt || '',
+        conceptTitle: sourceImage.conceptTitle,
+        
+        // CRITICAL: Pass product references from original image
+        productReferenceUrls,
+        
+        // Pass moodboard from original
+        moodboardId: sourceImage.moodboardId || refs.moodboardId,
+        moodboardUrl: refs.moodboardUrl || sourceImage.moodboardUrl,
+        
+        // Pass shot type from original
+        shotTypePrompt: refs.shotTypePrompt,
+        
+        // Technical settings from original
+        artisticStyle: settings.artisticStyle || state.artisticStyle,
+        lightingStyle: settings.lightingStyle || state.lightingStyle,
+        cameraAngle: settings.cameraAngle || state.cameraAngle,
+        
+        // Generation settings
+        imageCount: 1,
+        resolution: settings.resolution || state.resolution,
+        aspectRatio: settings.aspectRatio || state.aspectRatio,
+        aiModel: settings.aiModel || state.aiModel,
+        
+        // New random seed for variation
+        seed: Math.floor(Math.random() * 1000000),
+        
+        // Preserve brand association
+        brandId: sourceImage.brand_id || state.brandId,
+      },
+    });
 
-// After
-const [conceptPrompt, setConceptPrompt] = useState(DEFAULT_CONCEPT_AGENT_PROMPT);
-const [promptAgentPrompt, setPromptAgentPrompt] = useState(DEFAULT_PROMPT_AGENT_PROMPT);
-const [onFootPrompt, setOnFootPrompt] = useState(DEFAULT_ON_FOOT_SHOT_PROMPT);
-const [lifestylePrompt, setLifestylePrompt] = useState(DEFAULT_LIFESTYLE_SHOT_PROMPT);
-const [productFocusPrompt, setProductFocusPrompt] = useState(DEFAULT_PRODUCT_FOCUS_SHOT_PROMPT);
+    if (error) {
+      console.error('Error generating variation:', error);
+      toast({
+        title: 'Failed to generate variation',
+        description: error.message || 'Please try again',
+        variant: 'destructive',
+      });
+      return [];
+    }
+
+    const images: GeneratedImage[] = (data.images || []).map((img: any) => ({
+      id: img.id || `variation-${Date.now()}`,
+      imageUrl: img.imageUrl || '',
+      status: img.status || 'failed',
+      prompt: sourceImage.prompt || '',
+      refinedPrompt: img.refinedPrompt,
+      conceptTitle: sourceImage.conceptTitle,
+      productReferenceUrls,
+      moodboardId: sourceImage.moodboardId,
+      index: img.index,
+    }));
+
+    const successCount = images.filter(i => i.status === 'completed').length;
+    if (successCount > 0) {
+      toast({
+        title: 'Variation generated!',
+        description: `Created ${successCount} new variation(s)`,
+      });
+    }
+
+    return images;
+  } catch (err) {
+    console.error('Error generating variation:', err);
+    toast({
+      title: 'Failed to generate variation',
+      description: 'An unexpected error occurred',
+      variant: 'destructive',
+    });
+    return [];
+  } finally {
+    setIsGeneratingImages(false);
+  }
+}, [toast]);
 ```
 
-This single change ensures:
-- Buttons are disabled correctly when prompts match defaults
-- Reset works immediately when user HAS customized prompts
-- No empty state flicker during initial load
+## Expected Result After Fix
 
----
+When you click "Generate Variations" on an image that was created with product references:
 
-## Technical Details
+**Before (broken):**
+```json
+{
+  "productReferenceUrls": [],  // Empty!
+  "shotTypePrompt": null
+}
+```
 
-The `useEffect` on lines 52-63 will still run and update the state if custom prompts exist in `brand_context.aiPrompts`. But now:
-- If no custom prompts exist: state already has defaults, no change needed
-- If custom prompts exist: state updates to custom values, button becomes enabled
-- Clicking reset: sets back to default, button becomes disabled
+**After (fixed):**
+```json
+{
+  "productReferenceUrls": [
+    "https://.../product-1.png",
+    "https://.../product-2.png",
+    // ... all original references
+  ],
+  "shotTypePrompt": "A single, high-resolution e-commerce image..."
+}
+```
 
----
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/hooks/useImageGeneration.ts` | Rewrite `generateVariations` function (lines 597-610) to extract and preserve original image settings |
 
 ## Testing
 
 After the fix:
-1. Load Settings page → all "Reset to Default" buttons should be disabled (showing defaults)
-2. Edit any prompt → button becomes enabled
-3. Click "Reset to Default" → textarea reverts to default, button becomes disabled
-4. Save with custom prompt, reload → button should be enabled
-5. Click reset → works correctly
+1. Generate a Product Shoot image with a Birkenstock SKU (5 reference angles)
+2. Click "Generate Variations" on the completed image
+3. Verify in logs that `productReferenceUrls` contains all 5 reference URLs
+4. Confirm the generated variation matches the original color, materials, and construction
