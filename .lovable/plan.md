@@ -1,77 +1,80 @@
 
-# Fix Background Indicator Display
 
-## Issue
+# Add Aspect Ratio and Resolution to Generation Info
 
-The bottom bar shows "Background: Auto" even when a studio background (White Cyclorama) is selected. The indicator should reflect the actual selection.
+## Summary
 
----
-
-## Root Cause
-
-The `getBackgroundLabel` function in `ProductShootIndicators.tsx` only checks `state.settingType`:
-
-```typescript
-const getBackgroundLabel = () => {
-  if (state.settingType === 'studio') return 'Background: Studio';
-  if (state.settingType === 'outdoor') return 'Background: Outdoor';
-  return 'Background: Auto';
-};
-```
-
-However, when a specific background is selected from the Studio/Outdoor tabs, the `backgroundId` is set (e.g., `studio-white`), but `settingType` may not be properly synced. The indicator should also consider the `backgroundId` prefix to correctly determine the background category.
+Add two new metadata rows to the "Generation Info" section in the Image Detail Modal:
+1. **Aspect Ratio** - Display the selected ratio (e.g., "1:1", "16:9", "4:5")
+2. **Resolution** - Display the pixel size (e.g., "1024px", "2048px")
 
 ---
 
-## Fix
+## Current State
 
-Update `getBackgroundLabel` to check both `settingType` AND the `backgroundId` prefix:
+The Generation Info section currently shows:
+- Model (e.g., "Gemini 3 Pro")
+- Status (e.g., "Completed")
+- Image ID (truncated UUID)
 
-**File:** `src/components/creative-studio/product-shoot/ProductShootIndicators.tsx`
+The data is already available in `image.settings.aspectRatio` and `image.settings.resolution` - it just needs to be displayed.
 
-**Current (lines 55-59):**
+---
+
+## Technical Changes
+
+### File: `src/components/creative-studio/ImageDetailModal.tsx`
+
+Add two new rows after the "Model" row (around line 392):
+
+**After this block (lines 387-392):**
 ```typescript
-const getBackgroundLabel = () => {
-  if (state.settingType === 'studio') return 'Background: Studio';
-  if (state.settingType === 'outdoor') return 'Background: Outdoor';
-  return 'Background: Auto';
-};
+{/* AI Model */}
+{image.settings?.aiModel && (
+  <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+    <span className="text-muted-foreground">Model</span>
+    <span className="text-xs font-medium">{formatModelName(image.settings.aiModel)}</span>
+  </div>
+)}
 ```
 
-**Updated:**
+**Add:**
 ```typescript
-const getBackgroundLabel = () => {
-  // Check backgroundId prefix first (most reliable indicator of actual selection)
-  if (state.backgroundId?.startsWith('studio-')) return 'Background: Studio';
-  if (state.backgroundId?.startsWith('outdoor-')) return 'Background: Outdoor';
-  
-  // Fall back to settingType
-  if (state.settingType === 'studio') return 'Background: Studio';
-  if (state.settingType === 'outdoor') return 'Background: Outdoor';
-  
-  return 'Background: Auto';
-};
+{/* Aspect Ratio */}
+{image.settings?.aspectRatio && (
+  <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+    <span className="text-muted-foreground">Aspect Ratio</span>
+    <span className="text-xs font-medium">{image.settings.aspectRatio}</span>
+  </div>
+)}
+
+{/* Resolution */}
+{image.settings?.resolution && (
+  <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+    <span className="text-muted-foreground">Resolution</span>
+    <span className="text-xs font-medium">{image.settings.resolution}px</span>
+  </div>
+)}
 ```
 
 ---
 
 ## Expected Result
 
-When "White Cyclorama" (studio-white) is selected:
-
 ```text
-✓ Product · ✓ Shot Type: Full Body · ✓ Background: Studio
-                                                      ↑ Now correctly shows "Studio"
-```
-
-When an outdoor background is selected:
-```text
-✓ Product · ✓ Shot Type: Full Body · ✓ Background: Outdoor
-```
-
-When "Auto" is selected (no specific background):
-```text
-✓ Product · ✓ Shot Type: Full Body · ✓ Background: Auto
+┌─────────────────────────────────────────┐
+│ 🎨 Generation Info                      │
+├─────────────────────────────────────────┤
+│ Model                      Gemini 3 Pro │
+│ ─────────────────────────────────────── │
+│ Aspect Ratio                       4:5  │  ← NEW
+│ ─────────────────────────────────────── │
+│ Resolution                      1024px  │  ← NEW
+│ ─────────────────────────────────────── │
+│ Status                       Completed  │
+│ ─────────────────────────────────────── │
+│ Image ID                    d673f29f... │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -80,4 +83,5 @@ When "Auto" is selected (no specific background):
 
 | File | Changes |
 |------|---------|
-| `ProductShootIndicators.tsx` | Update `getBackgroundLabel` to check `backgroundId` prefix in addition to `settingType` |
+| `ImageDetailModal.tsx` | Add Aspect Ratio and Resolution rows to Generation Info section |
+
