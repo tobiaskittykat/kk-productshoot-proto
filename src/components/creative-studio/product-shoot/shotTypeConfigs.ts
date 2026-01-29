@@ -393,7 +393,8 @@ export type ProductFocusAngle =
   | 'top-down'
   | 'sole-view'
   | 'detail-closeup'
-  | 'pair-shot';
+  | 'pair-shot'
+  | 'lifestyle';
 
 export const productFocusAngleOptions = [
   { 
@@ -437,6 +438,12 @@ export const productFocusAngleOptions = [
     label: 'Pair Shot', 
     prompt: 'both shoes arranged at complementary angles showing depth, classic e-commerce pair composition, shoes slightly overlapping or staggered',
     thumbnail: 'angle-pair.jpg',
+  },
+  { 
+    value: 'lifestyle' as ProductFocusAngle, 
+    label: 'Lifestyle', 
+    prompt: 'dynamic lifestyle composition with creative freedom, product artfully placed in context with props or environmental elements, editorial product photography with mood and atmosphere, AI determines optimal angle and arrangement',
+    thumbnail: null,
   },
 ];
 
