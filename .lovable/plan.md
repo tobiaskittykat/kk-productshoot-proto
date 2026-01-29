@@ -1,218 +1,175 @@
 
-# SKU Display Enhancement & Button Cleanup
+
+# Product Shoot UX Refinements
 
 ## Overview
 
-Clean up redundant buttons and improve SKU naming display to show structured product attributes (brand, model, material, color) consistently across the Product picker and Gallery.
+Three improvements to the Product Shoot workflow:
+1. **Show all product angles** on click/hover
+2. **Collapsible shot type options** (default collapsed) + review "Always Enforced" relevance
+3. **Background selector** with single row + "Show More" for the rest, prioritizing recently used
 
 ---
 
-## Current State Analysis
+## 1. View All Product Angles on Click/Hover
 
-**Existing SKU Data Structure** (from `product_skus.description` JSONB):
-```json
-{
-  "colors": ["taupe", "brown"],
-  "materials": ["suede", "cork", "rubber"],
-  "product_type": "clog",
-  "style_keywords": ["casual", "comfort", "slip-on"]
-}
+### Current State
+- Product thumbnails in Step 2 show a badge like "3 angles" but no way to see them
+- ProductPickerModal shows angle count but no angle preview
+
+### Solution
+Add a hover popover that shows all angles when hovering over a product thumbnail.
+
+**Files to modify:**
+- `src/components/creative-studio/product-shoot/ProductShootStep2.tsx`
+
+**Implementation:**
+```
+┌─────────────────────────────────────────────────────┐
+│  Hover over product thumbnail → Popover appears:   │
+│  ┌───────────────────────────────────────────────┐  │
+│  │   Boston - Taupe Suede                        │  │
+│  │   ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │  │
+│  │   │Side │ │Front│ │Back │ │Top  │            │  │
+│  │   └─────┘ └─────┘ └─────┘ └─────┘            │  │
+│  │   4 angles                                    │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Current SKU Names** are already well-structured (e.g., "Birkenstock Boston Taupe Suede Clog") but display is inconsistent.
+- Wrap product thumbnails with `HoverCard` from Radix
+- Fetch angles for the hovered SKU (already available in `fetchedSku` query)
+- Show horizontal row of angle thumbnails with labels
 
 ---
 
-## Changes
+## 2. Collapsible Shot Type Options (Default Collapsed)
 
-### 1. Remove Duplicate Buttons
+### Current State
+- Shot type configurators (`OnFootConfigurator`, `LifestyleConfigurator`, `ProductFocusConfigurator`) are always expanded
+- Each has an "Always Enforced" info box taking up space
 
-**File: `src/components/creative-studio/product-shoot/ProductShootStep2.tsx`**
+### Solution
+Make shot-specific options collapsible (default collapsed) and review the "Always Enforced" content.
 
-Remove lines 389-409 (the "Quick actions" section with Smart Upload and Create SKU buttons) since these already exist inside the ProductPickerModal.
+**Files to modify:**
+- `src/components/creative-studio/product-shoot/OnFootConfigurator.tsx`
+- `src/components/creative-studio/product-shoot/LifestyleConfigurator.tsx`
+- `src/components/creative-studio/product-shoot/ProductFocusConfigurator.tsx`
+
+**Implementation:**
 
 ```
-REMOVE:
-{/* Quick actions */}
-<div className="flex gap-2">
-  <Button variant="default" ... onClick={() => setShowSmartUploadModal(true)}>
-    Smart Upload
-  </Button>
-  <Button variant="outline" ... onClick={() => setShowCreateSKUModal(true)}>
-    Create SKU
-  </Button>
-</div>
+┌─────────────────────────────────────────────────────┐
+│  [Visual shot type cards - always visible]          │
+│                                                     │
+│  ▶ Shot Options                    [Collapsed]      │
+│    ─────────────────────────────────────────────    │
+│  (Click to expand and see Gender, Pose, etc.)      │
+└─────────────────────────────────────────────────────┘
 ```
 
-### 2. Create SKU Display Helper
+**Changes:**
+1. Wrap configurator content in `Collapsible` with `defaultOpen={false}`
+2. Add a clickable header: "Shot Options" with chevron icon
+3. Keep the options inside the collapsible content
 
-**New utility function** to parse and format SKU display info:
+### "Always Enforced" Review
 
-```typescript
-// Helper to extract display attributes from SKU
-interface SKUDisplayInfo {
-  brandName: string;      // "Birkenstock"
-  modelName: string;      // "Boston"
-  material: string;       // "Suede"
-  color: string;          // "Taupe"
-  productType: string;    // "Clog"
-}
+The "Always Enforced" boxes contain:
+- **On Foot**: Mid-calf framing, three-quarter view, product integrity, clean lighting
+- **Lifestyle**: Full body, head cropped, white background, product integrity, no logos
+- **Product Focus**: Product only, Birkenstock integrity, ultra-sharp focus, e-commerce quality
 
-function parseSkuDisplayInfo(name: string, description?: object): SKUDisplayInfo {
-  // Try to parse from name format "Brand Model Color Material Type"
-  // Fallback to description JSONB if available
-}
-```
+**Recommendation:** These ARE still relevant as user-facing documentation BUT:
+- These rules are already encoded in `defaultPrompts.ts`
+- They serve as a reminder to users, not as functional code
+- **Action**: Keep them but move inside the collapsed section OR convert to a small tooltip on the shot type card
 
-### 3. Improve Thumbnail Overlay Display
-
-**File: `src/components/creative-studio/product-shoot/ProductShootStep2.tsx`**
-
-Update the name overlay on product thumbnails (around line 368-372) to show structured info:
-
-**Current:**
-```tsx
-<span className="text-xs text-white font-medium truncate block">
-  {sku.name}
-</span>
-```
-
-**Proposed:**
-```tsx
-<div className="text-xs text-white">
-  <span className="font-medium block truncate">{displayInfo.modelName}</span>
-  <span className="opacity-80 text-[10px] truncate block">
-    {displayInfo.color} {displayInfo.material}
-  </span>
-</div>
-```
-
-This displays:
-- Line 1: **Boston** (model name - bold)
-- Line 2: Taupe Suede (color + material - smaller, subtle)
-
-### 4. Improve ProductPickerModal Row Display
-
-**File: `src/components/creative-studio/product-shoot/ProductPickerModal.tsx`**
-
-Update ProductRow component (lines 186-196) to show structured attributes:
-
-**Current:**
-```tsx
-<div className="flex items-center gap-2">
-  <span className="font-medium truncate">{sku.name}</span>
-</div>
-<div className="text-xs text-muted-foreground">
-  {sku.sku_code && <span>{sku.sku_code}</span>}
-  <span>{sku.angles.length} angles</span>
-</div>
-```
-
-**Proposed:**
-```tsx
-<div className="flex items-center gap-2">
-  <span className="font-medium truncate">{displayInfo.modelName}</span>
-  {isSelected && <Check className="w-4 h-4 text-accent" />}
-</div>
-<div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-  <span className="text-foreground/70">{displayInfo.brandName}</span>
-  <span>•</span>
-  <span>{displayInfo.color} {displayInfo.material}</span>
-  {sku.angles.length > 1 && (
-    <>
-      <span>•</span>
-      <span>{sku.angles.length} angles</span>
-    </>
-  )}
-</div>
-```
-
-This displays:
-- Line 1: **Boston** + checkmark
-- Line 2: Birkenstock • Taupe Suede • 3 angles
-
-### 5. Update Gallery Image Cards
-
-**File: `src/components/creative-studio/GeneratedImageCard.tsx`**
-
-Currently (line 228-229):
-```tsx
-{image.conceptTitle || 'Generated Image'}
-```
-
-For Product Shoot images, `conceptTitle` already contains the product name. This should be sufficient but ensure it's using the improved naming when generated.
+**Proposed approach:** Move "Always Enforced" inside the collapsed section. When collapsed, users focus on selecting the shot type. When expanded (power users), they see both options AND the enforced rules.
 
 ---
 
-## SKU Name Parsing Logic
+## 3. Background Selector - Single Row + Show More
 
-The parsing function will handle existing well-formatted names:
+### Current State
+- All 10 studio / 12 outdoor backgrounds shown in a 3-4 column grid
+- No prioritization of recently used backgrounds
+- Takes significant vertical space
 
-| Input Name | Brand | Model | Color | Material | Type |
-|------------|-------|-------|-------|----------|------|
-| Birkenstock Boston Taupe Suede Clog | Birkenstock | Boston | Taupe | Suede | Clog |
-| Birkenstock Arizona EVA Sandals Taupe | Birkenstock | Arizona | Taupe | EVA | Sandals |
+### Solution
+Show only first 4 backgrounds + "Show More" button that expands to full grid.
 
-**Algorithm:**
-1. First word = Brand (if known brand like "Birkenstock")
-2. Second word = Model name
-3. Last word = Product type (clog, sandal, boot, etc.)
-4. Remaining words = Color + Material (from description JSONB if available)
+**Files to modify:**
+- `src/components/creative-studio/product-shoot/BackgroundSelector.tsx`
+- `src/components/creative-studio/product-shoot/types.ts` (if needed for last_used tracking)
 
-**Fallback:** If parsing fails, just show full name as-is.
+**Implementation:**
+
+```
+Default (Collapsed):
+┌─────────────────────────────────────────────────────┐
+│  [Auto] Let AI choose                               │
+│                                                     │
+│  Studio | Outdoor                                   │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
+│  │White│ │Black│ │Warm │ │Cool │  [Show 6 more...] │
+│  └─────┘ └─────┘ └─────┘ └─────┘                   │
+└─────────────────────────────────────────────────────┘
+
+Expanded (After clicking "Show More"):
+┌─────────────────────────────────────────────────────┐
+│  [Auto] Let AI choose                               │
+│                                                     │
+│  Studio | Outdoor                                   │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
+│  │White│ │Black│ │Warm │ │Cool │                   │
+│  └─────┘ └─────┘ └─────┘ └─────┘                   │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
+│  │Conc │ │Marbl│ │Fabri│ │Wood │                   │
+│  └─────┘ └─────┘ └─────┘ └─────┘                   │
+│  ┌─────┐ ┌─────┐                                   │
+│  │Terr │ │Paper│                     [Show Less]   │
+│  └─────┘ └─────┘                                   │
+└─────────────────────────────────────────────────────┘
+```
+
+**Prioritization Logic:**
+1. If a background was recently used (selected in a previous generation), show it first
+2. This requires tracking `last_used_background_id` - could use localStorage for simplicity
+3. Sort backgrounds: recently used → then default order
+
+**Changes:**
+1. Add `showAllBackgrounds` state (default `false`)
+2. Slice backgrounds to first 4 when collapsed
+3. Add "Show X more..." button that toggles state
+4. Track last used background in localStorage
+5. Reorder backgrounds to show recently used first
 
 ---
 
-## Visual Comparison
+## Technical Details
 
-### Before (Thumbnails)
-```
-┌─────────────────────┐
-│                     │
-│      [image]        │
-│                     │
-│ Birkenstock Bosto...│
-└─────────────────────┘
-```
-
-### After (Thumbnails)
-```
-┌─────────────────────┐
-│                     │
-│      [image]        │
-│                     │
-│ Boston              │
-│ Taupe Suede         │
-└─────────────────────┘
-```
-
-### Before (Modal Row)
-```
-[thumb] Birkenstock Boston Taupe Suede Clog  >
-        BIRK-BOSTON-TAUPE • 3 angles
-```
-
-### After (Modal Row)
-```
-[thumb] Boston                               >
-        Birkenstock • Taupe Suede • 3 angles
-```
-
----
-
-## File Summary
+### File Changes Summary
 
 | File | Changes |
 |------|---------|
-| `src/components/creative-studio/product-shoot/ProductShootStep2.tsx` | Remove duplicate buttons, improve thumbnail display |
-| `src/components/creative-studio/product-shoot/ProductPickerModal.tsx` | Add description field to query, improve row display |
-| `src/lib/skuDisplayUtils.ts` | NEW: Create SKU name parsing utility |
+| `ProductShootStep2.tsx` | Add HoverCard for product angle preview |
+| `OnFootConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
+| `LifestyleConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
+| `ProductFocusConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
+| `BackgroundSelector.tsx` | Add collapsed/expanded state, slice to 4 visible, add "Show More" button, prioritize recently used |
+
+### Dependencies
+- Uses existing `HoverCard` from `@/components/ui/hover-card`
+- Uses existing `Collapsible` from `@/components/ui/collapsible`
+- No new packages needed
 
 ---
 
-## Result
+## Expected Result
 
-1. **Cleaner UI** - No duplicate Smart Upload / Create SKU buttons
-2. **Consistent naming** - Model name prominent, attributes secondary
-3. **Scannable** - Easy to distinguish products at a glance
-4. **Scalable** - Works for 1000+ SKUs with consistent formatting
+1. **Angles**: Users can hover over any product thumbnail to see all available angles
+2. **Shot Options**: Cleaner UI with options collapsed by default - power users can expand
+3. **Backgrounds**: Less visual clutter, faster scanning, recently used backgrounds prioritized
+
