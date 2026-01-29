@@ -1,108 +1,185 @@
 
-
-# Set White Studio Background and Sunny as Defaults with Exact Hardcoded Output
+# Generate AI Background Thumbnails for Studio & Outdoor Presets
 
 ## Overview
 
-Configure the white studio cyclorama background preset to produce the **exact same hardcoded output** you had before, and set "sunny" as the default weather selection.
+Replace the CSS gradient placeholders with actual AI-generated thumbnail images for all 22 background presets (10 studio + 12 outdoor). These will give users a much clearer visual preview of what each background setting looks like.
 
 ---
 
-## Changes Required
+## Approach
 
-### 1. Update White Cyclorama Preset (`presets.ts`)
+### Option A: Generate & Store in Supabase Storage (Recommended)
+Generate images using Gemini, upload to the `brand-assets` bucket, and reference via public URLs.
 
-Update the `studio-white` preset to produce the exact background output:
+**Pros:**
+- Images persist across deployments
+- Fast loading via CDN
+- No build-time generation needed
 
-| Current | Updated |
-|---------|---------|
-| `clean white studio cyclorama background, professional product photography lighting, seamless white backdrop` | Custom handling in `buildBackgroundSection` |
+**Cons:**
+- Requires edge function to generate
+- One-time setup effort
 
-The background section will output:
-```text
-BACKGROUND (MANDATORY):
-- Pure white seamless studio background
-- Visible floor and wall plane
-- Soft cast shadows grounding the model
-```
+### Option B: Generate & Store as Static Assets
+Generate images and save to `src/assets/backgrounds/` or `public/backgrounds/`.
 
-### 2. Update Lighting for White Studio (`shotTypeConfigs.ts`)
+**Pros:**
+- Simple file references
+- No external dependencies
 
-Update `buildLightingSection` to detect `studio-white` specifically and output:
-```text
-LIGHTING & TECHNICAL (MANDATORY):
-- Clean, diffused studio light
-- Soft contact shadows under the soles
-```
-
-### 3. Set Default Weather to "Sunny" (`types.ts`)
-
-Change `initialProductShootState.weatherCondition` from `'auto'` to `'sunny'`.
+**Cons:**
+- Increases bundle size
+- Must regenerate if presets change
 
 ---
 
-## File Changes
+## Recommended: Option A - Edge Function + Storage
 
-### `src/components/creative-studio/product-shoot/presets.ts`
+### Step 1: Create Edge Function for Thumbnail Generation
 
-No changes needed - the current `studio-white` preset is fine. The special handling will be in the prompt builders.
-
-### `src/components/creative-studio/product-shoot/types.ts`
-
-Update `initialProductShootState`:
+Create `supabase/functions/generate-background-thumbnails/index.ts`:
 
 ```typescript
-// Line 148
-weatherCondition: 'sunny',  // Changed from 'auto'
+// Calls Gemini image generation API for each preset
+// Uploads results to brand-assets bucket
+// Returns mapping of background ID -> thumbnail URL
 ```
 
-### `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
+**Prompt Template for Each Background:**
+```text
+Generate a simple, clean background preview image for product photography.
+Setting: [preset.prompt]
+Style: Empty background only, no products or people, soft lighting, 
+       4:3 aspect ratio, suitable as a selection thumbnail.
+```
 
-**Update `buildBackgroundSection` function (lines 21-47):**
+### Step 2: Update Presets with Thumbnail URLs
 
-Add special case for `studio-white` to produce exact hardcoded output:
+After generation, update `presets.ts` to include actual thumbnail URLs:
+
 ```typescript
-if (context.backgroundId === 'studio-white') {
-  sections.push("BACKGROUND (MANDATORY):");
-  sections.push("- Pure white seamless studio background");
-  sections.push("- Visible floor and wall plane");
-  sections.push("- Soft cast shadows grounding the model");
-  return sections;
+{ 
+  id: 'studio-white', 
+  name: 'White Cyclorama', 
+  category: 'studio', 
+  thumbnail: 'https://[supabase-url]/storage/v1/object/public/brand-assets/bg-thumbnails/studio-white.png',
+  prompt: '...',
+  colorHint: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)' // Fallback
 }
 ```
 
-**Update `buildLightingSection` function (lines 52-77):**
+### Step 3: Update BackgroundSelector to Prefer Thumbnails
 
-Add special case for `studio-white` to produce exact hardcoded lighting:
+The component already handles this (line 81):
 ```typescript
-if (context.backgroundId === 'studio-white') {
-  sections.push("LIGHTING & TECHNICAL (MANDATORY):");
-  sections.push("- Clean, diffused studio light");
-  sections.push("- Soft contact shadows under the soles");
-  return sections;
-}
+background: bg.thumbnail || bg.colorHint || 'linear-gradient(...)'
+```
+
+So once thumbnails are populated, they'll automatically be used.
+
+---
+
+## Thumbnail Specifications
+
+| Property | Value |
+|----------|-------|
+| **Dimensions** | 400x300px (4:3 aspect ratio) |
+| **Format** | PNG or WebP |
+| **Style** | Empty background, soft lighting, no products/people |
+| **Storage Path** | `brand-assets/bg-thumbnails/{preset-id}.png` |
+
+---
+
+## Backgrounds to Generate (22 total)
+
+### Studio (10)
+1. `studio-white` - White Cyclorama
+2. `studio-black` - Black Void
+3. `studio-gradient-warm` - Warm Gradient
+4. `studio-gradient-cool` - Cool Gradient
+5. `studio-concrete` - Concrete Floor
+6. `studio-marble` - Marble Surface
+7. `studio-fabric` - Textured Fabric
+8. `studio-wood` - Warm Wood
+9. `studio-terrazzo` - Terrazzo
+10. `studio-paper` - Paper Backdrop
+
+### Outdoor (12)
+1. `outdoor-beach` - Sandy Beach
+2. `outdoor-urban` - Urban Street
+3. `outdoor-park` - Park Grass
+4. `outdoor-cafe` - Cafe Terrace
+5. `outdoor-desert` - Desert Dunes
+6. `outdoor-forest` - Forest Path
+7. `outdoor-rooftop` - Rooftop
+8. `outdoor-pool` - Poolside
+9. `outdoor-mountain` - Mountain Trail
+10. `outdoor-vineyard` - Vineyard
+11. `outdoor-boardwalk` - Boardwalk
+12. `outdoor-market` - Street Market
+
+---
+
+## Implementation Steps
+
+### 1. Create Edge Function
+- `supabase/functions/generate-background-thumbnails/index.ts`
+- Uses Lovable AI (Gemini image generation)
+- Generates 22 images sequentially (to avoid rate limits)
+- Uploads each to `brand-assets/bg-thumbnails/`
+- Returns JSON with all URLs
+
+### 2. Run Generation Once
+- Call the edge function to generate all thumbnails
+- This is a one-time operation
+
+### 3. Update Presets File
+- Add generated thumbnail URLs to each preset in `presets.ts`
+- Keep `colorHint` as fallback for loading states
+
+### 4. Update Config
+- Add function to `supabase/config.toml`
+
+---
+
+## Edge Function Code Structure
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const BACKGROUNDS = [
+  { id: 'studio-white', prompt: 'Pure white seamless studio cyclorama, professional photography backdrop, soft diffused lighting' },
+  { id: 'studio-black', prompt: 'Deep black studio void, dramatic rim lighting, high contrast photography backdrop' },
+  // ... all 22 presets
+];
+
+serve(async (req) => {
+  // 1. For each background preset
+  // 2. Call Gemini image generation with prompt
+  // 3. Upload base64 result to storage
+  // 4. Collect URLs
+  // 5. Return mapping
+});
 ```
 
 ---
 
 ## Result
 
-When a user enters Product Shoot, the defaults will be:
-- **Background**: White Cyclorama (studio-white)
-- **Weather**: Sunny (for outdoor backgrounds)
+After implementation:
+- Users will see actual visual previews of each background
+- Studio backgrounds will show realistic studio/surface textures
+- Outdoor backgrounds will show scenic location previews
+- CSS gradients remain as loading fallbacks
 
-When generating with `studio-white` selected, the prompt will include the **exact** hardcoded sections:
+---
 
-```text
-BACKGROUND (MANDATORY):
-- Pure white seamless studio background
-- Visible floor and wall plane
-- Soft cast shadows grounding the model
+## File Changes Summary
 
-LIGHTING & TECHNICAL (MANDATORY):
-- Clean, diffused studio light
-- Soft contact shadows under the soles
-```
-
-Other studio backgrounds will use the generic studio lighting, and outdoor backgrounds will use natural lighting with the selected weather condition (defaulting to sunny).
-
+| File | Action |
+|------|--------|
+| `supabase/functions/generate-background-thumbnails/index.ts` | Create |
+| `supabase/config.toml` | Add function config |
+| `src/components/creative-studio/product-shoot/presets.ts` | Update with thumbnail URLs after generation |
