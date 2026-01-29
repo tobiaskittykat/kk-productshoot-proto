@@ -1,85 +1,194 @@
 
-# Highlight Birkenstock Logos in Prompt Agent
+
+# Update Product Focus Camera Angles with Visual Thumbnails
 
 ## Summary
 
-Two changes to give Birkenstock logos (embossed and engraved) special prominence:
-1. **Enhance prompt agent instructions** to specifically call out the Birkenstock wordmark/logos as a critical product integrity element
-2. **Instruct the agent to emphasize logos in the final prompt** so the image generator pays extra attention to reproducing them faithfully
+Replace the current dropdown-based camera angle selector with a visual thumbnail grid that shows EXACTLY the 6 angle types from Birkenstock's e-commerce photography standard. Users will see reference thumbnails of each angle so they know exactly what output to expect.
 
 ---
 
-## What's Changing
+## Camera Angle Mapping (from uploaded images)
 
-### File: `src/lib/defaultPrompts.ts`
-
-**Current logo mention (line 73):**
-```
-- **LOGO & TEXT FIDELITY**: All embossed, engraved, or stamped brand text/logos must be reproduced with 100% accuracy
-```
-
-**Enhanced version:**
-```
-- **⚠️ BIRKENSTOCK LOGO FIDELITY (CRITICAL)**:
-  - The embossed "BIRKENSTOCK" wordmark on the footbed and the engraved "Birkenstock" on the buckle are signature brand identifiers
-  - These logos MUST be clearly visible and accurately reproduced in every product shot
-  - Pay special attention to: the classic serif typography, correct letter spacing, proper placement on footbed and buckle
-  - Your final prompt MUST explicitly describe and emphasize these logo elements to ensure the image generator renders them faithfully
-```
-
-### File: `supabase/functions/generate-image/index.ts`
-
-The same enhancement will be applied to the inline system prompt (around line 512) to ensure consistency.
+| Uploaded Image | Angle Name | Description |
+|----------------|------------|-------------|
+| `1022457_top.jpg` | **Top Down** | Overhead view of pair, footbed visible with embossed branding |
+| `1022457.jpg` | **Hero (3/4 Front)** | Classic 45° hero shot, main product image |
+| `1022457_side.jpg` | **Side Profile** | Pure lateral side view, single shoe |
+| `1022457_sole.jpg` | **Sole View** | One shoe showing sole tread pattern + one showing footbed |
+| `1022457_detail-1.jpg` | **Detail Close-up** | Tight crop on buckles, texture, hardware |
+| `1022457_pair.jpg` | **Pair Shot** | Two shoes artfully arranged, showing depth |
 
 ---
 
-## The Updated Prompt Agent Instruction Block
+## Changes
+
+### 1. Copy Reference Images to Assets
+
+Copy all 6 uploaded images to `src/assets/product-angles/`:
 
 ```text
-3. **⚠️ PRODUCT INTEGRITY IS CRITICAL** - When product reference images are provided:
-   - **INCLUDE brand name and model name** (e.g., "Birkenstock Boston", "Nike Air Max") when provided in PRODUCT IDENTITY section
-   - ALSO describe the products visually in your prompt with EXACT detail
-   - Include: material (leather, suede, croc-embossed), color, hardware finish (gold, silver, brushed metal)
-   - Include: silhouette/type (clog, sandal, crossbody), and key details (cork footbed, adjustable buckle, chain strap)
-   
-   **⚠️ BIRKENSTOCK LOGO FIDELITY (CRITICAL)**:
-   - The embossed "BIRKENSTOCK" wordmark on the footbed and the engraved "Birkenstock" on the buckle are signature brand identifiers
-   - These logos MUST be clearly visible and accurately reproduced in every product shot
-   - Pay special attention to: the classic serif typography, correct letter spacing, proper placement on footbed and buckle
-   - Your final prompt MUST explicitly describe and emphasize these logo elements to ensure the image generator renders them faithfully
-   
-   - **EMPHASIZE PRODUCT FIDELITY NATURALLY**: Weave product integrity requirements into your evocative description. The product must match reference images EXACTLY - same silhouette, same hardware placement, same materials, same branding. Make this emphasis feel natural, not like a checklist.
+src/assets/product-angles/
+├── angle-top-down.jpg
+├── angle-hero.jpg
+├── angle-side-profile.jpg
+├── angle-sole.jpg
+├── angle-detail.jpg
+└── angle-pair.jpg
+```
+
+### 2. Update Camera Angle Options
+
+**File: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`**
+
+Replace the current `productFocusAngleOptions` with updated options that include thumbnail paths:
+
+```typescript
+export type ProductFocusAngle = 
+  | 'auto'
+  | 'hero'           // was 'three-quarter'
+  | 'side-profile'
+  | 'top-down'
+  | 'sole-view'
+  | 'detail-closeup'
+  | 'pair-shot';     // NEW
+
+export const productFocusAngleOptions = [
+  { 
+    value: 'auto', 
+    label: 'Auto (AI chooses)', 
+    prompt: null,
+    thumbnail: null,
+  },
+  { 
+    value: 'hero', 
+    label: 'Hero (3/4 Front)', 
+    prompt: 'three-quarter front view at 45-degree angle, classic hero product shot showing depth and dimension, single shoe angled toward camera',
+    thumbnail: 'angle-hero.jpg',
+  },
+  { 
+    value: 'side-profile', 
+    label: 'Side Profile', 
+    prompt: 'pure lateral side profile view, single shoe centered, showing full silhouette from true side angle, product facing left',
+    thumbnail: 'angle-side-profile.jpg',
+  },
+  { 
+    value: 'top-down', 
+    label: 'Top Down', 
+    prompt: 'overhead top-down view of pair, both shoes visible side by side, footbed and straps fully visible from above, embossed branding readable',
+    thumbnail: 'angle-top-down.jpg',
+  },
+  { 
+    value: 'sole-view', 
+    label: 'Sole View', 
+    prompt: 'one shoe flipped to show sole tread pattern and outsole construction, second shoe showing footbed, artfully arranged to show both surfaces',
+    thumbnail: 'angle-sole.jpg',
+  },
+  { 
+    value: 'detail-closeup', 
+    label: 'Detail Close-up', 
+    prompt: 'extreme close-up cropped tight on buckle hardware, strap texture, and material details, macro-style product detail shot',
+    thumbnail: 'angle-detail.jpg',
+  },
+  { 
+    value: 'pair-shot', 
+    label: 'Pair Shot', 
+    prompt: 'both shoes arranged at complementary angles showing depth, classic e-commerce pair composition, shoes slightly overlapping or staggered',
+    thumbnail: 'angle-pair.jpg',
+  },
+];
+```
+
+### 3. Create Visual Angle Selector Component
+
+**New File: `src/components/creative-studio/product-shoot/CameraAngleSelector.tsx`**
+
+A visual grid selector that displays thumbnail images for each camera angle:
+
+```typescript
+// Visual grid of camera angles with thumbnails
+// - 3x2 grid layout (or 2x3 on mobile)
+// - Each option shows thumbnail image + label
+// - Selected option has accent border/ring
+// - "Auto" option shows grid icon instead of thumbnail
+```
+
+### 4. Update ProductFocusConfigurator
+
+**File: `src/components/creative-studio/product-shoot/ProductFocusConfigurator.tsx`**
+
+Replace the dropdown Select with the new visual `CameraAngleSelector` component:
+
+```typescript
+// Before: dropdown
+<Select value={config.cameraAngle} onValueChange={...}>
+
+// After: visual grid
+<CameraAngleSelector
+  value={config.cameraAngle}
+  onChange={(v) => onConfigChange({ cameraAngle: v })}
+/>
+```
+
+### 5. Export New Component
+
+**File: `src/components/creative-studio/product-shoot/index.ts`**
+
+Add export for the new component.
+
+---
+
+## UI Preview
+
+```text
+┌─────────────────────────────────────────────────┐
+│ Shot Options                          [↻]  [▼]  │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│ Camera Angle                                    │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
+│ │ ▢ Auto   │ │  [img]   │ │  [img]   │         │
+│ │          │ │  Hero    │ │  Side    │         │
+│ └──────────┘ └──────────┘ └──────────┘         │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
+│ │  [img]   │ │  [img]   │ │  [img]   │         │
+│ │ Top Down │ │  Sole    │ │  Detail  │         │
+│ └──────────┘ └──────────┘ └──────────┘         │
+│ ┌──────────┐                                    │
+│ │  [img]   │                                    │
+│ │  Pair    │                                    │
+│ └──────────┘                                    │
+│                                                 │
+│ Lighting                                        │
+│ ┌─────────────────────────────────────────────┐│
+│ │ Auto (match background)               [▼]   ││
+│ └─────────────────────────────────────────────┘│
+│                                                 │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Expected Prompt Output
+## Files to Create/Modify
 
-**Before:**
-```
-...the iconic Birkenstock Boston clog in taupe suede, featuring the signature cork-latex footbed, adjustable metal buckle strap, and contoured EVA sole...
-```
-
-**After (with logo emphasis):**
-```
-...the iconic Birkenstock Boston clog in taupe suede, featuring the signature cork-latex footbed with the embossed "BIRKENSTOCK" wordmark clearly visible in classic serif typography, the adjustable metal buckle engraved with the distinctive "Birkenstock" script, contoured EVA sole...
-```
-
----
-
-## Regarding AI Settings Page
-
-The Settings page correctly displays the current defaults from `defaultPrompts.ts`. Since the Birkenstock brand has `aiPrompts: null` in the database, clicking "Reset to Default" or viewing the page will show the updated prompts once we modify `defaultPrompts.ts`.
-
-**No additional changes needed to the Settings page** - it already:
-- Loads from `brand_context.aiPrompts` if custom
-- Falls back to `DEFAULT_*` constants from `defaultPrompts.ts` if null
-
----
-
-## Files to Update
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/lib/defaultPrompts.ts` | Add Birkenstock logo emphasis to `DEFAULT_PROMPT_AGENT_PROMPT` |
-| `supabase/functions/generate-image/index.ts` | Add same logo emphasis to inline system prompt (line ~512) |
+| `src/assets/product-angles/*.jpg` | CREATE - Copy 6 reference images |
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | MODIFY - Update angle options with thumbnails |
+| `src/components/creative-studio/product-shoot/CameraAngleSelector.tsx` | CREATE - New visual selector component |
+| `src/components/creative-studio/product-shoot/ProductFocusConfigurator.tsx` | MODIFY - Use visual selector |
+| `src/components/creative-studio/product-shoot/index.ts` | MODIFY - Export new component |
+
+---
+
+## Prompt Output Example
+
+When user selects **"Sole View"**, the prompt will include:
+
+```text
+CAMERA ANGLE:
+- one shoe flipped to show sole tread pattern and outsole construction, second shoe showing footbed, artfully arranged to show both surfaces
+```
+
+This matches EXACTLY the composition shown in the `1022457_sole.jpg` reference image.
+
