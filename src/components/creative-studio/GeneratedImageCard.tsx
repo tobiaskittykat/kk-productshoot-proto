@@ -2,6 +2,8 @@ import { useState, DragEvent } from 'react';
 import { Download, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, Check, GripVertical } from 'lucide-react';
 import { GeneratedImage } from './types';
 import { cn } from '@/lib/utils';
+import { ProductIntegrityBadge } from './product-shoot/ProductIntegrityBadge';
+import { ProductIntegrityResult } from './product-shoot/types';
 
 interface GeneratedImageCardProps {
   image: GeneratedImage;
@@ -10,6 +12,8 @@ interface GeneratedImageCardProps {
   onDelete: (image: GeneratedImage) => void;
   onSelect?: (image: GeneratedImage) => void;
   enableDrag?: boolean;
+  integrityResult?: ProductIntegrityResult;
+  isAnalyzingIntegrity?: boolean;
 }
 
 export const GeneratedImageCard = ({ 
@@ -19,6 +23,8 @@ export const GeneratedImageCard = ({
   onDelete,
   onSelect,
   enableDrag = false,
+  integrityResult,
+  isAnalyzingIntegrity = false,
 }: GeneratedImageCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -233,9 +239,21 @@ export const GeneratedImageCard = ({
           {image.prompt}
         </p>
 
-        {/* Status & References */}
-        <div className="flex items-center justify-between">
-          {getStatusBadge()}
+        {/* Status, Integrity Badge & References */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {getStatusBadge()}
+            
+            {/* Product Integrity Badge */}
+            {(integrityResult || isAnalyzingIntegrity) && image.status === 'completed' && (
+              <ProductIntegrityBadge
+                result={integrityResult}
+                isAnalyzing={isAnalyzingIntegrity}
+                onRegenerate={() => onVariation(image)}
+                compact
+              />
+            )}
+          </div>
           
           {/* Reference thumbnails */}
           {(image.productReferenceUrl || image.contextReferenceUrl) && (

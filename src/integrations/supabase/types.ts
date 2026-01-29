@@ -198,6 +198,7 @@ export type Database = {
           folder: string | null
           id: string
           image_url: string
+          integrity_analysis: Json | null
           liked: boolean | null
           moodboard_id: string | null
           negative_prompt: string | null
@@ -220,6 +221,7 @@ export type Database = {
           folder?: string | null
           id?: string
           image_url: string
+          integrity_analysis?: Json | null
           liked?: boolean | null
           moodboard_id?: string | null
           negative_prompt?: string | null
@@ -242,6 +244,7 @@ export type Database = {
           folder?: string | null
           id?: string
           image_url?: string
+          integrity_analysis?: Json | null
           liked?: boolean | null
           moodboard_id?: string | null
           negative_prompt?: string | null

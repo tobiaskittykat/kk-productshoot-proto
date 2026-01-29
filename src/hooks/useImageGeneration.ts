@@ -17,6 +17,7 @@ import { parseSkuDisplayInfo, type SKUDisplayInfo } from '@/lib/skuDisplayUtils'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditLog } from '@/hooks/useAuditLog';
+import { triggerIntegrityAnalysis } from '@/hooks/useIntegrityResults';
 
 export function useImageGeneration() {
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
@@ -572,6 +573,19 @@ export function useImageGeneration() {
           title: 'Images generated!',
           description: `Successfully generated ${successCount} of ${state.imageCount} images`,
         });
+        
+        // Trigger background product integrity analysis for images with product references
+        if (productReferenceUrls.length > 0) {
+          const successfulImages = images.filter(i => i.status === 'completed' && i.imageUrl);
+          successfulImages.forEach(img => {
+            triggerIntegrityAnalysis(
+              img.id,
+              img.imageUrl,
+              productReferenceUrls,
+              productNames[0] // Use first product name
+            );
+          });
+        }
       } else {
         toast({
           title: 'Generation failed',
@@ -681,6 +695,19 @@ export function useImageGeneration() {
           title: 'Variation generated!',
           description: `Created ${successCount} new variation(s)`,
         });
+        
+        // Trigger background product integrity analysis for variations with product references
+        if (productReferenceUrls.length > 0) {
+          const successfulImages = images.filter(i => i.status === 'completed' && i.imageUrl);
+          successfulImages.forEach(img => {
+            triggerIntegrityAnalysis(
+              img.id,
+              img.imageUrl,
+              productReferenceUrls,
+              sourceImage.conceptTitle // Use original image's concept title as product name
+            );
+          });
+        }
       }
 
       return images;

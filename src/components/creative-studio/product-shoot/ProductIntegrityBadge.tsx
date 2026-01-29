@@ -4,7 +4,23 @@ import {
   TooltipContent, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
-import { ProductIntegrityResult } from "./types";
+
+// Enhanced integrity result with detailed breakdowns
+export interface IntegrityDetails {
+  colorMatch: { score: number; notes: string };
+  silhouetteMatch: { score: number; notes: string };
+  featureMatch: { score: number; notes: string };
+  materialMatch: { score: number; notes: string };
+}
+
+export interface ProductIntegrityResult {
+  score: number;
+  issues: string[];
+  passesCheck: boolean;
+  analyzed?: boolean;
+  analyzedAt?: string;
+  details?: IntegrityDetails;
+}
 
 interface ProductIntegrityBadgeProps {
   result?: ProductIntegrityResult;
@@ -30,11 +46,11 @@ export const ProductIntegrityBadge = ({
   }
 
   // No result yet
-  if (!result || !result.analyzed) {
+  if (!result) {
     return null;
   }
 
-  const { score, issues, passesCheck } = result;
+  const { score, issues, passesCheck, details } = result;
 
   // Determine badge style based on score
   let badgeClass = '';
@@ -67,8 +83,8 @@ export const ProductIntegrityBadge = ({
     </div>
   );
 
-  // If there are issues, show tooltip with details
-  if (issues.length > 0 || !passesCheck) {
+  // If there are issues or details, show tooltip with info
+  if (issues.length > 0 || !passesCheck || details) {
     return (
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -76,16 +92,42 @@ export const ProductIntegrityBadge = ({
             {badge}
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="font-medium text-sm">Product Integrity: {score}/100</div>
+              
+              {/* Detail scores if available */}
+              {details && (
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Color:</span>
+                    <span className="font-medium">{details.colorMatch.score}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Shape:</span>
+                    <span className="font-medium">{details.silhouetteMatch.score}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Features:</span>
+                    <span className="font-medium">{details.featureMatch.score}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Materials:</span>
+                    <span className="font-medium">{details.materialMatch.score}%</span>
+                  </div>
+                </div>
+              )}
+              
               {issues.length > 0 && (
                 <ul className="text-xs space-y-0.5">
-                  {issues.map((issue, i) => (
+                  {issues.slice(0, 3).map((issue, i) => (
                     <li key={i} className="flex items-start gap-1">
                       <span className="text-yellow-500">•</span>
                       {issue}
                     </li>
                   ))}
+                  {issues.length > 3 && (
+                    <li className="text-muted-foreground">+{issues.length - 3} more issues</li>
+                  )}
                 </ul>
               )}
             </div>
