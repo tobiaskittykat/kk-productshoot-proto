@@ -1,216 +1,105 @@
 
 
-# Shot Options UX Enhancements
+# Add Embossed/Engraved Logo Text Accuracy to Product Integrity
 
 ## Summary
 
-Improve the Shot Options section visibility and usability with 4 enhancements:
-1. Reset to "auto" when navigating back to Step 1
-2. Add a Reset button within Shot Options
-3. Auto-expand when customized (stay open instead of collapsed)
-4. Show "Customized" chip/indicator even when collapsed
+Enhance the PRODUCT INTEGRITY sections across all Product Shoot prompts to explicitly require 100% accurate reproduction of embossed and engraved logos, brand text, and markings on Birkenstock footwear. Also update the prompt agent instructions to preserve these sections and emphasize text accuracy.
 
 ---
 
-## Current State Analysis
+## What We're Adding
 
-### Already Working
-The `handleBack()` function in `CreativeStudioWizard.tsx` already resets `productShoot` to `initialProductShootState` when navigating back to Step 1. All initial configs have 'auto' values.
-
-### Files to Modify
-- `OnFootConfigurator.tsx`
-- `LifestyleConfigurator.tsx`
-- `ProductFocusConfigurator.tsx`
-- `ProductShootStep2.tsx` (for passing isCustomized prop)
-- `shotTypeConfigs.ts` (for helper functions)
+Birkenstock footwear contains several branded elements that must be accurately reproduced:
+- "BIRKENSTOCK" embossed on the footbed
+- "Made in Germany" text on sole/footbed
+- Logo markings on buckles
+- Size/style text stamps
+- Any engraved hardware details
 
 ---
 
-## Implementation Details
+## Part 1: Update PRODUCT INTEGRITY Sections
 
-### Part 1: Add Helper Functions for Detecting Customization
+### File: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
 
-**File:** `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
+#### On-Foot Shot (lines 326-333)
 
-Add three helper functions to check if each config type has been customized:
+Add new bullet point for logo/text accuracy:
+
+```
+=== PRODUCT INTEGRITY (CRITICAL) ===
+⚠️ ABSOLUTE PRIORITY: The footwear must match the reference images EXACTLY.
+• This is Birkenstock footwear - preserve the iconic brand identity
+• Match the exact silhouette, buckle placement, strap width, sole thickness
+• Maintain signature Birkenstock details: cork-latex footbed, contoured sole, adjustable strap
+• Capture authentic material textures: suede nap, cork grain, metal buckle finish
+• LOGO & TEXT ACCURACY: Reproduce all embossed, engraved, or stamped brand markings with 100% accuracy - "BIRKENSTOCK" text, buckle logos, footbed stamps must be letter-perfect
+• NO reinterpretation, NO modifications, NO creative liberties with the product
+• The shoe's geometry and construction must remain identical in every generation
+```
+
+#### Product Focus Shot (lines 491-498)
+
+Add same bullet point:
 
 ```typescript
-// Check if OnFoot config has any non-auto values
-export function isOnFootConfigCustomized(config: OnFootShotConfig): boolean {
-  return (
-    config.gender !== 'auto' ||
-    config.ethnicity !== 'auto' ||
-    config.poseVariation !== 'auto' ||
-    config.legStyling !== 'auto' ||
-    config.trouserColor !== 'auto'
-  );
-}
-
-// Check if Lifestyle config has any non-auto values
-export function isLifestyleConfigCustomized(config: LifestyleShotConfig): boolean {
-  return (
-    config.gender !== 'auto' ||
-    config.ethnicity !== 'auto' ||
-    config.pose !== 'auto' ||
-    config.trouserStyle !== 'auto' ||
-    config.topStyle !== 'auto' ||
-    config.outfitColor !== 'auto'
-  );
-}
-
-// Check if ProductFocus config has any non-auto values
-export function isProductFocusConfigCustomized(config: ProductFocusShotConfig): boolean {
-  return (
-    config.cameraAngle !== 'auto' ||
-    config.lighting !== 'auto'
-  );
-}
+sections.push("- LOGO & TEXT ACCURACY: Reproduce all embossed, engraved, or stamped brand markings with 100% accuracy - 'BIRKENSTOCK' text, buckle logos, footbed stamps must be letter-perfect");
 ```
+
+#### Full Body Shot (lines 746-753)
+
+Add same bullet point (identical to On-Foot).
 
 ---
 
-### Part 2: Update Configurator Components
+## Part 2: Update Prompt Agent Instructions
 
-All three configurators need the same pattern of changes. Here's the pattern using `OnFootConfigurator.tsx` as example:
+### File: `supabase/functions/generate-image/index.ts` (lines 483-489)
 
-#### Add Props
-
-```typescript
-interface OnFootConfiguratorProps {
-  config: OnFootShotConfig;
-  onConfigChange: (updates: Partial<OnFootShotConfig>) => void;
-  onReset: () => void;  // NEW: callback to reset config
-}
-```
-
-#### Change Open State Logic
+Update rule #3 to include logo accuracy and add instruction to preserve PRODUCT INTEGRITY section:
 
 ```typescript
-// Determine if customized
-const isCustomized = isOnFootConfigCustomized(config);
-
-// Auto-open when customized, otherwise closed by default
-const [isOpen, setIsOpen] = useState(isCustomized);
-
-// Keep in sync if user makes changes
-useEffect(() => {
-  if (isCustomized && !isOpen) {
-    setIsOpen(true);
-  }
-}, [isCustomized]);
+3. **⚠️ PRODUCT INTEGRITY IS CRITICAL** - When product reference images are provided:
+   - DESCRIBE the products visually in your prompt with EXACT detail
+   - Include: material (leather, croc-embossed, smooth, pebbled), color, hardware finish (gold, silver, gunmetal)
+   - Include: silhouette/type (crossbody, clutch, card holder, phone case), and key details (chain strap, magnetic closure, zip)
+   - **LOGO & TEXT FIDELITY**: All embossed, engraved, or stamped brand text/logos must be reproduced with 100% accuracy - no misspellings, no altered letterforms
+   - Example: Instead of "the Remi Magnet crossbody", write "a black croc-embossed leather phone crossbody with a detachable gold chain strap and magnetic gold hardware closure"
+   - This visual description ensures the image generator renders the product EXACTLY as it appears
+   - Do NOT use product names - use VISUAL DESCRIPTIONS only
+   
+   **IMPORTANT FOR PRODUCT SHOOTS**: If the brief contains a "=== PRODUCT INTEGRITY (CRITICAL) ===" section, 
+   you MUST include this EXACT section at the START of your output, preserving the header and all bullet points verbatim.
+   This is an EXCEPTION to the "no section headers" rule - product integrity instructions are non-negotiable.
 ```
 
-#### Add Customized Badge & Reset Button in Header
+Also update rule #13 to clarify the exception:
 
 ```typescript
-<CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors">
-  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-    <SlidersHorizontal className="w-4 h-4 text-accent" />
-    Shot Options
-    {/* Customized indicator badge */}
-    {isCustomized && (
-      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-accent/20 text-accent rounded">
-        Customized
-      </span>
-    )}
-  </div>
-  <div className="flex items-center gap-2">
-    {/* Reset button - stops propagation to not toggle collapse */}
-    {isCustomized && (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onReset();
-        }}
-        className="p-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-        title="Reset to defaults"
-      >
-        <RotateCcw className="w-3.5 h-3.5" />
-      </button>
-    )}
-    {isOpen ? (
-      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-    ) : (
-      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-    )}
-  </div>
-</CollapsibleTrigger>
+13. **NEVER ECHO SECTION HEADERS** - Do NOT start your prompt with labels like "Product Focus:", "Product Category:", "Visual World:", "Campaign Concept:", etc. Start DIRECTLY with the image description.
+    **EXCEPTION**: The "=== PRODUCT INTEGRITY (CRITICAL) ===" section must be preserved verbatim when present in the brief.
 ```
+
+### File: `src/lib/defaultPrompts.ts` (lines 68-74, 99)
+
+Apply the same updates to `DEFAULT_PROMPT_AGENT_PROMPT` for consistency when brand-level custom prompts are used.
 
 ---
 
-### Part 3: Wire Up Reset Callbacks in ProductShootStep2
-
-**File:** `src/components/creative-studio/product-shoot/ProductShootStep2.tsx`
-
-Pass reset callbacks to each configurator:
-
-```typescript
-{state.productShotType === 'on-foot' && (
-  <OnFootConfigurator
-    config={state.onFootConfig || initialOnFootConfig}
-    onConfigChange={(updates) => onStateChange({
-      onFootConfig: { ...(state.onFootConfig || initialOnFootConfig), ...updates }
-    })}
-    onReset={() => onStateChange({ onFootConfig: initialOnFootConfig })}
-  />
-)}
-
-{state.productShotType === 'lifestyle' && (
-  <LifestyleConfigurator
-    config={state.lifestyleConfig || initialLifestyleConfig}
-    onConfigChange={(updates) => onStateChange({
-      lifestyleConfig: { ...(state.lifestyleConfig || initialLifestyleConfig), ...updates }
-    })}
-    onReset={() => onStateChange({ lifestyleConfig: initialLifestyleConfig })}
-  />
-)}
-
-{state.productShotType === 'product-focus' && (
-  <ProductFocusConfigurator
-    config={state.productFocusConfig || initialProductFocusConfig}
-    onConfigChange={(updates) => onStateChange({
-      productFocusConfig: { ...(state.productFocusConfig || initialProductFocusConfig), ...updates }
-    })}
-    onReset={() => onStateChange({ productFocusConfig: initialProductFocusConfig })}
-  />
-)}
-```
-
----
-
-## Visual Result
-
-### Before
+## Final PRODUCT INTEGRITY Block (All Shot Types)
 
 ```text
-┌─────────────────────────────────────────────┐
-│ ⚙ Shot Options                          > │
-└─────────────────────────────────────────────┘
-(Collapsed, no indication if customized)
-```
-
-### After - With Customizations (Expanded by Default)
-
-```text
-┌─────────────────────────────────────────────┐
-│ ⚙ Shot Options  [Customized]       ↻   v │
-├─────────────────────────────────────────────┤
-│ Gender            [Female ▼]                │
-│ Ethnicity         [Asian ▼]                 │
-│ Pose Variation    [One Foot Forward ▼]      │
-│ ...                                         │
-└─────────────────────────────────────────────┘
-```
-
-### After - Default State (Collapsed)
-
-```text
-┌─────────────────────────────────────────────┐
-│ ⚙ Shot Options                          > │
-└─────────────────────────────────────────────┘
-(No badge, no reset icon - all values are auto)
+=== PRODUCT INTEGRITY (CRITICAL) ===
+⚠️ ABSOLUTE PRIORITY: The footwear must match the reference images EXACTLY.
+• This is Birkenstock footwear - preserve the iconic brand identity
+• Match the exact silhouette, buckle placement, strap width, sole thickness
+• Maintain signature Birkenstock details: cork-latex footbed, contoured sole, adjustable strap
+• Capture authentic material textures: suede nap, cork grain, metal buckle finish
+• LOGO & TEXT ACCURACY: Reproduce all embossed, engraved, or stamped brand markings 
+  with 100% accuracy - "BIRKENSTOCK" text, buckle logos, footbed stamps must be letter-perfect
+• NO reinterpretation, NO modifications, NO creative liberties with the product
+• The shoe's geometry and construction must remain identical in every generation
 ```
 
 ---
@@ -219,21 +108,18 @@ Pass reset callbacks to each configurator:
 
 | File | Changes |
 |------|---------|
-| `shotTypeConfigs.ts` | Add 3 helper functions: `isOnFootConfigCustomized`, `isLifestyleConfigCustomized`, `isProductFocusConfigCustomized` |
-| `OnFootConfigurator.tsx` | Add `onReset` prop, add "Customized" badge, add reset button, auto-expand when customized |
-| `LifestyleConfigurator.tsx` | Same pattern as OnFootConfigurator |
-| `ProductFocusConfigurator.tsx` | Same pattern as OnFootConfigurator |
-| `ProductShootStep2.tsx` | Pass `onReset` callbacks to configurators |
-| `types.ts` | Export new helper functions |
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Add "LOGO & TEXT ACCURACY" bullet to all 3 PRODUCT INTEGRITY sections |
+| `supabase/functions/generate-image/index.ts` | Update rule #3 with logo fidelity + add PRODUCT INTEGRITY preservation instruction; update rule #13 with exception |
+| `src/lib/defaultPrompts.ts` | Same updates for consistency |
 
 ---
 
-## Behavior Summary
+## Why This Matters
 
-| Feature | Behavior |
-|---------|----------|
-| Step 1 Reset | Already works - `handleBack()` resets `productShoot` to initial state |
-| Reset Button | Appears only when customized, resets config to all 'auto' values |
-| Default Open State | Closed when all 'auto', opens automatically when any value is customized |
-| Customized Badge | Shows "Customized" chip next to "Shot Options" when any value is non-auto |
+AI image generators often struggle with text reproduction:
+- Letters can be misspelled or malformed
+- Logo proportions can be distorted
+- Text can appear blurry or illegible
+
+By explicitly calling out that brand text must be "letter-perfect", we give the image model stronger guidance to pay attention to these fine details.
 
