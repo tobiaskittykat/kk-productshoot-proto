@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid3X3 } from 'lucide-react';
+import { Grid3X3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductFocusAngle, productFocusAngleOptions } from './shotTypeConfigs';
 
@@ -30,7 +30,7 @@ export function CameraAngleSelector({ value, onChange }: CameraAngleSelectorProp
   return (
     <div className="space-y-2">
       <label className="text-xs text-muted-foreground">Camera Angle</label>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {productFocusAngleOptions.map((option) => {
           const isSelected = value === option.value;
           const thumbnailSrc = option.thumbnail ? thumbnailMap[option.thumbnail] : null;
@@ -48,7 +48,7 @@ export function CameraAngleSelector({ value, onChange }: CameraAngleSelectorProp
                   : "border-border/50 bg-muted/30"
               )}
             >
-              {/* Thumbnail or Auto icon */}
+              {/* Thumbnail or icon */}
               <div className="w-full aspect-square relative">
                 {thumbnailSrc ? (
                   <img 
@@ -56,9 +56,13 @@ export function CameraAngleSelector({ value, onChange }: CameraAngleSelectorProp
                     alt={option.label}
                     className="w-full h-full object-cover"
                   />
+                ) : option.value === 'lifestyle' ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                    <Grid3X3 className="w-6 h-6 text-muted-foreground" />
+                    <Grid3X3 className="w-5 h-5 text-muted-foreground" />
                   </div>
                 )}
                 
@@ -70,7 +74,7 @@ export function CameraAngleSelector({ value, onChange }: CameraAngleSelectorProp
               
               {/* Label */}
               <div className={cn(
-                "w-full px-1.5 py-1.5 text-center text-[10px] font-medium truncate",
+                "w-full px-1 py-1 text-center text-[9px] font-medium truncate",
                 isSelected ? "text-accent" : "text-muted-foreground"
               )}>
                 {option.label}
