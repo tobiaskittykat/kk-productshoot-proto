@@ -74,11 +74,13 @@ export const BackgroundSelector = ({
             : 'border-border hover:border-accent/40'
         }`}
       >
-        {/* Gradient placeholder or thumbnail */}
+        {/* Thumbnail image or gradient fallback */}
         <div 
-          className="absolute inset-0"
+          className="absolute inset-0 bg-cover bg-center"
           style={{ 
-            background: bg.thumbnail || bg.colorHint || 'linear-gradient(135deg, #f5f5f5, #e0e0e0)' 
+            background: bg.thumbnail 
+              ? `url(${bg.thumbnail}) center/cover no-repeat` 
+              : (bg.colorHint || 'linear-gradient(135deg, #f5f5f5, #e0e0e0)') 
           }}
         />
         
