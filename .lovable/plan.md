@@ -1,175 +1,146 @@
 
+# Fix Ethnicity Not Being Applied to Generated Images
 
-# Product Shoot UX Refinements
+## Problem Identified
 
-## Overview
+The user selected "African / Black" model ethnicity in the Lifestyle shot configurator, but the generated image did not reflect this selection.
 
-Three improvements to the Product Shoot workflow:
-1. **Show all product angles** on click/hover
-2. **Collapsible shot type options** (default collapsed) + review "Always Enforced" relevance
-3. **Background selector** with single row + "Show More" for the rest, prioritizing recently used
+**Root Cause**: The `buildLifestylePrompt()` and `buildOnFootPrompt()` functions in `shotTypeConfigs.ts` completely ignore the `ethnicity` field from the config. Only `gender` is injected into the prompt.
 
 ---
 
-## 1. View All Product Angles on Click/Hover
+## Evidence from Logs
 
-### Current State
-- Product thumbnails in Step 2 show a badge like "3 angles" but no way to see them
-- ProductPickerModal shows angle count but no angle preview
-
-### Solution
-Add a hover popover that shows all angles when hovering over a product thumbnail.
-
-**Files to modify:**
-- `src/components/creative-studio/product-shoot/ProductShootStep2.tsx`
-
-**Implementation:**
-```
-┌─────────────────────────────────────────────────────┐
-│  Hover over product thumbnail → Popover appears:   │
-│  ┌───────────────────────────────────────────────┐  │
-│  │   Boston - Taupe Suede                        │  │
-│  │   ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │  │
-│  │   │Side │ │Front│ │Back │ │Top  │            │  │
-│  │   └─────┘ └─────┘ └─────┘ └─────┘            │  │
-│  │   4 angles                                    │  │
-│  └───────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
+**Config sent to edge function:**
+```json
+"lifestyleConfig": {
+  "gender": "male",
+  "ethnicity": "african",  // <-- Sent but never used!
+  "pose": "three-quarter",
+  "trouserStyle": "straight",
+  "topStyle": "knitwear",
+  "outfitColor": "contrast-neutral"
+}
 ```
 
-- Wrap product thumbnails with `HoverCard` from Radix
-- Fetch angles for the hovered SKU (already available in `fetchedSku` query)
-- Show horizontal row of angle thumbnails with labels
+**Resulting prompt (ethnicity missing):**
+```
+"The male model is photographed..."
+```
+
+**Expected:**
+```
+"An African male model is photographed..." 
+```
 
 ---
 
-## 2. Collapsible Shot Type Options (Default Collapsed)
+## Solution
 
-### Current State
-- Shot type configurators (`OnFootConfigurator`, `LifestyleConfigurator`, `ProductFocusConfigurator`) are always expanded
-- Each has an "Always Enforced" info box taking up space
+Update both prompt builder functions to include ethnicity in the model description.
 
-### Solution
-Make shot-specific options collapsible (default collapsed) and review the "Always Enforced" content.
+### Files to Modify
 
-**Files to modify:**
-- `src/components/creative-studio/product-shoot/OnFootConfigurator.tsx`
-- `src/components/creative-studio/product-shoot/LifestyleConfigurator.tsx`
-- `src/components/creative-studio/product-shoot/ProductFocusConfigurator.tsx`
-
-**Implementation:**
-
-```
-┌─────────────────────────────────────────────────────┐
-│  [Visual shot type cards - always visible]          │
-│                                                     │
-│  ▶ Shot Options                    [Collapsed]      │
-│    ─────────────────────────────────────────────    │
-│  (Click to expand and see Gender, Pose, etc.)      │
-└─────────────────────────────────────────────────────┘
-```
-
-**Changes:**
-1. Wrap configurator content in `Collapsible` with `defaultOpen={false}`
-2. Add a clickable header: "Shot Options" with chevron icon
-3. Keep the options inside the collapsible content
-
-### "Always Enforced" Review
-
-The "Always Enforced" boxes contain:
-- **On Foot**: Mid-calf framing, three-quarter view, product integrity, clean lighting
-- **Lifestyle**: Full body, head cropped, white background, product integrity, no logos
-- **Product Focus**: Product only, Birkenstock integrity, ultra-sharp focus, e-commerce quality
-
-**Recommendation:** These ARE still relevant as user-facing documentation BUT:
-- These rules are already encoded in `defaultPrompts.ts`
-- They serve as a reminder to users, not as functional code
-- **Action**: Keep them but move inside the collapsed section OR convert to a small tooltip on the shot type card
-
-**Proposed approach:** Move "Always Enforced" inside the collapsed section. When collapsed, users focus on selecting the shot type. When expanded (power users), they see both options AND the enforced rules.
+| File | Change |
+|------|--------|
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Add ethnicity to both `buildOnFootPrompt()` and `buildLifestylePrompt()` |
 
 ---
 
-## 3. Background Selector - Single Row + Show More
+## Technical Changes
 
-### Current State
-- All 10 studio / 12 outdoor backgrounds shown in a 3-4 column grid
-- No prioritization of recently used backgrounds
-- Takes significant vertical space
+### 1. Add Ethnicity Mapping Helper
 
-### Solution
-Show only first 4 backgrounds + "Show More" button that expands to full grid.
+Create a helper to convert ethnicity values to natural language:
 
-**Files to modify:**
-- `src/components/creative-studio/product-shoot/BackgroundSelector.tsx`
-- `src/components/creative-studio/product-shoot/types.ts` (if needed for last_used tracking)
-
-**Implementation:**
-
-```
-Default (Collapsed):
-┌─────────────────────────────────────────────────────┐
-│  [Auto] Let AI choose                               │
-│                                                     │
-│  Studio | Outdoor                                   │
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
-│  │White│ │Black│ │Warm │ │Cool │  [Show 6 more...] │
-│  └─────┘ └─────┘ └─────┘ └─────┘                   │
-└─────────────────────────────────────────────────────┘
-
-Expanded (After clicking "Show More"):
-┌─────────────────────────────────────────────────────┐
-│  [Auto] Let AI choose                               │
-│                                                     │
-│  Studio | Outdoor                                   │
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
-│  │White│ │Black│ │Warm │ │Cool │                   │
-│  └─────┘ └─────┘ └─────┘ └─────┘                   │
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
-│  │Conc │ │Marbl│ │Fabri│ │Wood │                   │
-│  └─────┘ └─────┘ └─────┘ └─────┘                   │
-│  ┌─────┐ ┌─────┐                                   │
-│  │Terr │ │Paper│                     [Show Less]   │
-│  └─────┘ └─────┘                                   │
-└─────────────────────────────────────────────────────┘
+```typescript
+function getEthnicityDescription(ethnicity: string): string {
+  const map: Record<string, string> = {
+    'auto': '',  // Let AI decide
+    'caucasian': 'Caucasian',
+    'african': 'African',
+    'asian': 'Asian',
+    'hispanic': 'Hispanic',
+    'middle-eastern': 'Middle Eastern',
+    'south-asian': 'South Asian',
+    'mixed': 'mixed-race',
+  };
+  return map[ethnicity] || '';
+}
 ```
 
-**Prioritization Logic:**
-1. If a background was recently used (selected in a previous generation), show it first
-2. This requires tracking `last_used_background_id` - could use localStorage for simplicity
-3. Sort backgrounds: recently used → then default order
+### 2. Update buildLifestylePrompt()
 
-**Changes:**
-1. Add `showAllBackgrounds` state (default `false`)
-2. Slice backgrounds to first 4 when collapsed
-3. Add "Show X more..." button that toggles state
-4. Track last used background in localStorage
-5. Reorder backgrounds to show recently used first
+**Current (line ~628-630):**
+```typescript
+const genderStr = config.gender === 'auto' 
+  ? ['female', 'male'][Math.floor(Math.random() * 2)]
+  : config.gender;
+```
+
+**Updated:**
+```typescript
+// Determine gender string
+const genderStr = config.gender === 'auto' 
+  ? ['female', 'male'][Math.floor(Math.random() * 2)]
+  : config.gender;
+
+// Determine ethnicity string
+const ethnicityStr = config.ethnicity === 'auto'
+  ? ''  // Let AI choose naturally
+  : getEthnicityDescription(config.ethnicity);
+
+// Build model description
+const modelDesc = ethnicityStr 
+  ? `${ethnicityStr} ${genderStr}` 
+  : genderStr;
+```
+
+**Then update the prompt (line ~667):**
+```typescript
+// Before:
+The ${genderStr} model is photographed...
+
+// After:
+The ${modelDesc} model is photographed...
+```
+
+### 3. Update buildOnFootPrompt()
+
+Apply the same pattern to the On-Foot shot builder (line ~301):
+
+```typescript
+// Before:
+A close-up on-model product shot of a ${genderStr} model wearing Birkenstock footwear...
+
+// After:
+A close-up on-model product shot of a ${modelDesc} model wearing Birkenstock footwear...
+```
 
 ---
 
-## Technical Details
+## Resulting Prompt Examples
 
-### File Changes Summary
-
-| File | Changes |
-|------|---------|
-| `ProductShootStep2.tsx` | Add HoverCard for product angle preview |
-| `OnFootConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
-| `LifestyleConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
-| `ProductFocusConfigurator.tsx` | Wrap in Collapsible (default collapsed), move "Always Enforced" inside |
-| `BackgroundSelector.tsx` | Add collapsed/expanded state, slice to 4 visible, add "Show More" button, prioritize recently used |
-
-### Dependencies
-- Uses existing `HoverCard` from `@/components/ui/hover-card`
-- Uses existing `Collapsible` from `@/components/ui/collapsible`
-- No new packages needed
+| Ethnicity | Gender | Output |
+|-----------|--------|--------|
+| african | male | "An African male model is photographed..." |
+| asian | female | "An Asian female model is photographed..." |
+| auto | male | "A male model is photographed..." (AI decides ethnicity) |
+| caucasian | auto | "A Caucasian female model..." (random gender) |
 
 ---
 
-## Expected Result
+## Product Reference Images
 
-1. **Angles**: Users can hover over any product thumbnail to see all available angles
-2. **Shot Options**: Cleaner UI with options collapsed by default - power users can expand
-3. **Backgrounds**: Less visual clutter, faster scanning, recently used backgrounds prioritized
+**Confirmed:** All 6 product reference images ARE being sent correctly. The logs show:
+```
+"Adding 6 product images to prompt agent for visual analysis"
+```
 
+This is working as expected.
+
+---
+
+## Summary
+
+The fix is straightforward: inject the `ethnicity` value into the prompt text, similar to how `gender` is already handled. This ensures the AI model receives explicit instructions about the model's appearance.
