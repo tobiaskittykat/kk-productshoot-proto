@@ -53,8 +53,14 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
   const shotLabel = `Shot Type: ${shotTypeLabels[state.productShotType] || 'Select'}`;
   
   const getBackgroundLabel = () => {
+    // Check backgroundId prefix first (most reliable indicator of actual selection)
+    if (state.backgroundId?.startsWith('studio-')) return 'Background: Studio';
+    if (state.backgroundId?.startsWith('outdoor-')) return 'Background: Outdoor';
+    
+    // Fall back to settingType
     if (state.settingType === 'studio') return 'Background: Studio';
     if (state.settingType === 'outdoor') return 'Background: Outdoor';
+    
     return 'Background: Auto';
   };
   
