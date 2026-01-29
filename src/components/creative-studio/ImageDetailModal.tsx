@@ -391,6 +391,22 @@ export const ImageDetailModal = ({
                     </div>
                   )}
                   
+                  {/* Aspect Ratio */}
+                  {image.settings?.aspectRatio && (
+                    <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground">Aspect Ratio</span>
+                      <span className="text-xs font-medium">{image.settings.aspectRatio}</span>
+                    </div>
+                  )}
+                  
+                  {/* Resolution */}
+                  {image.settings?.resolution && (
+                    <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground">Resolution</span>
+                      <span className="text-xs font-medium">{image.settings.resolution}px</span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between py-1.5 border-b border-border/50">
                     <span className="text-muted-foreground">Status</span>
                     <span className={cn(
