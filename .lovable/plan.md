@@ -1,85 +1,143 @@
 
-
-# Fix Resolution Parameter - Actually Send to Gemini API
+# Improve Prompt Agent Instructions for Product Integrity
 
 ## Summary
 
-The resolution selector in the UI stores the value but the edge function never passes it to the Gemini API. We need to add the `image_config` parameter to the API call.
+Two changes to how the prompt agent handles product integrity and naming:
+1. **Remove hardcoded PRODUCT INTEGRITY section** from shot type prompts → teach the prompt agent to naturally emphasize product fidelity in its evocative output
+2. **Include brand & model name** in the creative brief → let the agent mention "Birkenstock Boston" for better product identity recognition
 
 ---
 
-## Root Cause
+## Current Problems
 
-In `supabase/functions/generate-image/index.ts` (lines 873-890), the API call only includes:
-```typescript
-body: JSON.stringify({
-  model: selectedModel,
-  messages: [...],
-  modalities: ["image", "text"],
-  // MISSING: image_config with image_size and aspect_ratio
-}),
+### Problem 1: Ugly Section Headers in Prompts
+
+The current prompts include literal section headers like:
+
+```
+=== PRODUCT INTEGRITY (CRITICAL) ===
+⚠️ ABSOLUTE PRIORITY: The footwear must match the reference images EXACTLY.
+• This is Birkenstock footwear...
 ```
 
-The `body.resolution` and `body.aspectRatio` values are received from the frontend but discarded.
+The prompt agent is instructed to "preserve this section verbatim" - creating non-evocative, technical prompts.
+
+### Problem 2: Brand/Model Name Suppressed
+
+The prompt agent instruction explicitly says:
+> "Do NOT use product names - use VISUAL DESCRIPTIONS only"
+
+This prevents the agent from writing "Birkenstock Boston" which would actually help the image generator understand the iconic product.
 
 ---
 
-## The Fix
+## Solution
 
-### File: `supabase/functions/generate-image/index.ts`
+### Part 1: Remove Hardcoded Product Integrity Section
 
-#### Step 1: Map resolution values to API format (add before line 873)
+**Files to modify:**
+- `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
+- `supabase/functions/generate-image/index.ts`
+- `src/lib/defaultPrompts.ts`
 
+**Changes:**
+
+1. **Remove the `=== PRODUCT INTEGRITY (CRITICAL) ===` section** from all shot type prompt builders:
+   - `buildOnFootPrompt()` 
+   - `buildProductFocusPrompt()`
+   - `buildLifestylePrompt()`
+
+2. **Update the prompt agent system prompt** to naturally emphasize product integrity without requiring echoed section headers
+
+**Before (in shotTypeConfigs.ts, lines 326-334):**
 ```typescript
-// Map resolution to Gemini image_size format
-const imageSizeMap: Record<string, string> = {
-  '512': '1K',    // 512px → 1K (closest match)
-  '1024': '1K',   // 1024px → 1K
-  '2048': '2K',   // 2048px → 2K
-  '4096': '4K',   // 4096px → 4K (true 4K!)
-};
-
-const imageSize = imageSizeMap[body.resolution || '1024'] || '1K';
-const aspectRatio = body.aspectRatio || '1:1';
-
-console.log(`Image config: size=${imageSize}, aspectRatio=${aspectRatio}`);
+=== PRODUCT INTEGRITY (CRITICAL) ===
+⚠️ ABSOLUTE PRIORITY: The footwear must match the reference images EXACTLY.
+• This is Birkenstock footwear - preserve the iconic brand identity
+...
 ```
 
-#### Step 2: Add `image_config` to the API call (modify lines 880-889)
+**After:**
+Remove this block entirely from the prompt builders. The prompt agent instructions will handle emphasizing product integrity naturally.
 
-```typescript
-body: JSON.stringify({
-  model: selectedModel,
-  messages: [
-    { 
-      role: "user", 
-      content: messageContent
-    }
-  ],
-  modalities: ["image", "text"],
-  image_config: {
-    image_size: imageSize,
-    aspect_ratio: aspectRatio,
-  },
-}),
-```
+---
+
+### Part 2: Pass Brand & Model Information
+
+**File to modify:**
+- `supabase/functions/generate-image/index.ts`
+- `src/hooks/useImageGeneration.ts`
+
+**Changes:**
+
+1. **Fetch and pass SKU description data** (brand, model, colors, materials) to the edge function
+2. **Add a new section in the creative brief** with product identity:
+   ```
+   === PRODUCT IDENTITY ===
+   Brand: Birkenstock
+   Model: Boston
+   Color: Taupe
+   Material: Suede
+   Type: Clog
+   ```
+
+3. **Update prompt agent instructions** to INCLUDE brand and model name (not suppress them), while still emphasizing visual accuracy.
+
+---
+
+### Part 3: Update Prompt Agent Instructions
+
+**Files:**
+- `supabase/functions/generate-image/index.ts` (default system prompt)
+- `src/lib/defaultPrompts.ts` (default templates)
+
+**Key changes to the prompt agent system prompt:**
+
+1. **Remove** the instruction:
+   > "Do NOT use product names - use VISUAL DESCRIPTIONS only"
+
+2. **Replace with:**
+   > "INCLUDE the brand name (e.g., Birkenstock) and model name (e.g., Boston) to ensure the image generator understands the iconic product identity. Also describe the product visually with EXACT detail."
+
+3. **Remove** the instruction about preserving `=== PRODUCT INTEGRITY ===` sections verbatim
+
+4. **Add** instruction:
+   > "Product integrity is CRITICAL. Your final prompt must emphasize that the footwear matches reference images EXACTLY - silhouette, hardware, materials. Weave this emphasis naturally into your evocative prompt rather than using section headers."
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Remove `=== PRODUCT INTEGRITY ===` blocks from all 3 prompt builders |
+| `src/hooks/useImageGeneration.ts` | Fetch and pass SKU description (brand, model, color, material) |
+| `supabase/functions/generate-image/index.ts` | Add `=== PRODUCT IDENTITY ===` section with brand/model; update prompt agent instructions |
+| `src/lib/defaultPrompts.ts` | Update `DEFAULT_PROMPT_AGENT_PROMPT` with new product integrity approach |
 
 ---
 
 ## Expected Outcome
 
-After this fix:
-- Selecting **4096px (4K)** will send `image_size: "4K"` to Gemini
-- Selecting **2048px (2K)** will send `image_size: "2K"` to Gemini
-- Aspect ratio will also be enforced via `aspect_ratio` parameter
-- Logs will show `Image config: size=4K, aspectRatio=1:1` for verification
+**Before (current prompt output):**
+```
+=== PRODUCT INTEGRITY (CRITICAL) ===
+⚠️ ABSOLUTE PRIORITY: The footwear must match the reference images EXACTLY.
+• This is Birkenstock footwear - preserve the iconic brand identity...
 
----
+A close-up on-model product shot of a female model wearing a suede clog...
+```
 
-## Technical Notes
+**After (improved evocative prompt):**
+```
+A close-up on-model product shot of a female model wearing the iconic Birkenstock Boston clog in taupe suede, photographed against a pure white seamless studio background...
 
-- The Lovable AI Gateway (OpenRouter-compatible) supports `image_config` for Gemini models
-- Supported sizes: `"1K"` (default), `"2K"`, `"4K"`
-- 4K generation may take longer and consume more credits
-- Aspect ratio mapping uses native Gemini formats (1:1, 16:9, 9:16, etc.)
+The shoe must be rendered with absolute fidelity to the reference images - the distinctive Boston silhouette with its rounded closed toe, the soft suede upper with visible nap texture, the signature cork-latex footbed in warm brown tones, the adjustable metal buckle in brushed finish, and the EVA outsole with its characteristic tread pattern...
+```
 
+This approach:
+- Includes brand name "Birkenstock" and model "Boston"
+- Emphasizes product integrity naturally within evocative language
+- Removes ugly section headers from final output
+- Maintains strict fidelity requirements while being more prompt-friendly
