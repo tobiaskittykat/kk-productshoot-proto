@@ -1,185 +1,353 @@
 
-# Fix Generate Variations Missing Product References
 
-## Problem Summary
+# Post-Generation Product Integrity Check
 
-When you click "Generate Variations" on an existing image, the product reference images are not being sent to the AI generator. This causes:
-1. **Wrong color** - The AI guesses the product color instead of matching your reference images
-2. **Missing details** (like straps behind the heels) - The AI doesn't know the exact product construction
+## Summary
 
-## Root Cause
+Implement a background AI analysis that runs automatically after each image generation to compare the generated image against its product reference images. This will detect issues like incorrect colors, missing features (straps, hardware), wrong silhouette, or material mismatches - and display the results as a badge on each image card.
 
-The `generateVariations` function in `src/hooks/useImageGeneration.ts` receives the `sourceImage` parameter but **completely ignores it**:
+---
 
-```typescript
-const generateVariations = useCallback(async (
-  state: CreativeStudioState,
-  sourceImage: GeneratedImage  // <-- RECEIVED BUT NEVER USED!
-): Promise<GeneratedImage[]> => {
-  const variationState = {
-    ...state,  // <-- Uses current wizard state (often empty!)
-    imageCount: 1,
-    seed: Math.floor(Math.random() * 1000000),
-  };
-  
-  return generateImages(variationState);  // No product data!
-}, [generateImages]);
+## Architecture Overview
+
+```text
++------------------+        +----------------------+        +------------------+
+| generate-image   | -----> | Client receives      | -----> | Trigger async    |
+| edge function    |        | completed images     |        | integrity check  |
++------------------+        +----------------------+        +------------------+
+                                                                     |
+                                                                     v
+                                                          +----------------------+
+                                                          | analyze-product-     |
+                                                          | integrity edge fn    |
+                                                          +----------------------+
+                                                                     |
+                                                                     v
+                                                          +----------------------+
+                                                          | Gemini Vision API    |
+                                                          | Compare images       |
+                                                          +----------------------+
+                                                                     |
+                                                                     v
+                                                          +----------------------+
+                                                          | Update DB with       |
+                                                          | integrity_analysis   |
+                                                          +----------------------+
+                                                                     |
+                                                                     v
+                                                          +----------------------+
+                                                          | Client polls/fetches |
+                                                          | displays badge       |
+                                                          +----------------------+
 ```
 
-The original image has all the product references stored in `sourceImage.settings.references.productReferenceUrls`, but this data is never extracted and passed to the new generation.
+---
 
-## Solution
+## Components to Build
 
-Update `generateVariations` to extract the original generation parameters from `sourceImage.settings` and pass them directly to the `generate-image` edge function (bypassing the state-based `generateImages` wrapper).
+### 1. New Edge Function: `analyze-product-integrity`
 
-## Technical Changes
+**Purpose**: Compare a generated image against its product reference images using Gemini Vision
 
-### File: `src/hooks/useImageGeneration.ts`
-
-**Lines 597-610 - Rewrite `generateVariations` function:**
-
-Extract from `sourceImage.settings`:
-- `productReferenceUrls` - All the product reference images
-- `moodboardId` / `moodboardUrl` - The original moodboard
-- `shotTypePrompt` - The original shot type configuration
-- `artisticStyle`, `lightingStyle`, `cameraAngle` - Technical settings
-- `resolution`, `aspectRatio`, `aiModel` - Generation settings
-
-Then call `generate-image` directly with these preserved parameters plus a new random seed.
-
-**New implementation:**
-
+**Input**:
 ```typescript
-const generateVariations = useCallback(async (
-  state: CreativeStudioState,
-  sourceImage: GeneratedImage
-): Promise<GeneratedImage[]> => {
-  setIsGeneratingImages(true);
-  
-  try {
-    // Extract original generation data from sourceImage.settings
-    const settings = sourceImage.settings || {};
-    const refs = settings.references || {};
-    
-    // Get product references from original image
-    const productReferenceUrls = refs.productReferenceUrls || 
-      (sourceImage.productReferenceUrls) || 
-      (sourceImage.productReferenceUrl ? [sourceImage.productReferenceUrl] : []);
-    
-    const { data, error } = await supabase.functions.invoke('generate-image', {
-      body: {
-        // Use refined prompt from original or fallback to prompt
-        prompt: sourceImage.refinedPrompt || sourceImage.prompt || '',
-        conceptTitle: sourceImage.conceptTitle,
-        
-        // CRITICAL: Pass product references from original image
-        productReferenceUrls,
-        
-        // Pass moodboard from original
-        moodboardId: sourceImage.moodboardId || refs.moodboardId,
-        moodboardUrl: refs.moodboardUrl || sourceImage.moodboardUrl,
-        
-        // Pass shot type from original
-        shotTypePrompt: refs.shotTypePrompt,
-        
-        // Technical settings from original
-        artisticStyle: settings.artisticStyle || state.artisticStyle,
-        lightingStyle: settings.lightingStyle || state.lightingStyle,
-        cameraAngle: settings.cameraAngle || state.cameraAngle,
-        
-        // Generation settings
-        imageCount: 1,
-        resolution: settings.resolution || state.resolution,
-        aspectRatio: settings.aspectRatio || state.aspectRatio,
-        aiModel: settings.aiModel || state.aiModel,
-        
-        // New random seed for variation
-        seed: Math.floor(Math.random() * 1000000),
-        
-        // Preserve brand association
-        brandId: sourceImage.brand_id || state.brandId,
-      },
-    });
+{
+  imageId: string;               // Generated image ID
+  generatedImageUrl: string;     // URL of the generated image
+  productReferenceUrls: string[]; // Array of reference product images
+  productName?: string;          // Product name for context
+}
+```
 
-    if (error) {
-      console.error('Error generating variation:', error);
-      toast({
-        title: 'Failed to generate variation',
-        description: error.message || 'Please try again',
-        variant: 'destructive',
-      });
-      return [];
-    }
-
-    const images: GeneratedImage[] = (data.images || []).map((img: any) => ({
-      id: img.id || `variation-${Date.now()}`,
-      imageUrl: img.imageUrl || '',
-      status: img.status || 'failed',
-      prompt: sourceImage.prompt || '',
-      refinedPrompt: img.refinedPrompt,
-      conceptTitle: sourceImage.conceptTitle,
-      productReferenceUrls,
-      moodboardId: sourceImage.moodboardId,
-      index: img.index,
-    }));
-
-    const successCount = images.filter(i => i.status === 'completed').length;
-    if (successCount > 0) {
-      toast({
-        title: 'Variation generated!',
-        description: `Created ${successCount} new variation(s)`,
-      });
-    }
-
-    return images;
-  } catch (err) {
-    console.error('Error generating variation:', err);
-    toast({
-      title: 'Failed to generate variation',
-      description: 'An unexpected error occurred',
-      variant: 'destructive',
-    });
-    return [];
-  } finally {
-    setIsGeneratingImages(false);
+**Output**:
+```typescript
+{
+  score: number;          // 0-100 overall integrity score
+  issues: string[];       // List of detected problems
+  passesCheck: boolean;   // true if score >= 70
+  details: {
+    colorMatch: { score: number; notes: string };
+    silhouetteMatch: { score: number; notes: string };
+    featureMatch: { score: number; notes: string };
+    materialMatch: { score: number; notes: string };
   }
-}, [toast]);
-```
-
-## Expected Result After Fix
-
-When you click "Generate Variations" on an image that was created with product references:
-
-**Before (broken):**
-```json
-{
-  "productReferenceUrls": [],  // Empty!
-  "shotTypePrompt": null
 }
 ```
 
-**After (fixed):**
-```json
-{
-  "productReferenceUrls": [
-    "https://.../product-1.png",
-    "https://.../product-2.png",
-    // ... all original references
-  ],
-  "shotTypePrompt": "A single, high-resolution e-commerce image..."
+**AI Prompt Strategy**:
+- Attach ALL reference images + the generated image
+- Ask Gemini to compare and score: color accuracy, silhouette fidelity, feature presence (buckles, straps, hardware), material textures
+- Use function calling to extract structured analysis
+
+---
+
+### 2. Database Schema Update
+
+Add a new JSONB column to `generated_images`:
+
+```sql
+ALTER TABLE generated_images 
+ADD COLUMN integrity_analysis JSONB DEFAULT NULL;
+```
+
+This will store:
+- `score`: 0-100
+- `issues`: string[]
+- `passesCheck`: boolean
+- `analyzedAt`: timestamp
+- `details`: sub-scores for color, silhouette, features, materials
+
+---
+
+### 3. Client-Side Integration
+
+#### A. Update `useImageGeneration.ts`
+
+After successful generation, trigger the background integrity check:
+
+```typescript
+// After images are returned successfully
+const successfulImages = images.filter(i => i.status === 'completed');
+
+// Fire-and-forget: trigger integrity analysis for each image with product refs
+successfulImages.forEach(img => {
+  if (productReferenceUrls.length > 0) {
+    supabase.functions.invoke('analyze-product-integrity', {
+      body: {
+        imageId: img.id,
+        generatedImageUrl: img.imageUrl,
+        productReferenceUrls,
+        productName: selectedSku?.name || undefined,
+      }
+    }).catch(err => console.error('Integrity check failed:', err));
+  }
+});
+```
+
+#### B. Update `GeneratedImageCard.tsx`
+
+Add the `ProductIntegrityBadge` component to display results:
+
+```typescript
+// Fetch integrity analysis from image settings or prop
+const integrityResult = image.settings?.integrityAnalysis;
+
+// In the card footer, next to the status badge:
+<ProductIntegrityBadge 
+  result={integrityResult}
+  isAnalyzing={!integrityResult && image.productReferenceUrls?.length > 0}
+  onRegenerate={() => onVariation(image)}
+  compact
+/>
+```
+
+#### C. Update `ImageDetailModal.tsx`
+
+Show detailed integrity analysis in the modal sidebar:
+- Full score breakdown (color, silhouette, features, materials)
+- List of specific issues detected
+- "Regenerate with focus on fidelity" button if score < 70
+
+---
+
+### 4. Hook for Live Updates: `useIntegrityResults`
+
+Create a hook that polls or subscribes for integrity results:
+
+```typescript
+export function useIntegrityResults(imageIds: string[]) {
+  const [results, setResults] = useState<Record<string, ProductIntegrityResult>>({});
+  
+  useEffect(() => {
+    // Initial fetch for images that have integrity_analysis
+    const fetchResults = async () => {
+      const { data } = await supabase
+        .from('generated_images')
+        .select('id, integrity_analysis')
+        .in('id', imageIds)
+        .not('integrity_analysis', 'is', null);
+      
+      const resultsMap = {};
+      data?.forEach(img => {
+        resultsMap[img.id] = img.integrity_analysis;
+      });
+      setResults(resultsMap);
+    };
+    
+    if (imageIds.length > 0) {
+      fetchResults();
+      
+      // Poll every 5 seconds for updates (until all analyzed)
+      const interval = setInterval(fetchResults, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [imageIds]);
+  
+  return results;
 }
 ```
 
-## Files to Modify
+---
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useImageGeneration.ts` | Rewrite `generateVariations` function (lines 597-610) to extract and preserve original image settings |
+## Files to Create/Modify
 
-## Testing
+| File | Action | Purpose |
+|------|--------|---------|
+| `supabase/functions/analyze-product-integrity/index.ts` | Create | New edge function for AI comparison |
+| `supabase/config.toml` | Update | Register the new function |
+| Migration | Create | Add `integrity_analysis` column |
+| `src/hooks/useIntegrityResults.ts` | Create | Hook for fetching/polling integrity data |
+| `src/hooks/useImageGeneration.ts` | Update | Trigger background check after generation |
+| `src/components/creative-studio/GeneratedImageCard.tsx` | Update | Display integrity badge |
+| `src/components/creative-studio/ImageDetailModal.tsx` | Update | Show detailed analysis |
+| `src/components/creative-studio/types.ts` | Update | Add integrity fields to GeneratedImage type |
 
-After the fix:
-1. Generate a Product Shoot image with a Birkenstock SKU (5 reference angles)
-2. Click "Generate Variations" on the completed image
-3. Verify in logs that `productReferenceUrls` contains all 5 reference URLs
-4. Confirm the generated variation matches the original color, materials, and construction
+---
+
+## Edge Function Implementation Details
+
+### `analyze-product-integrity/index.ts`
+
+```typescript
+// Key implementation points:
+
+// 1. Attach generated image + all reference images
+const messages = [
+  {
+    role: 'user',
+    content: [
+      // Reference images first
+      ...productReferenceUrls.map(url => ({
+        type: 'image_url',
+        image_url: { url }
+      })),
+      // Generated image last
+      { type: 'image_url', image_url: { url: generatedImageUrl } },
+      // Analysis prompt
+      { type: 'text', text: analysisPrompt }
+    ]
+  }
+];
+
+// 2. Structured analysis prompt
+const analysisPrompt = `
+The first ${refCount} images are PRODUCT REFERENCE photos showing the actual product.
+The LAST image is an AI-GENERATED image that should contain this product.
+
+Compare the generated image to the reference images and analyze:
+
+1. COLOR ACCURACY (0-100): Does the product color in the generated image match the reference exactly?
+   - Check main color, accent colors, hardware colors
+   
+2. SILHOUETTE MATCH (0-100): Does the shape/form match the reference?
+   - Check proportions, curves, overall outline
+   
+3. FEATURE PRESENCE (0-100): Are all distinctive features present?
+   - Straps, buckles, hardware, logos, stitching, linings
+   
+4. MATERIAL ACCURACY (0-100): Do materials look correct?
+   - Suede texture, leather grain, shearling, cork, rubber
+
+Call the extract_integrity_analysis function with your findings.
+`;
+
+// 3. Use function calling for structured output
+const tools = [{
+  type: 'function',
+  function: {
+    name: 'extract_integrity_analysis',
+    parameters: {
+      type: 'object',
+      properties: {
+        overall_score: { type: 'number' },
+        color_match: { 
+          type: 'object',
+          properties: { score: { type: 'number' }, notes: { type: 'string' } }
+        },
+        silhouette_match: { ... },
+        feature_match: { ... },
+        material_match: { ... },
+        issues: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  }
+}];
+
+// 4. Update database with results
+await supabase
+  .from('generated_images')
+  .update({
+    integrity_analysis: {
+      score: result.overall_score,
+      issues: result.issues,
+      passesCheck: result.overall_score >= 70,
+      analyzedAt: new Date().toISOString(),
+      details: {
+        colorMatch: result.color_match,
+        silhouetteMatch: result.silhouette_match,
+        featureMatch: result.feature_match,
+        materialMatch: result.material_match
+      }
+    }
+  })
+  .eq('id', imageId);
+```
+
+---
+
+## UI Display
+
+### GeneratedImageCard Badge
+
+Position: Bottom-left corner of image, or in the footer next to status
+
+- Green badge (80-100): "Excellent" with checkmark
+- Yellow badge (60-79): "Fair" with warning icon
+- Red badge (<60): "Issues" with X icon and "Regenerate" button
+
+### ImageDetailModal Detailed View
+
+Add a collapsible "Product Integrity" section:
+
+```text
++------------------------------------------+
+| Product Integrity           Score: 65/100 |
++------------------------------------------+
+| Color Match        ████████░░  82%        |
+| Silhouette         ██████░░░░  62%        |
+| Features           █████░░░░░  48%        |
+| Materials          ███████░░░  71%        |
++------------------------------------------+
+| Issues Detected:                          |
+| • Heel strap appears missing              |
+| • Color is slightly darker than reference |
+| • Shearling lining not visible            |
++------------------------------------------+
+| [Regenerate with Focus on Fidelity]       |
++------------------------------------------+
+```
+
+---
+
+## Performance Considerations
+
+1. **Background execution**: Use `EdgeRuntime.waitUntil()` if the edge function needs to do cleanup
+2. **Rate limiting**: Process one image at a time to avoid overwhelming the AI API
+3. **Caching**: Skip analysis if product references haven't changed and score is already high
+4. **Timeout handling**: Set reasonable timeout (30s) for the vision API call
+
+---
+
+## Migration SQL
+
+```sql
+-- Add integrity_analysis column to generated_images
+ALTER TABLE public.generated_images 
+ADD COLUMN IF NOT EXISTS integrity_analysis JSONB DEFAULT NULL;
+
+-- Add index for efficient querying of un-analyzed images
+CREATE INDEX IF NOT EXISTS idx_generated_images_integrity_analysis 
+ON public.generated_images ((integrity_analysis IS NULL))
+WHERE integrity_analysis IS NULL;
+```
+
