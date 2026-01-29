@@ -11,12 +11,15 @@ import {
   Palette,
   Sparkles,
   AlertCircle,
-  Expand
+  Expand,
+  ShieldCheck
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogContentClean } from '@/components/ui/dialog';
 import { GeneratedImage } from './types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { ProductIntegrityBadge, ProductIntegrityResult } from './product-shoot/ProductIntegrityBadge';
+import { Progress } from '@/components/ui/progress';
 
 interface ImageDetailModalProps {
   image: GeneratedImage | null;
@@ -40,6 +43,57 @@ export const ImageDetailModal = ({
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [integrityResult, setIntegrityResult] = useState<ProductIntegrityResult | null>(null);
+  const [isLoadingIntegrity, setIsLoadingIntegrity] = useState(false);
+
+  // Fetch integrity analysis when image changes
+  useEffect(() => {
+    if (!image?.id || !isOpen) {
+      setIntegrityResult(null);
+      return;
+    }
+
+    const fetchIntegrity = async () => {
+      setIsLoadingIntegrity(true);
+      try {
+        const { data, error } = await supabase
+          .from('generated_images')
+          .select('integrity_analysis')
+          .eq('id', image.id)
+          .maybeSingle();
+
+        if (!error && data?.integrity_analysis) {
+          setIntegrityResult(data.integrity_analysis as unknown as ProductIntegrityResult);
+        } else {
+          setIntegrityResult(null);
+        }
+      } catch (err) {
+        console.error('Error fetching integrity analysis:', err);
+      } finally {
+        setIsLoadingIntegrity(false);
+      }
+    };
+
+    fetchIntegrity();
+
+    // Poll for updates if no result yet (analysis might be running)
+    const interval = setInterval(async () => {
+      if (!integrityResult) {
+        const { data } = await supabase
+          .from('generated_images')
+          .select('integrity_analysis')
+          .eq('id', image.id)
+          .maybeSingle();
+
+        if (data?.integrity_analysis) {
+          setIntegrityResult(data.integrity_analysis as unknown as ProductIntegrityResult);
+          clearInterval(interval);
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [image?.id, isOpen]);
 
   // Resolve moodboard URL if we have ID but no URL
   useEffect(() => {
@@ -387,6 +441,96 @@ export const ImageDetailModal = ({
                       {image.refinedPrompt}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Product Integrity Analysis */}
+              {(integrityResult || isLoadingIntegrity) && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <ShieldCheck className="w-4 h-4" />
+                      Product Integrity
+                    </div>
+                    {integrityResult && (
+                      <ProductIntegrityBadge
+                        result={integrityResult}
+                        isAnalyzing={isLoadingIntegrity}
+                        onRegenerate={() => handleAction('variation')}
+                      />
+                    )}
+                  </div>
+                  
+                  {isLoadingIntegrity && !integrityResult && (
+                    <div className="p-3 rounded-lg bg-secondary/50 border border-border text-center">
+                      <p className="text-sm text-muted-foreground">Analyzing product fidelity...</p>
+                    </div>
+                  )}
+                  
+                  {integrityResult && integrityResult.details && (
+                    <div className="p-3 rounded-lg bg-secondary/50 border border-border space-y-3">
+                      {/* Score breakdown with progress bars */}
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Color Match</span>
+                            <span className="font-medium">{integrityResult.details.colorMatch.score}%</span>
+                          </div>
+                          <Progress value={integrityResult.details.colorMatch.score} className="h-1.5" />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Silhouette</span>
+                            <span className="font-medium">{integrityResult.details.silhouetteMatch.score}%</span>
+                          </div>
+                          <Progress value={integrityResult.details.silhouetteMatch.score} className="h-1.5" />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Features</span>
+                            <span className="font-medium">{integrityResult.details.featureMatch.score}%</span>
+                          </div>
+                          <Progress value={integrityResult.details.featureMatch.score} className="h-1.5" />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Materials</span>
+                            <span className="font-medium">{integrityResult.details.materialMatch.score}%</span>
+                          </div>
+                          <Progress value={integrityResult.details.materialMatch.score} className="h-1.5" />
+                        </div>
+                      </div>
+                      
+                      {/* Issues list */}
+                      {integrityResult.issues.length > 0 && (
+                        <div className="pt-2 border-t border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5">Issues Detected:</p>
+                          <ul className="space-y-1">
+                            {integrityResult.issues.map((issue, idx) => (
+                              <li key={idx} className="flex items-start gap-1.5 text-xs">
+                                <span className="text-yellow-500 mt-0.5">•</span>
+                                <span className="text-foreground/80">{issue}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {/* Regenerate button if failed check */}
+                      {!integrityResult.passesCheck && (
+                        <button
+                          onClick={() => handleAction('variation')}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/90 transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Regenerate with Focus on Fidelity
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

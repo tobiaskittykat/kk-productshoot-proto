@@ -130,12 +130,21 @@ export interface BackgroundPreset {
   colorHint?: string; // For generating placeholder thumbnails
 }
 
-// Product integrity analysis result
+// Product integrity analysis result (enhanced with detail breakdowns)
+export interface IntegrityDetails {
+  colorMatch: { score: number; notes: string };
+  silhouetteMatch: { score: number; notes: string };
+  featureMatch: { score: number; notes: string };
+  materialMatch: { score: number; notes: string };
+}
+
 export interface ProductIntegrityResult {
   score: number;           // 0-100
   issues: string[];        // List of detected issues
   passesCheck: boolean;    // score >= 70
-  analyzed: boolean;       // Has been analyzed
+  analyzed?: boolean;      // Has been analyzed (legacy)
+  analyzedAt?: string;     // Timestamp of analysis
+  details?: IntegrityDetails; // Detailed breakdown scores
 }
 
 // Initial product shoot state
