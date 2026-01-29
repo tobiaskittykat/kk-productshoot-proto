@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.analyze-bulk-products]
 verify_jwt = false
+
+[functions.generate-background-thumbnails]
+verify_jwt = false
