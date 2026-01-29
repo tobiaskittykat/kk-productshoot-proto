@@ -234,6 +234,25 @@ export const genderOptions = [
   { value: 'nonbinary' as ModelGender, label: 'Non-binary' },
 ];
 
+// ===== ETHNICITY HELPER =====
+/**
+ * Convert ethnicity value to natural language description for prompts.
+ * Returns empty string for 'auto' to let AI decide naturally.
+ */
+function getEthnicityDescription(ethnicity: string): string {
+  const map: Record<string, string> = {
+    'auto': '',
+    'caucasian': 'Caucasian',
+    'african': 'African',
+    'asian': 'Asian',
+    'hispanic': 'Hispanic',
+    'middle-eastern': 'Middle Eastern',
+    'south-asian': 'South Asian',
+    'mixed': 'mixed-race',
+  };
+  return map[ethnicity] || '';
+}
+
 // ===== ON-FOOT SHOT TYPE CONFIG =====
 export interface OnFootShotConfig {
   // Model appearance
@@ -270,6 +289,12 @@ export function buildOnFootPrompt(config: OnFootShotConfig, bgContext?: Backgrou
     ? ['female', 'male'][Math.floor(Math.random() * 2)]
     : config.gender;
   
+  // Determine ethnicity string and build model description
+  const ethnicityStr = config.ethnicity === 'auto'
+    ? ''
+    : getEthnicityDescription(config.ethnicity);
+  const modelDesc = ethnicityStr ? `${ethnicityStr} ${genderStr}` : genderStr;
+  
   // Determine background description
   let backgroundDesc = 'a pure white seamless studio background with a visible floor plane and soft, natural contact shadows';
   let lightingDesc = 'clean, diffused studio lighting that accurately represents suede texture and true color';
@@ -298,7 +323,7 @@ export function buildOnFootPrompt(config: OnFootShotConfig, bgContext?: Backgrou
   // Build the evocative prompt
   const prompt = `A single, high-resolution e-commerce image (one frame only, no collage).
 
-A close-up on-model product shot of a ${genderStr} model wearing Birkenstock footwear, photographed against ${backgroundDesc}.
+A close-up on-model product shot of a ${modelDesc} model wearing Birkenstock footwear, photographed against ${backgroundDesc}.
 
 Framing is tight and product-focused, showing the feet, shoes, ankles, and lower legs, cropped roughly from mid-calf down. The shoes fill most of the frame, consistent with official Birkenstock e-commerce photography.
 
@@ -629,6 +654,12 @@ export function buildLifestylePrompt(config: LifestyleShotConfig, bgContext?: Ba
     ? ['female', 'male'][Math.floor(Math.random() * 2)]
     : config.gender;
   
+  // Determine ethnicity string and build model description
+  const ethnicityStr = config.ethnicity === 'auto'
+    ? ''
+    : getEthnicityDescription(config.ethnicity);
+  const modelDesc = ethnicityStr ? `${ethnicityStr} ${genderStr}` : genderStr;
+  
   // Determine background description
   let backgroundDesc = 'a pure white seamless studio background with visible floor and wall plane';
   let lightingDesc = 'clean, diffused studio lighting with soft, realistic shadows grounding the model';
@@ -664,7 +695,7 @@ export function buildLifestylePrompt(config: LifestyleShotConfig, bgContext?: Ba
 
 A full-body product-on-model shot, framed from upper chest or shoulders down to the feet, with the head cropped out of frame.
 
-The ${genderStr} model is photographed at a pulled-back distance, allowing full body proportions and clear negative space around the figure, on ${backgroundDesc}.
+The ${modelDesc} model is photographed at a pulled-back distance, allowing full body proportions and clear negative space around the figure, on ${backgroundDesc}.
 
 Camera angle is eye-level and neutral, with no wide-angle distortion, matching classic Birkenstock lookbook and e-commerce photography.
 
