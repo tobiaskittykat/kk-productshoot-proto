@@ -1,57 +1,112 @@
 
-# Fix Color Picker in Nested Dialog/Popover
 
-## Problem Identified
+# Update Materials Library: Add Birko-Flor Variants & Translucent Buckles
 
-The color picker in `ComponentOverridePopover` is not working because it's rendered inside a nested modal structure:
+## Overview
 
-```text
-ProductPickerModal (Dialog)
-  └── ShoeComponentsPanel
-       └── ComponentRow
-            └── ComponentOverridePopover (Popover inside Dialog)
-                 └── Color Swatches (click events not working)
-```
-
-When a Popover is inside a Dialog in Radix UI, the Popover's content is portaled outside the Dialog's DOM tree. However, the Dialog's modal behavior traps pointer events, preventing clicks from reaching the Popover content.
-
-## Solution
-
-Add `pointer-events-auto` to the PopoverContent to ensure interactive elements work properly inside the nested modal context. This is the same pattern used for datepickers inside dialogs (documented in shadcn's datepicker pattern).
+Updating `src/lib/birkenstockMaterials.ts` to add missing materials and buckle finishes based on actual Birkenstock catalog.
 
 ---
 
-## Technical Changes
+## Changes to `src/lib/birkenstockMaterials.ts`
 
-### File: `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx`
-
-Add `pointer-events-auto` class to the PopoverContent wrapper:
+### 1. Update Upper Materials (add Birko-Flor variants, organize with clearer labels)
 
 ```typescript
-<PopoverContent 
-  className="w-80 p-4 pointer-events-auto" 
-  align="end"
->
+upper: [
+  // Natural Leathers
+  { value: 'Oiled Leather', label: 'Oiled Leather' },
+  { value: 'Smooth Leather', label: 'Smooth Leather' },
+  { value: 'Nubuck', label: 'Nubuck (Leather)' },        // Clarified
+  { value: 'Suede', label: 'Suede' },
+  { value: 'Patent Leather', label: 'Patent Leather' },
+  { value: 'Shearling', label: 'Shearling' },
+  
+  // Birkenstock Synthetics
+  { value: 'Birko-Flor', label: 'Birko-Flor (Smooth)' },      // Clarified
+  { value: 'Birko-Flor Nubuck', label: 'Birko-Flor Nubuck' }, // NEW
+  { value: 'Birko-Flor Patent', label: 'Birko-Flor Patent' }, // NEW
+  { value: 'Birkibuc', label: 'Birkibuc' },
+  { value: 'EVA', label: 'EVA (Molded)' },                    // Clarified
+  
+  // Textiles
+  { value: 'Wool Felt', label: 'Wool Felt' },
+  { value: 'Canvas', label: 'Canvas' },
+  { value: 'Fabric', label: 'Fabric (Woven)' },
+  { value: 'Mesh', label: 'Mesh (Breathable)' },
+  { value: 'Recycled PET', label: 'Recycled PET (Eco)' },
+],
 ```
 
-This ensures that even when the popover is portaled outside a Dialog, the interactive elements (color swatches, buttons, inputs) will correctly receive click events.
-
----
-
-## Alternative (if above doesn't work)
-
-If the `pointer-events-auto` fix isn't sufficient, we may need to set `modal={false}` on the Popover to disable its modal behavior entirely:
+### 2. Add New Buckle Finishes (Translucent, Metallic Rose Gold, Big Buckle)
 
 ```typescript
-<Popover open={open} onOpenChange={setOpen} modal={false}>
+buckles: [
+  // Metal finishes
+  { value: 'Metal (Brass)', label: 'Metal (Brass/Gold)' },
+  { value: 'Metal (Silver)', label: 'Metal (Silver)' },
+  { value: 'Metal (Copper)', label: 'Metal (Copper)' },
+  { value: 'Metal (Rose Gold)', label: 'Metal (Rose Gold)' },  // NEW
+  { value: 'Antique Brass', label: 'Antique Brass' },
+  
+  // Plastic finishes
+  { value: 'Matte Plastic', label: 'Matte Plastic' },
+  { value: 'Matte Plastic (Coordinated)', label: 'Matte Plastic (Color-Matched)' },
+  
+  // Translucent/Big Buckle options  
+  { value: 'Translucent', label: 'Translucent (Clear)' },              // NEW
+  { value: 'Translucent Rose Gold', label: 'Translucent (Rose Gold)' }, // NEW
+  { value: 'Metallic Rose Gold', label: 'Metallic (Rose Gold Big Buckle)' }, // NEW
+],
 ```
 
-This tells Radix not to trap focus or pointer events, which allows it to work properly inside another modal component.
+### 3. Update Heelstrap (add Birko-Flor Nubuck)
+
+```typescript
+heelstrap: [
+  { value: 'Suede', label: 'Suede' },
+  { value: 'Oiled Leather', label: 'Oiled Leather' },
+  { value: 'Smooth Leather', label: 'Smooth Leather' },
+  { value: 'Nubuck', label: 'Nubuck' },
+  { value: 'Birko-Flor', label: 'Birko-Flor' },
+  { value: 'Birko-Flor Nubuck', label: 'Birko-Flor Nubuck' },  // NEW
+],
+```
+
+### 4. Add Rose Gold to Color Presets
+
+```typescript
+// Add to COLOR_PRESETS array
+{ name: 'Rose Gold', hex: '#B76E79', category: 'metallic' },
+{ name: 'Blush', hex: '#DE98AB', category: 'color' },  // For the pink EVA
+```
 
 ---
 
-## Files to Modify
+## Summary of Additions
 
-| File | Change |
-|------|--------|
-| `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` | Add `pointer-events-auto` to PopoverContent className; optionally add `modal={false}` to Popover |
+| Category | New Options |
+|----------|-------------|
+| **Upper** | `Birko-Flor Nubuck`, `Birko-Flor Patent` |
+| **Buckles** | `Metal (Rose Gold)`, `Translucent`, `Translucent Rose Gold`, `Metallic Rose Gold Big Buckle` |
+| **Heelstrap** | `Birko-Flor Nubuck` |
+| **Colors** | `Rose Gold`, `Blush` |
+
+---
+
+## Labels Clarified
+
+| Before | After |
+|--------|-------|
+| `Nubuck` | `Nubuck (Leather)` |
+| `Birko-Flor` | `Birko-Flor (Smooth)` |
+| `EVA` | `EVA (Molded)` |
+
+---
+
+## File to Modify
+
+| File | Changes |
+|------|---------|
+| `src/lib/birkenstockMaterials.ts` | Add new materials, buckle finishes, colors; clarify labels |
+
