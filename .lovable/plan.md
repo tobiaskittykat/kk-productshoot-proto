@@ -1,69 +1,48 @@
 
+# Add "Metal (Color-Matched)" Buckle Option
 
-# Auto-Sync Tokyo Heelstrap with Upper
+## What This Does
 
-## The Problem
+Adds a new buckle material called **"Metal (Color-Matched)"** that behaves identically to the existing "Matte Plastic (Color-Matched)" option: when selected, the buckle color automatically syncs with the upper's color and the manual color picker is locked.
 
-On the Tokyo model, the heelstrap is always the same material and color as the upper (it's one continuous piece of suede/leather). Right now it shows as a separate editable component, which means a user could accidentally set the heelstrap to a different material -- producing an impossible shoe.
+## Changes
 
-## Solution: Hide + Auto-Sync
+### 1. `src/lib/birkenstockMaterials.ts` -- Add new material entry
 
-Rather than removing heelstrap data entirely (we still want it in the prompt for accurate generation), we'll:
+Add a new buckle material in the **Metal** category:
+```
+{ value: 'Metal (Coordinated)', label: 'Metal (Color-Matched)', category: 'Metal' }
+```
 
-1. **Auto-sync the override** -- whenever the upper is overridden, the heelstrap override automatically mirrors it
-2. **Hide it from the UI** -- the heelstrap row won't appear in the component panel, since users can't (and shouldn't) change it independently
-3. **Keep it in the prompt** -- the override prompt builder still includes heelstrap, so the AI knows both upper and heelstrap share the same material/color
+### 2. `src/hooks/useShoeComponents.ts` -- Extend sync logic
+
+Update the buckle auto-sync `useEffect` (line 123) to trigger for **both** coordinated materials:
+
+```
+Before: overrides.buckles?.material === 'Matte Plastic (Coordinated)'
+After:  overrides.buckles?.material === 'Matte Plastic (Coordinated)' ||
+        overrides.buckles?.material === 'Metal (Coordinated)'
+```
+
+### 3. `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` -- Extend locked-color detection
+
+Update the `isColorMatched` check (line 51) to recognize both coordinated materials:
+
+```
+Before: selectedMaterial === 'Matte Plastic (Coordinated)'
+After:  selectedMaterial === 'Matte Plastic (Coordinated)' ||
+        selectedMaterial === 'Metal (Coordinated)'
+```
+
+## How It Works
+
+When a user selects "Metal (Color-Matched)" for buckles:
+- The color picker locks and shows "Matches Upper: [Color]"
+- The buckle color auto-syncs with the upper (checking overrides first, then original)
+- The prompt will describe it as e.g. "Metal (Coordinated) in Moss Green" so the AI generates a color-matched metal buckle
 
 ## Files Changed
 
-### 1. `src/hooks/useShoeComponents.ts` -- Add heelstrap auto-sync
-
-Add a new `useEffect` in `useComponentOverrides` (right next to the existing buckle sync logic):
-
-- When an upper override is set, automatically apply the same material + color to heelstrap
-- When the upper override is removed (reset), also remove the heelstrap override
-
-This mirrors the existing buckle color-match pattern but is unconditional -- the heelstrap always follows the upper.
-
-### 2. `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx` -- Hide heelstrap row
-
-Filter `heelstrap` out of the `existingComponents` list so it never renders as a separate row. The user sees: Upper, Footbed, Sole, Buckles, Lining -- but not Heelstrap.
-
-### 3. No changes to prompt builder
-
-`buildComponentOverridePrompt` in `birkenstockMaterials.ts` already iterates all component types including heelstrap. Since the auto-sync creates a heelstrap override whenever the upper is overridden, the prompt will naturally include something like:
-
-```
-UPPER: Suede in Moss Green
-  (Original was: Suede in Tobacco Brown)
-HEELSTRAP: Suede in Moss Green
-  (Original was: Suede in Tobacco Brown)
-```
-
-This tells the AI both pieces should match -- exactly what we want.
-
-## How It Works End-to-End
-
-```text
-User changes Upper to "Moss Green Suede"
-        |
-        v
-useComponentOverrides auto-sync effect fires
-        |
-        v
-Heelstrap override set to "Moss Green Suede" (same as upper)
-        |
-        v
-Prompt builder includes both UPPER and HEELSTRAP overrides
-        |
-        v
-AI generates Tokyo with matching upper + heelstrap
-```
-
-## Edge Cases Handled
-
-- **User resets all overrides**: Both upper and heelstrap are cleared
-- **No upper override**: Heelstrap stays at its analyzed default (which already matches the upper from the AI analysis)
-- **Quick customization ("moss green version!")**: If the AI interpret function returns an upper override, the sync hook will auto-apply it to heelstrap too
-- **Other models without heelstrap**: The sync only fires when heelstrap exists in `initialComponents`, so it won't create phantom heelstrap overrides for Bostons or Arizonas
-
+- `src/lib/birkenstockMaterials.ts` (1 line added)
+- `src/hooks/useShoeComponents.ts` (1 condition expanded)
+- `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` (1 condition expanded)
