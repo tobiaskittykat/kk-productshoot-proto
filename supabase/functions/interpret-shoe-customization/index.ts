@@ -167,6 +167,13 @@ ${JSON.stringify(currentComponents, null, 2)}
 AVAILABLE MATERIALS BY COMPONENT:
 ${JSON.stringify(COMPONENT_MATERIALS, null, 2)}
 
+MATERIAL VALIDITY BY COMPONENT (which materials are valid where):
+- EVA: valid for upper, sole, footbed, heelstrap, lining (molded EVA sandals)
+- Leather/Suede/Nubuck/Oiled Leather: valid for upper, heelstrap (NOT sole/footbed)
+- Birko-Flor: valid for upper, heelstrap (NOT sole/footbed)
+- Cork-Latex: valid for footbed only
+- Rubber/Polyurethane: valid for sole only
+
 REFERENCE COLORS (common names and hex codes):
 ${COLOR_PALETTE.map(c => `${c.name}: ${c.hex}`).join("\n")}
 
@@ -176,45 +183,41 @@ CRITICAL RULES:
 3. You CAN and SHOULD create custom colors not in the reference list! Just provide a descriptive name and accurate hex code.
    - Example: "baby blue" → { color: "Baby Blue", colorHex: "#89CFF0" }
    - Example: "bright orange" → { color: "Bright Orange", colorHex: "#FF6B00" }
-   - Example: "forest green" → { color: "Forest Green", colorHex: "#228B22" }
 4. When user specifies only a color (no material), keep the original material and just change the color.
-5. "All [color]" or "entire shoe in [color]" → apply to: upper, sole, heelstrap (NOT footbed - stays cork).
+5. "All [color]" or "entire shoe in [color]" → apply color to: upper, sole, heelstrap, and BUCKLES become "Matte Plastic (Coordinated)" with matching color.
 6. For metal buckles changing to match shoe color, use "Matte Plastic (Coordinated)" material.
-7. Footbed typically stays cork unless explicitly mentioned.
+7. Footbed stays cork UNLESS:
+   - User explicitly mentions footbed (e.g., "EVA footbed")
+   - User says "all [material]" where that material is valid for footbed (EVA, Soft Footbed)
 8. NEVER return all nulls if the user clearly wants a color/material change. At minimum, change the UPPER.
 9. For vegan/synthetic requests, use Birko-Flor or EVA materials.
 10. For metal buckles, use metallic colors (Gold, Silver, Rose Gold, Copper).
 11. IGNORE shoe model names in the request - these are just product names, not instructions:
     "boston", "bston", "arizona", "madrid", "gizeh", "mayari", "milano", "kyoto", "zurich", etc.
     Focus ONLY on material/color/customization instructions.
-12. "all [material] in [color]" or "[material] in [color]" for the whole shoe:
-    - Change upper, sole, and heelstrap to the specified material AND color
-    - Example: "all EVA in dusty blue" → upper: EVA/Dusty Blue, sole: EVA/Dusty Blue, heelstrap: EVA/Dusty Blue
-    - Example: "all leather in cognac" → upper: Smooth Leather/Cognac, sole: (keep), heelstrap: Smooth Leather/Cognac
+12. "all [material] in [color]" applies to ALL components where that material is valid:
+    - "all EVA in [color]" → upper: EVA/color, sole: EVA/color, footbed: EVA/color, heelstrap: EVA/color, buckles: Matte Plastic (Coordinated)/color
+    - "all leather in [color]" → upper: Leather/color, heelstrap: Leather/color (sole stays EVA/rubber, footbed stays cork, buckles coordinate)
+    - ALWAYS include buckles as "Matte Plastic (Coordinated)" with matching color for "all" requests
 13. ALWAYS generate accurate hex codes for ANY color name, even if not in the reference list!
     - Look up or estimate the correct hex code for the color mentioned
-    - Example: "lavender" → #E6E6FA
-    - Example: "sage green" → #9DC183
-    - Example: "dusty rose" → #DCAE96
-    - Example: "terracotta" → #E2725B
-    - Example: "mint" → #98FF98
-    - Example: "burgundy" → #800020
     - NEVER leave colorHex empty or null when changing a color
 14. When user specifies BOTH material AND color, apply BOTH together - don't just change one.
-15. EVA is a valid material for: upper (molded sandals), sole, footbed. Apply it where mentioned.
+15. EVA is a valid material for: upper (molded sandals), sole, footbed, heelstrap, lining. For "all EVA" requests, apply to ALL these components.
 
 EXAMPLES:
 - "baby blue version" → upper: { material: (keep original), color: "Baby Blue", colorHex: "#89CFF0" }
-- "all black leather" → upper: Smooth Leather/Black/#1C1C1C, sole: EVA/Black/#1C1C1C, heelstrap: Smooth Leather/Black/#1C1C1C
+- "all black leather" → upper: Smooth Leather/Black/#1C1C1C, heelstrap: Smooth Leather/Black/#1C1C1C, buckles: Matte Plastic (Coordinated)/Black/#1C1C1C
 - "white sole" → sole: { material: (keep original), color: "White", colorHex: "#FFFFFF" }
 - "hot pink upper with silver buckles" → upper: (keep material)/Hot Pink/#FF69B4, buckles: Metal (Silver)/Silver/#C0C0C0
 - "vegan taupe" → upper: Birko-Flor/Taupe/#B8A99A, heelstrap: Birko-Flor/Taupe/#B8A99A
 - "make it coral" → upper: { material: (keep original), color: "Coral", colorHex: "#FF7F50" }
-- "boston all eva in dusty blue" → upper: EVA/Dusty Blue/#8CA9BC, sole: EVA/Dusty Blue/#8CA9BC, heelstrap: EVA/Dusty Blue/#8CA9BC
-- "all eva bright orange" → upper: EVA/Bright Orange/#FF6B00, sole: EVA/Bright Orange/#FF6B00, heelstrap: EVA/Bright Orange/#FF6B00
+- "all eva in dusty blue" → upper: EVA/Dusty Blue/#8CA9BC, sole: EVA/Dusty Blue/#8CA9BC, footbed: EVA/Dusty Blue/#8CA9BC, heelstrap: EVA/Dusty Blue/#8CA9BC, buckles: Matte Plastic (Coordinated)/Dusty Blue/#8CA9BC
+- "all eva version in baby blue" → upper: EVA/Baby Blue/#89CFF0, sole: EVA/Baby Blue/#89CFF0, footbed: EVA/Baby Blue/#89CFF0, heelstrap: EVA/Baby Blue/#89CFF0, buckles: Matte Plastic (Coordinated)/Baby Blue/#89CFF0
+- "all leather in cognac" → upper: Smooth Leather/Cognac/#834C24, heelstrap: Smooth Leather/Cognac/#834C24, buckles: Matte Plastic (Coordinated)/Cognac/#834C24
 - "arizona in olive leather" → upper: Oiled Leather/Olive/#808000, heelstrap: Oiled Leather/Olive/#808000
 - "make it lavender" → upper: { material: (keep original), color: "Lavender", colorHex: "#E6E6FA" }
-- "all sage green" → upper: (keep)/Sage Green/#9DC183, sole: (keep)/Sage Green/#9DC183, heelstrap: (keep)/Sage Green/#9DC183`;
+- "all sage green" → upper: (keep)/Sage Green/#9DC183, sole: (keep)/Sage Green/#9DC183, heelstrap: (keep)/Sage Green/#9DC183, buckles: Matte Plastic (Coordinated)/Sage Green/#9DC183`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
