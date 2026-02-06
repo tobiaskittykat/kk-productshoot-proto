@@ -1,79 +1,86 @@
 
 
-# Fix "All [Material]" to Include Footbed for EVA
+# Fix "No Changes Needed" False Negative
 
 ## Problem
-When user says "all eva version in baby blue", footbed and buckles stay unchanged because the current rules limit "all [material]" to only upper/sole/heelstrap.
 
-For EVA specifically, footbed IS valid (molded EVA sandals like Boston exist), so "all EVA" should include it.
+The edge function logs prove the AI model (Gemini 2.5 Flash) sometimes returns ALL null overrides despite explicit prompt rules saying "NEVER return all nulls." The current code has zero resilience against this -- it just shows the toast and gives up.
 
-## Solution
-
-Update the edge function prompt to be **material-aware**:
-
-### Rule Updates
-
-**Update Rule 7:**
-```
-Footbed stays cork UNLESS:
-- User explicitly mentions footbed
-- User says "all [material]" where material is valid for footbed (EVA, Soft Footbed)
-```
-
-**Update Rule 12:**
-```
-"all [material] in [color]" applies to ALL components where that material is valid:
-
-EVA (valid for upper, sole, footbed, heelstrap):
-→ "all EVA in baby blue" changes all 4 + buckles become coordinated plastic
-
-Leather/Suede/Birko-Flor (valid for upper, heelstrap only):
-→ "all leather in cognac" changes upper + heelstrap only
-→ sole stays EVA/rubber, footbed stays cork
-```
-
-**Add buckle coordination rule:**
-```
-For "all [color]" or "all [material] in [color]" requests, 
-buckles should switch to "Matte Plastic (Coordinated)" with matching color
-```
-
-### Updated Examples
-
-```
-- "all eva version in baby blue" → 
-    upper: EVA/Baby Blue/#89CFF0
-    sole: EVA/Baby Blue/#89CFF0
-    footbed: EVA/Baby Blue/#89CFF0
-    heelstrap: EVA/Baby Blue/#89CFF0
-    buckles: Matte Plastic (Coordinated)/Baby Blue/#89CFF0
-
-- "all leather in cognac" →
-    upper: Smooth Leather/Cognac/#834C24
-    heelstrap: Smooth Leather/Cognac/#834C24
-    (sole, footbed, buckles: null - unchanged)
-```
-
-## File to Modify
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/interpret-shoe-customization/index.ts` | Update rules 7 and 12, add material validity table, add EVA footbed examples |
-
-## Expected Result
-
-**Input:** "all eva version in baby blue"
-
-**Response:**
-```json
-{
-  "upper": { "material": "EVA", "color": "Baby Blue", "colorHex": "#89CFF0" },
-  "sole": { "material": "EVA", "color": "Baby Blue", "colorHex": "#89CFF0" },
-  "footbed": { "material": "EVA", "color": "Baby Blue", "colorHex": "#89CFF0" },
-  "heelstrap": { "material": "EVA", "color": "Baby Blue", "colorHex": "#89CFF0" },
-  "buckles": { "material": "Matte Plastic (Coordinated)", "color": "Baby Blue", "colorHex": "#89CFF0" }
+**Evidence from logs (your request at 11:43:04Z):**
+```text
+Parsed overrides: {
+  "heelstrap": null,
+  "sole": null,
+  "footbed": null,
+  "lining": null,
+  "buckles": null,
+  "upper": null
 }
 ```
 
-**Toast:** "Applied 5 component changes"
+Compare with a test 5 minutes earlier (11:37:47Z) that returned the correct 4 overrides for the same type of request.
+
+## Root Causes
+
+### 1. No Retry Logic
+When the AI returns all nulls (which violates Rule 8 in the prompt), the frontend just accepts it and shows "No changes needed." There's no retry mechanism.
+
+### 2. React Hooks Violation (Secondary)
+In `ShoeComponentsPanel.tsx`, the `useQuickCustomization` hook is called at line 187 -- AFTER early returns on lines 128 (loading), 143 (analyzing), and 156 (no components). This violates React's Rules of Hooks and can corrupt the hook's internal state across renders.
+
+## Solution
+
+### Fix 1: Add Retry Logic in the Hook
+
+**File:** `src/hooks/useQuickCustomization.ts`
+
+When the edge function returns empty overrides, automatically retry the request once before showing the "no changes" toast. The AI model is probabilistic -- a second attempt with the same prompt almost always succeeds.
+
+```text
+Flow:
+1. User types "neon green all eva version" and clicks Apply
+2. Edge function returns all nulls (AI fluke)
+3. Instead of showing toast, log a warning and retry the SAME request
+4. Second attempt succeeds -> apply overrides normally
+5. If second attempt also returns empty -> THEN show the toast
+```
+
+Also add console.log statements to trace what's being sent and received, making future debugging easier.
+
+### Fix 2: Move Hook Before Early Returns
+
+**File:** `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx`
+
+Move the `useQuickCustomization` hook call and `existingComponents` computation to before the early returns. The hook already handles `null` components gracefully (returns early from `applyWithAI` if `!currentComponents`).
+
+```text
+Before (buggy order):
+  if (isLoading) return ...;       // line 128
+  if (isAnalyzing) return ...;     // line 143
+  if (!components) return ...;     // line 156
+  const existingComponents = ...;  // line 181
+  const { ... } = useQuickCustomization(...);  // line 187 - HOOK AFTER RETURNS!
+
+After (correct order):
+  const existingComponents = ...;  // moved up
+  const { ... } = useQuickCustomization(...);  // HOOK ALWAYS RUNS
+  if (isLoading) return ...;
+  if (isAnalyzing) return ...;
+  if (!components) return ...;
+```
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useQuickCustomization.ts` | Add retry loop (1 retry on empty overrides), add console.log for debugging |
+| `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx` | Move `useQuickCustomization` hook and `existingComponents` before early returns |
+
+## Expected Result
+
+- If AI returns all nulls on first try, it automatically retries once
+- Second attempt should succeed (AI non-determinism means it rarely fails twice in a row)
+- If both attempts return empty, THEN the "no changes needed" toast appears (genuine case)
+- React hook state is stable across all render paths
+- Console logs provide visibility for future debugging
 
