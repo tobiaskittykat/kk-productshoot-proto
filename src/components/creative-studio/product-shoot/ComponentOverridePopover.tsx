@@ -116,7 +116,7 @@ export function ComponentOverridePopover({
           <ChevronDown className="w-3 h-3" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="end">
+      <PopoverContent className="w-80 p-4 pointer-events-auto" align="end">
         <div className="space-y-4">
           {/* Material Selection */}
           <div className="space-y-2">
