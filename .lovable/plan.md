@@ -1,86 +1,92 @@
 
 
-# Fix "No Changes Needed" False Negative
+# Fix Image Generation Failures (Timeout Issue)
 
-## Problem
+## Problem Identified
 
-The edge function logs prove the AI model (Gemini 2.5 Flash) sometimes returns ALL null overrides despite explicit prompt rules saying "NEVER return all nulls." The current code has zero resilience against this -- it just shows the toast and gives up.
+The `generate-image` edge function is failing with `TypeError: Load failed` before the request even reaches the server (no server logs exist). This is caused by:
 
-**Evidence from logs (your request at 11:43:04Z):**
-```text
-Parsed overrides: {
-  "heelstrap": null,
-  "sole": null,
-  "footbed": null,
-  "lining": null,
-  "buckles": null,
-  "upper": null
-}
-```
+1. **Function not in config.toml** - The `generate-image` function was missing from `supabase/config.toml`. I just deployed it manually, but it needs to be added to the config to ensure consistent deployment.
 
-Compare with a test 5 minutes earlier (11:37:47Z) that returned the correct 4 overrides for the same type of request.
+2. **Client-side timeout** - Gemini Pro image generation takes 30-60+ seconds. The browser or Supabase client is dropping the connection before the function can respond.
 
-## Root Causes
+## Solution: Async Queue Pattern
 
-### 1. No Retry Logic
-When the AI returns all nulls (which violates Rule 8 in the prompt), the frontend just accepts it and shows "No changes needed." There's no retry mechanism.
+Instead of waiting synchronously for image generation to complete, switch to an async pattern:
 
-### 2. React Hooks Violation (Secondary)
-In `ShoeComponentsPanel.tsx`, the `useQuickCustomization` hook is called at line 187 -- AFTER early returns on lines 128 (loading), 143 (analyzing), and 156 (no components). This violates React's Rules of Hooks and can corrupt the hook's internal state across renders.
+1. **Client calls edge function** → Function immediately returns a job ID
+2. **Function generates image in background** using `EdgeRuntime.waitUntil()`
+3. **Function saves result to database** when complete
+4. **Client polls database** for the result (already partially implemented in `useImageGeneration.ts`)
 
-## Solution
+---
 
-### Fix 1: Add Retry Logic in the Hook
-
-**File:** `src/hooks/useQuickCustomization.ts`
-
-When the edge function returns empty overrides, automatically retry the request once before showing the "no changes" toast. The AI model is probabilistic -- a second attempt with the same prompt almost always succeeds.
-
-```text
-Flow:
-1. User types "neon green all eva version" and clicks Apply
-2. Edge function returns all nulls (AI fluke)
-3. Instead of showing toast, log a warning and retry the SAME request
-4. Second attempt succeeds -> apply overrides normally
-5. If second attempt also returns empty -> THEN show the toast
-```
-
-Also add console.log statements to trace what's being sent and received, making future debugging easier.
-
-### Fix 2: Move Hook Before Early Returns
-
-**File:** `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx`
-
-Move the `useQuickCustomization` hook call and `existingComponents` computation to before the early returns. The hook already handles `null` components gracefully (returns early from `applyWithAI` if `!currentComponents`).
-
-```text
-Before (buggy order):
-  if (isLoading) return ...;       // line 128
-  if (isAnalyzing) return ...;     // line 143
-  if (!components) return ...;     // line 156
-  const existingComponents = ...;  // line 181
-  const { ... } = useQuickCustomization(...);  // line 187 - HOOK AFTER RETURNS!
-
-After (correct order):
-  const existingComponents = ...;  // moved up
-  const { ... } = useQuickCustomization(...);  // HOOK ALWAYS RUNS
-  if (isLoading) return ...;
-  if (isAnalyzing) return ...;
-  if (!components) return ...;
-```
-
-## Files to Modify
+## Changes Required
 
 | File | Change |
 |------|--------|
-| `src/hooks/useQuickCustomization.ts` | Add retry loop (1 retry on empty overrides), add console.log for debugging |
-| `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx` | Move `useQuickCustomization` hook and `existingComponents` before early returns |
+| `supabase/config.toml` | Add `[functions.generate-image]` with `verify_jwt = false` |
+| `supabase/functions/generate-image/index.ts` | Refactor to return job ID immediately, use `EdgeRuntime.waitUntil()` for background processing |
+| `src/hooks/useImageGeneration.ts` | Update to poll database for completed images instead of waiting for HTTP response |
 
-## Expected Result
+---
 
-- If AI returns all nulls on first try, it automatically retries once
-- Second attempt should succeed (AI non-determinism means it rarely fails twice in a row)
-- If both attempts return empty, THEN the "no changes needed" toast appears (genuine case)
-- React hook state is stable across all render paths
-- Console logs provide visibility for future debugging
+## Implementation Details
+
+### 1. Add to config.toml
+
+```toml
+[functions.generate-image]
+verify_jwt = false
+```
+
+### 2. Refactor Edge Function to Async
+
+```typescript
+// Current flow (synchronous - times out):
+// Client → Edge Function → Wait 60s for Gemini → Return image → Client
+
+// New flow (async - no timeout):
+// Client → Edge Function → Return job ID immediately → Client starts polling
+//                       ↓
+//                  waitUntil() continues in background
+//                       ↓
+//                  Generate image → Save to DB
+//                       ↓
+//                  Client poll finds completed image
+```
+
+Key changes:
+- Create a `pending_generations` or use existing `generated_images` table with a status field
+- Return a generation ID immediately (within 1-2 seconds)
+- Use `EdgeRuntime.waitUntil(generateAndSave(generationId, request))` for background processing
+- Update the database row when generation completes or fails
+
+### 3. Update Frontend Polling
+
+The recovery mechanism in `useImageGeneration.ts` (lines 575-587) already checks the database for images. Extend this to:
+- Start polling immediately after receiving the job ID
+- Poll every 5 seconds for up to 2 minutes
+- Show progress indicator with estimated time remaining
+- Handle both success and failure states
+
+---
+
+## Why This Works
+
+- Edge function returns in ~1 second (no timeout)
+- Background task can run for up to 2 minutes (edge function limit)
+- Client is decoupled from the generation time
+- Existing database storage is reused
+- If the browser closes, the image still generates and saves
+
+---
+
+## Quick Fix (Immediate)
+
+Before implementing the full async pattern, I can add the function to `config.toml` which ensures it's properly deployed and may resolve some issues. This is a quick fix that takes 1 minute.
+
+Do you want me to:
+1. **Quick fix only** - Add to config.toml (may still timeout on long generations)
+2. **Full async pattern** - Implement the background queue (robust, no timeouts)
 
