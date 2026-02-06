@@ -1,92 +1,76 @@
 
 
-# Fix Image Generation Failures (Timeout Issue)
+# Fix Hardcoded "Boston" in Shot Type Prompts
 
-## Problem Identified
+## Problem
 
-The `generate-image` edge function is failing with `TypeError: Load failed` before the request even reaches the server (no server logs exist). This is caused by:
+When generating images for any product (e.g., Birkenstock Arizona sandals), the prompt incorrectly describes a "closed-toe Boston clog." This happens because the **On Foot** and **Lifestyle (Full Body)** prompt builders have the product description hardcoded as a Boston clog, regardless of what product is actually selected.
 
-1. **Function not in config.toml** - The `generate-image` function was missing from `supabase/config.toml`. I just deployed it manually, but it needs to be added to the config to ensure consistent deployment.
+The `Product Focus` prompt builder does NOT have this problem -- it correctly delegates product description to the Prompt Agent. The fix is to bring the other two builders in line with this approach.
 
-2. **Client-side timeout** - Gemini Pro image generation takes 30-60+ seconds. The browser or Supabase client is dropping the connection before the function can respond.
+## Root Cause
 
-## Solution: Async Queue Pattern
+In `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`:
 
-Instead of waiting synchronously for image generation to complete, switch to an async pattern:
+- **`buildOnFootPrompt`** (lines 332-339): Hardcodes "Birkenstock Boston clog," "Closed-toe Boston silhouette," suede upper, etc.
+- **`buildLifestylePrompt`** (lines 754-761): Same hardcoded Boston description.
 
-1. **Client calls edge function** → Function immediately returns a job ID
-2. **Function generates image in background** using `EdgeRuntime.waitUntil()`
-3. **Function saves result to database** when complete
-4. **Client polls database** for the result (already partially implemented in `useImageGeneration.ts`)
+These hardcoded blocks override the actual product identity (Arizona, Dark Brown, Leather) that is provided separately in the brief. Since the shot direction is marked as "MANDATORY" and "LOCKED," the Prompt Agent faithfully follows it -- producing a Boston prompt for an Arizona product.
 
----
+Additionally, in `supabase/functions/generate-image/index.ts` (line 610), the example prompt in the system instructions uses "Birkenstock Boston" which may bias the AI toward Boston even when other products are selected.
 
-## Changes Required
+## Solution
+
+Replace the hardcoded product descriptions in `buildOnFootPrompt` and `buildLifestylePrompt` with generic, silhouette-agnostic footwear integrity instructions -- the same approach already used successfully by `buildProductFocusPrompt`.
+
+The Prompt Agent already receives a separate `=== PRODUCT IDENTITY ===` section with the correct brand, model, color, and material. It also receives reference images. These two sources are sufficient for accurate product description -- the shot type prompt should only describe the *shot composition*, not the *product itself*.
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/config.toml` | Add `[functions.generate-image]` with `verify_jwt = false` |
-| `supabase/functions/generate-image/index.ts` | Refactor to return job ID immediately, use `EdgeRuntime.waitUntil()` for background processing |
-| `src/hooks/useImageGeneration.ts` | Update to poll database for completed images instead of waiting for HTTP response |
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Replace hardcoded Boston blocks in `buildOnFootPrompt` and `buildLifestylePrompt` with generic footwear integrity instructions |
+| `supabase/functions/generate-image/index.ts` | Update the example prompt on line 610 to be model-agnostic (use placeholder like "Birkenstock [Model]" instead of "Birkenstock Boston") |
 
----
+## Detailed Changes
 
-## Implementation Details
+### 1. `shotTypeConfigs.ts` - `buildOnFootPrompt` (lines 332-346)
 
-### 1. Add to config.toml
+Replace the hardcoded "FOOTWEAR -- LOCKED" and "MATERIAL BEHAVIOR -- LOCKED" blocks with:
 
-```toml
-[functions.generate-image]
-verify_jwt = false
+```text
+FOOTWEAR -- LOCKED (MUST NOT CHANGE)
+The model is wearing the exact footwear shown in the product reference images.
+The shoe's geometry, construction, silhouette, proportions, stitching,
+hardware placement, and material behavior must remain identical to the
+reference images. Do not redesign, stylize, or reinterpret the product.
+
+Product identity and materials are provided in the PRODUCT IDENTITY section
+and must be described accurately by the prompt agent.
 ```
 
-### 2. Refactor Edge Function to Async
+This removes all Boston-specific details (closed-toe, suede, single strap) while preserving the integrity enforcement.
 
-```typescript
-// Current flow (synchronous - times out):
-// Client → Edge Function → Wait 60s for Gemini → Return image → Client
+### 2. `shotTypeConfigs.ts` - `buildLifestylePrompt` (lines 754-768)
 
-// New flow (async - no timeout):
-// Client → Edge Function → Return job ID immediately → Client starts polling
-//                       ↓
-//                  waitUntil() continues in background
-//                       ↓
-//                  Generate image → Save to DB
-//                       ↓
-//                  Client poll finds completed image
+Same replacement as above -- swap the hardcoded Boston block for the generic version.
+
+### 3. `generate-image/index.ts` - Example prompt (line 610)
+
+Change:
 ```
-
-Key changes:
-- Create a `pending_generations` or use existing `generated_images` table with a status field
-- Return a generation ID immediately (within 1-2 seconds)
-- Use `EdgeRuntime.waitUntil(generateAndSave(generationId, request))` for background processing
-- Update the database row when generation completes or fails
-
-### 3. Update Frontend Polling
-
-The recovery mechanism in `useImageGeneration.ts` (lines 575-587) already checks the database for images. Extend this to:
-- Start polling immediately after receiving the job ID
-- Poll every 5 seconds for up to 2 minutes
-- Show progress indicator with estimated time remaining
-- Handle both success and failure states
-
----
+"the iconic Birkenstock Boston clog in taupe suede..."
+```
+To a generic example that doesn't bias toward a specific model:
+```
+"the iconic Birkenstock [Model] in [color] [material], featuring the signature
+cork-latex footbed with the embossed 'BIRKENSTOCK' wordmark..."
+```
 
 ## Why This Works
 
-- Edge function returns in ~1 second (no timeout)
-- Background task can run for up to 2 minutes (edge function limit)
-- Client is decoupled from the generation time
-- Existing database storage is reused
-- If the browser closes, the image still generates and saves
-
----
-
-## Quick Fix (Immediate)
-
-Before implementing the full async pattern, I can add the function to `config.toml` which ensures it's properly deployed and may resolve some issues. This is a quick fix that takes 1 minute.
-
-Do you want me to:
-1. **Quick fix only** - Add to config.toml (may still timeout on long generations)
-2. **Full async pattern** - Implement the background queue (robust, no timeouts)
-
+- The Prompt Agent already receives `=== PRODUCT IDENTITY ===` with the correct model name, color, and material (e.g., "Arizona / Dark Brown / Leather")
+- The Prompt Agent also receives up to 10 reference images of the actual product
+- By removing the hardcoded Boston description from the shot direction, the agent can correctly describe whatever product is actually selected
+- Product integrity is still enforced -- the "LOCKED" instruction tells the agent not to redesign the shoe, just without specifying which shoe it is
+- This matches the pattern already working correctly in `buildProductFocusPrompt`
