@@ -1,129 +1,248 @@
 
 
-# Add EVA to Lining & Visual Category Headers in Material Picker
+# AI-Powered Quick Customization Input for Shoe Components
 
-## Issues Found
+## Overview
 
-1. **Missing Material**: `EVA` is not in the `lining` array - needed for molded sandals
-2. **No Visual Categorization**: The material list has category comments in the code but the UI shows all materials in a flat grid with no groupings
+Add a natural language input field above the shoe components list that lets users describe their desired modifications in plain English. An AI agent will interpret the description and automatically set the appropriate component overrides.
+
+---
+
+## User Experience
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Shoe Components                                  [Reset All]│
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ ✨ "all black leather with white sole"              │    │
+│  │    [Apply with AI]                                   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ UPPER        Oiled Leather • Tobacco      [Override]│    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ FOOTBED      Cork-Latex • Natural Cork    [Override]│    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ SOLE         EVA • Black                  [Override]│    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example Natural Language Inputs:**
+- "shoe in all EVA in bright orange"
+- "shoe as is, but white sole"
+- "make it all black leather"
+- "hot pink upper with silver buckles"
+- "change just the buckles to rose gold"
+- "vegan version with birko-flor in taupe"
+
+---
+
+## Architecture
+
+```text
+User Input → Edge Function (AI Interpretation) → Structured Overrides → UI Update
+                      ↓
+              Pass: current components + user text + available materials/colors
+                      ↓
+              Returns: { upper: {...}, sole: {...}, ... } or null for unchanged
+```
 
 ---
 
 ## Changes
 
-### 1. Add EVA to Lining Materials
+### 1. New Edge Function: `interpret-shoe-customization`
 
-**File: `src/lib/birkenstockMaterials.ts`**
+**File: `supabase/functions/interpret-shoe-customization/index.ts`**
+
+Uses Gemini 2.5 Flash to interpret natural language and return structured overrides:
 
 ```typescript
-lining: [
-  { value: 'Shearling (Cream)', label: 'Shearling (Cream)' },
-  { value: 'Shearling (Black)', label: 'Shearling (Black)' },
-  { value: 'Suede', label: 'Suede' },
-  { value: 'Wool Felt', label: 'Wool Felt' },
-  { value: 'Microfiber', label: 'Microfiber' },
-  { value: 'EVA', label: 'EVA (Molded)' },  // NEW
-],
+// Tool definition for structured output
+const TOOL_DEFINITION = {
+  name: "apply_customizations",
+  parameters: {
+    type: "object",
+    properties: {
+      upper: { type: ["object", "null"], properties: { material, color, colorHex } },
+      footbed: { type: ["object", "null"], properties: { material, color, colorHex } },
+      sole: { type: ["object", "null"], properties: { material, color, colorHex } },
+      buckles: { type: ["object", "null"], properties: { material, color, colorHex } },
+      heelstrap: { type: ["object", "null"], properties: { material, color, colorHex } },
+      lining: { type: ["object", "null"], properties: { material, color, colorHex } },
+    }
+  }
+};
 ```
 
-### 2. Add Category Metadata to Materials
+**System Prompt:**
+- Receives the current shoe components (what AI detected)
+- Receives the list of valid materials and colors from `birkenstockMaterials.ts`
+- Interprets user intent ("make it all X" → apply to all components)
+- Returns only the components that should be CHANGED (null = keep original)
 
-Update the data structure to include category info for UI rendering:
+### 2. New Hook: `useQuickCustomization`
 
-**File: `src/lib/birkenstockMaterials.ts`**
+**File: `src/hooks/useQuickCustomization.ts`**
 
 ```typescript
-upper: [
-  // Natural Leathers
-  { value: 'Oiled Leather', label: 'Oiled Leather', category: 'Natural Leathers' },
-  { value: 'Smooth Leather', label: 'Smooth Leather', category: 'Natural Leathers' },
-  { value: 'Nubuck', label: 'Nubuck (Leather)', category: 'Natural Leathers' },
-  // ... etc
-  // Synthetics
-  { value: 'Birko-Flor', label: 'Birko-Flor (Smooth)', category: 'Synthetics' },
-  // ... etc
-  // Textiles
-  { value: 'Canvas', label: 'Canvas', category: 'Textiles' },
-  // ... etc
-],
+export function useQuickCustomization(
+  currentComponents: ShoeComponents | null,
+  onApplyOverrides: (overrides: ComponentOverrides) => void
+) {
+  const [input, setInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const applyWithAI = async () => {
+    // Call edge function with current components + user input
+    // Merge returned overrides with any existing overrides
+    // Call onApplyOverrides with the merged result
+  };
+
+  return { input, setInput, isProcessing, error, applyWithAI };
+}
 ```
 
-### 3. Update UI to Show Category Headers
+### 3. New Component: `QuickCustomizationInput`
 
-**File: `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx`**
-
-Group materials by category and render section headers:
+**File: `src/components/creative-studio/product-shoot/QuickCustomizationInput.tsx`**
 
 ```typescript
-// Group materials by category
-const groupedMaterials = useMemo(() => {
-  const groups: Record<string, typeof materials> = {};
-  materials.forEach(mat => {
-    const cat = mat.category || 'Other';
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(mat);
-  });
-  return groups;
-}, [materials]);
-
-// In render:
-{Object.entries(groupedMaterials).map(([category, mats]) => (
-  <div key={category} className="space-y-1.5">
-    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-      {category}
-    </p>
-    <div className="grid grid-cols-2 gap-1.5">
-      {mats.map((mat) => (
-        // existing material button...
-      ))}
-    </div>
+<div className="space-y-2">
+  <div className="relative">
+    <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+    <Input
+      placeholder="Describe your customization... e.g. 'all black leather with white sole'"
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && applyWithAI()}
+      className="pl-10 pr-24"
+      disabled={isProcessing}
+    />
+    <Button
+      size="sm"
+      onClick={applyWithAI}
+      disabled={!input.trim() || isProcessing}
+      className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
+    >
+      {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Apply'}
+    </Button>
   </div>
-))}
+  {error && <p className="text-xs text-destructive">{error}</p>}
+</div>
+```
+
+### 4. Update `ShoeComponentsPanel.tsx`
+
+Add the QuickCustomizationInput above the component rows:
+
+```typescript
+export function ShoeComponentsPanel({
+  components,
+  overrides,
+  onOverrideChange,
+  onResetAll,
+  // ... other props
+}: ShoeComponentsPanelProps) {
+  // Add hook for quick customization
+  const { input, setInput, isProcessing, error, applyWithAI } = useQuickCustomization(
+    components,
+    (newOverrides) => {
+      // Apply each override
+      Object.entries(newOverrides).forEach(([type, override]) => {
+        onOverrideChange(type as ComponentType, override);
+      });
+    }
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium">Shoe Components</h4>
+        {/* ... existing buttons ... */}
+      </div>
+
+      {/* NEW: Quick Customization Input */}
+      {components && (
+        <QuickCustomizationInput
+          input={input}
+          onInputChange={setInput}
+          onApply={applyWithAI}
+          isProcessing={isProcessing}
+          error={error}
+        />
+      )}
+
+      {/* Existing component rows */}
+      <div className="space-y-2">
+        {/* ... */}
+      </div>
+    </div>
+  );
+}
 ```
 
 ---
 
-## Visual Result
+## AI Prompt Context (Edge Function)
 
-**Before** (flat list):
+The edge function receives:
+
+```json
+{
+  "userRequest": "all black leather with white sole",
+  "currentComponents": {
+    "upper": { "material": "Oiled Leather", "color": "Tobacco Brown" },
+    "footbed": { "material": "Cork-Latex", "color": "Natural Cork" },
+    "sole": { "material": "EVA", "color": "Black" },
+    "buckles": { "material": "Metal (Brass)", "color": "Gold" }
+  },
+  "availableMaterials": { /* from COMPONENT_MATERIALS */ },
+  "availableColors": [ /* from COLOR_PRESETS */ ]
+}
 ```
-┌─────────────┬─────────────┐
-│ Oiled       │ Smooth      │
-│ Nubuck      │ Suede       │
-│ Patent      │ Shearling   │
-│ Birko-Flor  │ Birko-Flor  │
-│ ...         │ ...         │
-└─────────────┴─────────────┘
-```
 
-**After** (grouped with headers):
-```
-NATURAL LEATHERS
-┌─────────────┬─────────────┐
-│ Oiled       │ Smooth      │
-│ Nubuck      │ Suede       │
-│ Patent      │ Shearling   │
-└─────────────┴─────────────┘
+The AI interprets:
+- "all" → apply to upper, footbed (if leather is valid), sole, buckles, heelstrap
+- "black leather" → material: "Smooth Leather" (or Oiled Leather), color: "Black"
+- "white sole" → sole: { material: unchanged, color: "White" }
 
-SYNTHETICS  
-┌─────────────┬─────────────┐
-│ Birko-Flor  │ Birko-Flor  │
-│ Birkibuc    │ EVA (Molded)│
-└─────────────┴─────────────┘
-
-TEXTILES
-┌─────────────┬─────────────┐
-│ Wool Felt   │ Canvas      │
-│ Fabric      │ Mesh        │
-└─────────────┴─────────────┘
+Returns:
+```json
+{
+  "upper": { "material": "Smooth Leather", "color": "Black", "colorHex": "#1C1C1C" },
+  "footbed": null,  // leather not valid for footbed, keep original
+  "sole": { "material": "EVA", "color": "White", "colorHex": "#FFFFFF" },
+  "buckles": { "material": "Metal (Silver)", "color": "Silver", "colorHex": "#C0C0C0" }
+}
 ```
 
 ---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/interpret-shoe-customization/index.ts` | AI interpretation edge function |
+| `src/hooks/useQuickCustomization.ts` | React hook for the feature |
+| `src/components/creative-studio/product-shoot/QuickCustomizationInput.tsx` | UI component |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/lib/birkenstockMaterials.ts` | Add EVA to lining; add `category` property to all materials in `upper`, `buckles`, `heelstrap` |
-| `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` | Group materials by category and render with section headers |
+| `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx` | Integrate QuickCustomizationInput |
+
+---
+
+## Benefits
+
+1. **Speed** - Describe complex multi-component changes in one sentence
+2. **Discoverability** - Users learn what's possible through natural language
+3. **Fine-tuning** - AI sets the baseline, users can still adjust individual components
+4. **Error-tolerant** - AI maps fuzzy terms ("bright orange") to valid hex codes
 
