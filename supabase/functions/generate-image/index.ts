@@ -507,19 +507,48 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       const componentTypes = ['upper', 'footbed', 'sole', 'buckles', 'heelstrap', 'lining'] as const;
       const changedComponents: string[] = [];
       
+      // Helper to get a descriptive color name from override data
+      const getColorDescription = (override: { color: string; colorHex?: string }): string => {
+        if (override.color !== 'Custom' && override.color !== 'custom') {
+          return override.color;
+        }
+        if (!override.colorHex) {
+          return override.color;
+        }
+        const hex = override.colorHex.toUpperCase();
+        const colorNames: Record<string, string> = {
+          '#FF69B4': 'Hot Pink',
+          '#FF1493': 'Deep Pink',
+          '#FFC0CB': 'Pink',
+          '#FFB6C1': 'Light Pink',
+          '#FF0000': 'Red',
+          '#00FF00': 'Lime Green',
+          '#0000FF': 'Blue',
+          '#FFFF00': 'Yellow',
+          '#FFA500': 'Orange',
+          '#800080': 'Purple',
+          '#00FFFF': 'Cyan',
+          '#000000': 'Black',
+          '#FFFFFF': 'White',
+        };
+        const namedColor = colorNames[hex];
+        return namedColor ? `${namedColor} (${hex})` : hex;
+      };
+      
       for (const type of componentTypes) {
         const override = overrides[type];
         const orig = original[type];
         
         if (override && orig) {
+          const colorDisplay = getColorDescription(override);
           if (override.material !== orig.material || override.color !== orig.color) {
             changedComponents.push(
-              `${type.toUpperCase()}: ${override.material} in ${override.color} (was: ${orig.material} in ${orig.color})`
+              `${type.toUpperCase()}: ${override.material} in ${colorDisplay} (was: ${orig.material} in ${orig.color})`
             );
           }
         } else if (override && !orig) {
-          // New component added
-          changedComponents.push(`${type.toUpperCase()}: ${override.material} in ${override.color}`);
+          const colorDisplay = getColorDescription(override);
+          changedComponents.push(`${type.toUpperCase()}: ${override.material} in ${colorDisplay}`);
         }
       }
       

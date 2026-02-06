@@ -142,6 +142,34 @@ export function hasAnyOverrides(overrides: ComponentOverrides | undefined, origi
   return false;
 }
 
+// Helper to get a descriptive color name from override data (resolves "Custom" to hex)
+function getColorDescription(override: { color: string; colorHex?: string }): string {
+  if (override.color !== 'Custom' && override.color !== 'custom') {
+    return override.color;
+  }
+  if (!override.colorHex) {
+    return override.color;
+  }
+  const hex = override.colorHex.toUpperCase();
+  const colorNames: Record<string, string> = {
+    '#FF69B4': 'Hot Pink',
+    '#FF1493': 'Deep Pink',
+    '#FFC0CB': 'Pink',
+    '#FFB6C1': 'Light Pink',
+    '#FF0000': 'Red',
+    '#00FF00': 'Lime Green',
+    '#0000FF': 'Blue',
+    '#FFFF00': 'Yellow',
+    '#FFA500': 'Orange',
+    '#800080': 'Purple',
+    '#00FFFF': 'Cyan',
+    '#000000': 'Black',
+    '#FFFFFF': 'White',
+  };
+  const namedColor = colorNames[hex];
+  return namedColor ? `${namedColor} (${hex})` : hex;
+}
+
 // Build override prompt section for image generation
 export function buildComponentOverridePrompt(
   overrides: ComponentOverrides,
@@ -168,7 +196,8 @@ export function buildComponentOverridePrompt(
       override.color !== originalComponent.color;
     
     if (isChanged) {
-      lines.push(`${type.toUpperCase()}: ${override.material} in ${override.color}`);
+      const colorDisplay = getColorDescription(override);
+      lines.push(`${type.toUpperCase()}: ${override.material} in ${colorDisplay}`);
       if (originalComponent) {
         lines.push(`  (Original was: ${originalComponent.material} in ${originalComponent.color})`);
       }
