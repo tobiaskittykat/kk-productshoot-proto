@@ -107,6 +107,13 @@ export const COLOR_PRESETS = [
   // Metallic/Special
   { name: 'Rose Gold', hex: '#B76E79', category: 'metallic' },
   { name: 'Blush', hex: '#DE98AB', category: 'color' },
+  // Blues
+  { name: 'Baby Blue', hex: '#89CFF0', category: 'color' },
+  { name: 'Sky Blue', hex: '#87CEEB', category: 'color' },
+  { name: 'Light Blue', hex: '#ADD8E6', category: 'color' },
+  { name: 'Powder Blue', hex: '#B0E0E6', category: 'color' },
+  { name: 'Royal Blue', hex: '#4169E1', category: 'color' },
+  { name: 'Dusty Blue', hex: '#8CA9BC', category: 'color' },
 ] as const;
 
 // Component type definitions
