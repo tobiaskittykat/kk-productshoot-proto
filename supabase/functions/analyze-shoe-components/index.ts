@@ -38,7 +38,7 @@ Note: Some styles like the Boston clog have 1 buckle, Arizona has 2
 
 **HEELSTRAP** (Optional - only if present)
 Back strap that wraps behind the heel.
-Note: Clogs (Boston, Kyoto) do NOT have heelstraps. Sandals (Arizona, Florida) DO have heelstraps.
+Note: Clogs like the Boston and Kyoto do NOT have heelstraps. However, the Tokyo (a Boston-style clog with a back strap) DOES have a heelstrap. Sandals (Arizona, Florida) also have heelstraps. Analyze the images to determine if one is present.
 Material usually matches the upper.
 
 **LINING** (Optional - only if visible/present)
