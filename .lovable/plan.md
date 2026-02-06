@@ -1,189 +1,175 @@
 
-# Move Product Modifier Panel to Main Step 2 Interface
+# Fix: Hot Pink Color Override Not Working
 
-## Summary
+## Problem Summary
 
-Move the ShoeComponentsPanel (material/color override UI) from the ProductPickerModal to the main ProductShootStep2 interface, displaying it directly below the "Browse All Products" button. The panel will show the analyzed components for the currently selected product, allowing inline customization.
+When you selected "Hot Pink" via hex color picker (`#FF69B4`), the override was correctly stored with `colorHex: "#FF69B4"`, but the prompt sent to the AI just said:
+
+```
+UPPER: Suede in Custom (was: Suede in Taupe)
+```
+
+The AI doesn't know what "Custom" means, so it ignores the instruction and uses the original Taupe color from the reference images.
 
 ---
 
-## Current vs. Proposed Layout
+## Root Cause
 
-```text
-CURRENT STATE:
-┌─────────────────────────────────────────────────────┐
-│ Product                                              │
-│ ┌─────┐ ┌─────┐ ┌─────┐                             │
-│ │Bost.│ │Ariz.│ │Ariz.│  ← Product Grid             │
-│ └─────┘ └─────┘ └─────┘                             │
-│                                                      │
-│ [Browse All Products...]                             │
-│                                                      │
-│ ← Components panel is HIDDEN (only in modal)         │
-└─────────────────────────────────────────────────────┘
+The `colorHex` field is captured in the override data but **never used** when building the prompt text:
 
-
-PROPOSED STATE:
-┌─────────────────────────────────────────────────────┐
-│ Product                                              │
-│ ┌─────┐ ┌─────┐ ┌─────┐                             │
-│ │Bost.│ │Ariz.│ │Ariz.│  ← Product Grid             │
-│ └─────┘ └─────┘ └─────┘      (Selected: Arizona)    │
-│                                                      │
-│ [Browse All Products...]                             │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ Shoe Components         [Ref. Images ⚪]         │ │
-│ │ ┌───────────────────────────────────────────┐   │ │
-│ │ │ UPPER                        [Override ▾] │   │ │
-│ │ │ EVA • Taupe            [▣]                │   │ │
-│ │ └───────────────────────────────────────────┘   │ │
-│ │ ┌───────────────────────────────────────────┐   │ │
-│ │ │ SOLE                         [Override ▾] │   │ │
-│ │ │ EVA • Taupe            [▣]                │   │ │
-│ │ └───────────────────────────────────────────┘   │ │
-│ │ ┌───────────────────────────────────────────┐   │ │
-│ │ │ FOOTBED                      [Override ▾] │   │ │
-│ │ │ Cork-Latex • Brown     [▣]                │   │ │
-│ │ └───────────────────────────────────────────┘   │ │
-│ │                                                 │ │
-│ │ 💡 Override to customize before generation     │ │
-│ └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Technical Approach
-
-### File to Modify: `ProductShootStep2.tsx`
-
-**1. Add hook imports for component management:**
 ```typescript
-import { useShoeComponents, useComponentOverrides } from '@/hooks/useShoeComponents';
-import { ShoeComponentsPanel } from './ShoeComponentsPanel';
-import { ComponentOverrides, ShoeComponents } from '@/lib/birkenstockMaterials';
-```
-
-**2. Add state management using the existing hooks:**
-```typescript
-// Inside component, after existing useState calls:
-const {
-  components,
-  isLoading: isLoadingComponents,
-  isAnalyzing,
-  triggerAnalysis,
-  error: componentsError,
-} = useShoeComponents({ skuId: state.selectedProductId });
-
-const {
-  overrides,
-  setComponentOverride,
-  resetOverrides,
-  hasOverrides,
-} = useComponentOverrides(components);
-```
-
-**3. Add local state for reference images toggle:**
-```typescript
-const [attachReferenceImages, setAttachReferenceImages] = useState(
-  state.attachReferenceImages ?? true
+// Current code (line 516-517 in generate-image/index.ts)
+changedComponents.push(
+  `${type.toUpperCase()}: ${override.material} in ${override.color} (was: ...)`
+  //                                                 ^^^^^^^^^^^ Just "Custom"
 );
-
-// Sync to parent state when changed
-useEffect(() => {
-  onStateChange({ attachReferenceImages });
-}, [attachReferenceImages]);
 ```
 
-**4. Update parent state when overrides change:**
-```typescript
-// Sync overrides to parent state
-useEffect(() => {
-  onStateChange({ componentOverrides: hasOverrides ? overrides : undefined });
-}, [overrides, hasOverrides]);
-```
-
-**5. Insert ShoeComponentsPanel after "Browse All Products" button (~line 436):**
-
-```tsx
-{/* Browse All Button */}
-<Button
-  variant="outline"
-  className="w-full"
-  onClick={() => setShowProductPickerModal(true)}
->
-  Browse All Products...
-</Button>
-
-{/* Component Customization Panel - Only show when product selected */}
-{state.selectedProductId && (
-  <div className="mt-4 pt-4 border-t border-border/50">
-    <ShoeComponentsPanel
-      components={components}
-      overrides={overrides}
-      onOverrideChange={setComponentOverride}
-      onResetAll={resetOverrides}
-      attachReferenceImages={attachReferenceImages}
-      onAttachReferenceImagesChange={setAttachReferenceImages}
-      isLoading={isLoadingComponents}
-      isAnalyzing={isAnalyzing}
-      onTriggerAnalysis={triggerAnalysis}
-      error={componentsError}
-    />
-  </div>
-)}
-```
+Same issue exists in the client-side helper (`birkenstockMaterials.ts` line 171).
 
 ---
 
-## Data Flow
+## Fix Overview
+
+Update both the edge function and client helper to include the hex code when the color name is "Custom" or when `colorHex` is available:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ User selects product in grid                                     │
-│         │                                                        │
-│         ▼                                                        │
-│ state.selectedProductId updates                                  │
-│         │                                                        │
-│         ▼                                                        │
-│ useShoeComponents(skuId) fetches/polls components from DB        │
-│         │                                                        │
-│         ▼                                                        │
-│ ShoeComponentsPanel displays analyzed components                 │
-│         │                                                        │
-│         ▼ (user clicks Override)                                 │
-│ ComponentOverridePopover opens                                   │
-│         │                                                        │
-│         ▼ (user selects new material/color)                      │
-│ useComponentOverrides updates local overrides state              │
-│         │                                                        │
-│         ▼                                                        │
-│ useEffect syncs to parent: onStateChange({ componentOverrides }) │
-│         │                                                        │
-│         ▼                                                        │
-│ Generate button triggers with overrides in request body          │
-└─────────────────────────────────────────────────────────────────┘
+BEFORE:  UPPER: Suede in Custom (was: Suede in Taupe)
+AFTER:   UPPER: Suede in Hot Pink (#FF69B4) (was: Suede in Taupe)
 ```
 
 ---
 
-## Implementation Summary
+## Technical Changes
 
-| Change | Description |
-|--------|-------------|
-| Import hooks | Add `useShoeComponents`, `useComponentOverrides` |
-| Import panel | Add `ShoeComponentsPanel` |
-| Add component state | Use hooks to manage components and overrides |
-| Add sync effects | Push overrides and attachReferenceImages to parent state |
-| Render panel | Insert `ShoeComponentsPanel` below "Browse All Products" |
+### 1. Edge Function: `supabase/functions/generate-image/index.ts`
+
+**Location:** Lines 510-523
+
+**Add hex color name resolution helper (near top of file):**
+```typescript
+// Helper to get a descriptive color name from override data
+function getColorDescription(override: { color: string; colorHex?: string }): string {
+  if (override.color !== 'Custom' && override.color !== 'custom') {
+    return override.color;
+  }
+  if (!override.colorHex) {
+    return override.color;
+  }
+  // Try to find a matching named color, otherwise describe the hex
+  const hex = override.colorHex.toUpperCase();
+  // Common color name mapping for hex values
+  const colorNames: Record<string, string> = {
+    '#FF69B4': 'Hot Pink',
+    '#FF1493': 'Deep Pink',
+    '#FFC0CB': 'Pink',
+    '#FFB6C1': 'Light Pink',
+    '#FF0000': 'Red',
+    '#00FF00': 'Lime Green',
+    '#0000FF': 'Blue',
+    '#FFFF00': 'Yellow',
+    '#FFA500': 'Orange',
+    '#800080': 'Purple',
+    '#00FFFF': 'Cyan',
+    '#000000': 'Black',
+    '#FFFFFF': 'White',
+  };
+  const namedColor = colorNames[hex];
+  return namedColor ? `${namedColor} (${hex})` : hex;
+}
+```
+
+**Update the override loop (lines 510-523):**
+```typescript
+for (const type of componentTypes) {
+  const override = overrides[type];
+  const orig = original[type];
+  
+  if (override && orig) {
+    // Get descriptive color (resolves "Custom" to actual hex/name)
+    const colorDisplay = getColorDescription(override);
+    
+    if (override.material !== orig.material || override.color !== orig.color) {
+      changedComponents.push(
+        `${type.toUpperCase()}: ${override.material} in ${colorDisplay} (was: ${orig.material} in ${orig.color})`
+      );
+    }
+  } else if (override && !orig) {
+    const colorDisplay = getColorDescription(override);
+    changedComponents.push(`${type.toUpperCase()}: ${override.material} in ${colorDisplay}`);
+  }
+}
+```
+
+### 2. Client Helper: `src/lib/birkenstockMaterials.ts`
+
+**Location:** `buildComponentOverridePrompt` function (lines 146-183)
+
+**Add the same helper and update the function:**
+```typescript
+// Helper to get a descriptive color name from override data
+function getColorDescription(override: { color: string; colorHex?: string }): string {
+  if (override.color !== 'Custom' && override.color !== 'custom') {
+    return override.color;
+  }
+  if (!override.colorHex) {
+    return override.color;
+  }
+  const hex = override.colorHex.toUpperCase();
+  const colorNames: Record<string, string> = {
+    '#FF69B4': 'Hot Pink',
+    '#FF1493': 'Deep Pink',
+    '#FFC0CB': 'Pink',
+    '#FFB6C1': 'Light Pink',
+    '#FF0000': 'Red',
+    '#00FF00': 'Lime Green',
+    '#0000FF': 'Blue',
+    '#FFFF00': 'Yellow',
+    '#FFA500': 'Orange',
+    '#800080': 'Purple',
+    '#00FFFF': 'Cyan',
+    '#000000': 'Black',
+    '#FFFFFF': 'White',
+  };
+  const namedColor = colorNames[hex];
+  return namedColor ? `${namedColor} (${hex})` : hex;
+}
+
+// In buildComponentOverridePrompt, update line 171:
+if (isChanged) {
+  const colorDisplay = getColorDescription(override);
+  lines.push(`${type.toUpperCase()}: ${override.material} in ${colorDisplay}`);
+  // ...
+}
+```
 
 ---
 
-## User Experience
+## Expected Result After Fix
 
-1. **Select Product**: User clicks on any product in the grid (e.g., Arizona Taupe EVA)
-2. **See Components**: Panel appears below showing analyzed components (Upper, Sole, Footbed, etc.)
-3. **Customize**: User clicks "Override ▾" on any component to change material/color
-4. **Visual Feedback**: Modified components show "Modified" badge with accent styling
-5. **Reference Toggle**: User can disable reference images for prompt-only generation
-6. **Generate**: Overrides are passed to the generation engine
+When you select Hot Pink (#FF69B4) for the upper:
+
+**Prompt sent to AI:**
+```
+=== PRODUCT COMPONENT OVERRIDES ===
+⚠️ IMPORTANT: The user has customized specific shoe components.
+Generate the product with THESE modifications while maintaining
+the original silhouette and proportions from reference images:
+
+UPPER: Suede in Hot Pink (#FF69B4) (was: Suede in Taupe)
+SOLE: EVA in Hot Pink (#FF69B4) (was: EVA in Dark Brown)
+
+Keep all OTHER components exactly as shown in reference images.
+The overall shoe silhouette/shape must remain unchanged.
+```
+
+The AI now receives a clear, unambiguous color instruction it can act on.
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/functions/generate-image/index.ts` | Add `getColorDescription()` helper and use it in override loop |
+| `src/lib/birkenstockMaterials.ts` | Add same helper and update `buildComponentOverridePrompt()` |
