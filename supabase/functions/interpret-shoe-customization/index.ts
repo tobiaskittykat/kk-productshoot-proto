@@ -59,6 +59,13 @@ const COLOR_PALETTE = [
   { name: "Purple", hex: "#800080" },
   { name: "Silver", hex: "#C0C0C0" },
   { name: "Gold", hex: "#FFD700" },
+  // Blues
+  { name: "Baby Blue", hex: "#89CFF0" },
+  { name: "Sky Blue", hex: "#87CEEB" },
+  { name: "Light Blue", hex: "#ADD8E6" },
+  { name: "Powder Blue", hex: "#B0E0E6" },
+  { name: "Royal Blue", hex: "#4169E1" },
+  { name: "Dusty Blue", hex: "#8CA9BC" },
 ];
 
 // Tool definition for structured output
@@ -160,26 +167,31 @@ ${JSON.stringify(currentComponents, null, 2)}
 AVAILABLE MATERIALS BY COMPONENT:
 ${JSON.stringify(COMPONENT_MATERIALS, null, 2)}
 
-AVAILABLE COLORS (use these names and hex codes):
+REFERENCE COLORS (common names and hex codes):
 ${COLOR_PALETTE.map(c => `${c.name}: ${c.hex}`).join("\n")}
 
-RULES:
-1. Only return components that should CHANGE. Use null for components that stay the same.
-2. When user says "all" or "entire shoe", apply to: upper, sole, heelstrap. NOT footbed (usually cork).
-3. When user specifies a color without material, keep the original material and just change the color.
-4. When user says "as is" for a component, return null for that component.
-5. For metal buckles, use appropriate metallic colors (Gold, Silver, Rose Gold, Copper).
-6. For EVA material, use solid colors. For leather, any color works.
-7. Map fuzzy color names to the closest available color (e.g., "bright orange" → "Orange" #FFA500).
-8. If a material isn't valid for a component, pick the closest valid alternative.
-9. Footbed colors are typically "Natural Cork", "Black", or match the shoe color scheme.
-10. For vegan/synthetic requests, use Birko-Flor or EVA materials.
+CRITICAL RULES:
+1. Only return components that should CHANGE. Use null for unchanged components.
+2. When user says "[color] version" or "make it [color]" or "all [color]" - ALWAYS change the UPPER component at minimum.
+3. You CAN create custom colors not in the reference list! Just provide a descriptive name and accurate hex code.
+   - Example: "baby blue" → { color: "Baby Blue", colorHex: "#89CFF0" }
+   - Example: "bright orange" → { color: "Bright Orange", colorHex: "#FF6B00" }
+   - Example: "forest green" → { color: "Forest Green", colorHex: "#228B22" }
+4. When user specifies only a color (no material), keep the original material and just change the color.
+5. "All [color]" or "entire shoe in [color]" → apply to: upper, sole, heelstrap (NOT footbed - stays cork).
+6. For metal buckles changing to match shoe color, use "Matte Plastic (Coordinated)" material.
+7. Footbed typically stays cork unless explicitly mentioned.
+8. NEVER return all nulls if the user clearly wants a color/material change. At minimum, change the UPPER.
+9. For vegan/synthetic requests, use Birko-Flor or EVA materials.
+10. For metal buckles, use metallic colors (Gold, Silver, Rose Gold, Copper).
 
 EXAMPLES:
+- "baby blue version" → upper: { material: (keep original), color: "Baby Blue", colorHex: "#89CFF0" }
 - "all black leather" → upper: Smooth Leather/Black, sole: EVA/Black, heelstrap: Smooth Leather/Black
-- "white sole" → sole: (keep material)/White
+- "white sole" → sole: { material: (keep original), color: "White", colorHex: "#FFFFFF" }
 - "hot pink upper with silver buckles" → upper: (keep material)/Hot Pink, buckles: Metal (Silver)/Silver
-- "vegan taupe" → upper: Birko-Flor/Taupe, heelstrap: Birko-Flor/Taupe`;
+- "vegan taupe" → upper: Birko-Flor/Taupe, heelstrap: Birko-Flor/Taupe
+- "make it coral" → upper: { material: (keep original), color: "Coral", colorHex: "#FF7F50" }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
