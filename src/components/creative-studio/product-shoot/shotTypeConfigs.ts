@@ -330,20 +330,13 @@ Framing is tight and product-focused, showing the feet, shoes, ankles, and lower
 Camera angle is eye-level to slightly low, neutral and undistorted. No top-down angle, no wide-angle distortion.
 
 FOOTWEAR — LOCKED (MUST NOT CHANGE)
-The model is wearing a Birkenstock Boston clog with the following fixed construction:
-– Closed-toe Boston silhouette with rounded toe box
-– Soft suede upper with visible nap and matte texture
-– Single adjustable instep strap with metal buckle
-– Natural cork-latex contoured footbed in warm brown cork tone
-– EVA outsole with accurate thickness and tread pattern
+The model is wearing the exact footwear shown in the product reference images.
+The shoe's geometry, construction, silhouette, proportions, stitching,
+hardware placement, and material behavior must remain identical to the
+reference images. Do not redesign, stylize, or reinterpret the product.
 
-The shoe's geometry, construction, proportions, and hardware placement must remain identical in every generation. Do not redesign, stylize, or reinterpret the product.
-
-MATERIAL BEHAVIOR — LOCKED
-– Suede remains matte, soft, and fibrous (no gloss, no synthetic smoothness)
-– Buckle remains metal, brushed or satin finish, not shiny
-– Cork remains natural warm brown tone
-– EVA outsole remains matte with subtle rubber texture
+Product identity and materials are provided in the PRODUCT IDENTITY section
+and must be described accurately.
 
 STYLING & POSE — COMMERCIAL
 The model stands in ${selectedPose.narrative || 'a natural, relaxed stance:\n– Feet flat or one foot slightly forward\n– Casual, grounded posture\n– No exaggerated movement or editorial posing'}
@@ -752,20 +745,13 @@ The ${modelDesc} model is photographed at a pulled-back distance, allowing full 
 Camera angle is eye-level and neutral, with no wide-angle distortion, matching classic Birkenstock lookbook and e-commerce photography.
 
 FOOTWEAR — LOCKED (MUST NOT CHANGE)
-The model is wearing a Birkenstock Boston clog with the following fixed construction and materials:
-– Closed-toe Boston silhouette
-– Soft suede upper with visible nap and matte texture
-– Single adjustable instep strap
-– One metal buckle
-– Natural cork-latex contoured footbed in warm brown cork tone
-– EVA outsole with accurate thickness and tread
+The model is wearing the exact footwear shown in the product reference images.
+The shoe's geometry, construction, silhouette, proportions, stitching,
+hardware placement, and material behavior must remain identical to the
+reference images. Do not redesign, stylize, or reinterpret the product.
 
-The shoe's geometry, construction, stitching, and material behavior must remain identical in every generation. Do not redesign, stylize, or reinterpret the product.
-
-MATERIAL BEHAVIOR — LOCKED
-– Suede remains matte, fibrous, and soft (no gloss, no leather sheen)
-– Buckle remains metal, not plastic
-– Cork footbed remains natural brown and unchanged
+Product identity and materials are provided in the PRODUCT IDENTITY section
+and must be described accurately.
 
 CLOTHING — VARIABLE (CONTROLLED)
 The model wears minimal, classic, timeless clothing:

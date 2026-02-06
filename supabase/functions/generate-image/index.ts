@@ -607,7 +607,7 @@ CRITICAL RULES:
    - Pay special attention to: the classic serif typography, correct letter spacing, proper placement on footbed and buckle
    - Your final prompt MUST explicitly describe and emphasize these logo elements to ensure the image generator renders them faithfully
    
-   - Example: "the iconic Birkenstock Boston clog in taupe suede, featuring the signature cork-latex footbed with the embossed 'BIRKENSTOCK' wordmark clearly visible in classic serif typography, the adjustable metal buckle engraved with the distinctive 'Birkenstock' script, and contoured EVA sole"
+   - Example: "the iconic Birkenstock [Model] in [color] [material], featuring the signature cork-latex footbed with the embossed 'BIRKENSTOCK' wordmark clearly visible in classic serif typography, the adjustable metal buckle engraved with the distinctive 'Birkenstock' script, and contoured EVA sole"
    - **EMPHASIZE PRODUCT FIDELITY NATURALLY**: Weave product integrity requirements into your evocative description. The product must match reference images EXACTLY - same silhouette, same hardware placement, same materials, same branding. Make this emphasis feel natural, not like a checklist.
 
 4. **BRAND GUIDELINES (MUST RESPECT)**:
