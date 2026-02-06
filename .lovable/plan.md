@@ -1,249 +1,431 @@
 
+# Shoe Component Customization with Material & Color Overrides
 
-# Progressive Image Display & Parallel Sequential Generation
+## Executive Summary
 
-## Summary
-
-Currently, when generating multiple images in Sequential Generation mode, all images are generated one by one (sequentially), and the UI only displays them after **all** images are complete. This creates a poor user experience where users stare at skeletons for 2-3 minutes.
-
-The solution is two-fold:
-1. **Progressive display**: Show each image as soon as it completes (like Discovery Mode already does)
-2. **Parallel execution**: Generate images in parallel batches (groups of 2-3) to significantly reduce total wait time
+This feature adds deep shoe component analysis and customization to the Product Shoot workflow. Each product will have its components (upper, footbed, sole, buckles, heelstrap, lining) analyzed and stored. Users can then override any component's material and/or color before generation, while preserving the exact prompt agent behavior when no overrides are made.
 
 ---
 
-## Current Behavior Analysis
-
-### Sequential Generation (lines 464-492 in useImageGeneration.ts)
-
-```typescript
-// CURRENT: Loop that waits for each image before starting the next
-for (let i = 0; i < state.imageCount; i++) {
-  const { data } = await supabase.functions.invoke('generate-image', { ... });
-  allImages.push(...data.images);  // Collected but not shown yet
-}
-// ONLY NOW are images returned to the UI
-return { images: allImages };
-```
-
-**Problems:**
-- Each image takes ~30-60 seconds to generate
-- 4 images = 2-4 minutes of waiting with no visual feedback
-- No parallelization despite independent operations
-
-### Discovery Mode (already has progressive display)
-
-Discovery mode uses an `onImageReady` callback that progressively adds images to the UI as they complete:
-
-```typescript
-// DISCOVERY: Parallel + progressive
-const shotPromises = shotTypes.map(async (shot) => {
-  const result = await generateSingleImage(...);
-  if (onImageReady) onImageReady(result);  // Immediately visible!
-  return result;
-});
-await Promise.all(shotPromises);
-```
-
----
-
-## Solution Architecture
+## Architecture Overview
 
 ```text
-  Sequential Mode (Current)          Sequential Mode (New)
-  ========================          =====================
-  
-  [Start] ─→ [Generate #1] ─→      [Start] ─┬→ [Gen #1] ─→ [Show #1]
-              ↓                              │
-          [Wait 45s]                         ├→ [Gen #2] ─→ [Show #2]
-              ↓                              │     (parallel batch 1)
-          [Generate #2] ─→                   ↓
-              ↓                         [Wait ~45s for batch]
-          [Wait 45s]                         │
-              ↓                         ─┬→ [Gen #3] ─→ [Show #3]
-          [Generate #3] ─→               │
-              ...                        ├→ [Gen #4] ─→ [Show #4]
-              ↓                               (parallel batch 2)
-          [Show ALL]                         
-                                    Total: ~90s for 4 images
-  Total: ~180s for 4 images         (50% faster + progressive feedback)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           COMPONENT ANALYSIS FLOW                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  [Product Upload]                                                            │
+│       │                                                                      │
+│       ▼                                                                      │
+│  [Save to DB] ──────► [Background Task: analyze-shoe-components]            │
+│       │                       │                                              │
+│       │                       ▼                                              │
+│       │               [Gemini Vision analyzes all angles]                   │
+│       │                       │                                              │
+│       │                       ▼                                              │
+│       │               [Store in product_skus.components JSONB]              │
+│       ▼                                                                      │
+│  [User Selects Product in Picker]                                           │
+│       │                                                                      │
+│       ▼                                                                      │
+│  [Show Component Details + Override Panel]                                  │
+│       │                                                                      │
+│       ├── No overrides? ──► Use existing prompt agent (no changes)          │
+│       │                                                                      │
+│       └── Overrides set? ──► Inject override instructions into brief        │
+│               │                                                              │
+│               ▼                                                              │
+│       [Generate Image with modified component prompts]                      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technical Changes
+## Data Model Updates
 
-### 1. Update `generateImages` in `useImageGeneration.ts`
+### 1. Database Schema: Add `components` Column
 
-Add an `onImageReady` callback parameter (same pattern as `generateDiscoveryBatch`):
+Add a new JSONB column to `product_skus` to store analyzed component data:
 
-```typescript
-const generateImages = useCallback(async (
-  state: CreativeStudioState,
-  logoUrl?: string,
-  brandId?: string,
-  onImageReady?: (image: GeneratedImage) => void  // NEW: progressive callback
-): Promise<GeneratedImage[]> => {
+```sql
+ALTER TABLE public.product_skus
+ADD COLUMN components JSONB DEFAULT NULL;
 ```
 
-### 2. Rewrite Sequential Generation Block
-
-Replace the sequential `for` loop with parallel batches:
+### 2. Component Data Structure
 
 ```typescript
-if (state.sequentialGeneration && state.useCase === 'product' && state.imageCount > 1) {
-  console.log(`Sequential mode: generating ${state.imageCount} images with parallel batches`);
-  
-  const BATCH_SIZE = 2; // Generate 2-3 images in parallel at a time
-  const allImages: GeneratedImage[] = [];
-  
-  // Create all generation promises (but don't execute yet)
-  const generateOne = async (index: number): Promise<GeneratedImage | null> => {
-    const freshShotTypePrompt = buildShotTypePromptForProduct();
-    console.log(`Sequential image ${index + 1}/${state.imageCount} - starting`);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-image', {
-        body: buildRequestBody(freshShotTypePrompt, 1),
-      });
-      
-      if (error || !data?.images?.[0]) return null;
-      
-      const img = data.images[0];
-      const generatedImage: GeneratedImage = {
-        id: img.id || `seq-${Date.now()}-${index}`,
-        imageUrl: img.imageUrl || '',
-        status: img.status || 'failed',
-        prompt: state.prompt,
-        refinedPrompt: img.refinedPrompt,
-        conceptTitle: productNames[0] || 'Product Shot',
-        index,
-        productReferenceUrls: productReferenceUrls.length > 0 ? productReferenceUrls : undefined,
-        productReferenceUrl: productReferenceUrls[0],
-      };
-      
-      // PROGRESSIVE DISPLAY: Immediately notify caller
-      if (onImageReady && generatedImage.status === 'completed') {
-        onImageReady(generatedImage);
-      }
-      
-      return generatedImage;
-    } catch (err) {
-      console.error(`Sequential image ${index + 1} failed:`, err);
-      return null;
-    }
-  };
-  
-  // Process in parallel batches to avoid overwhelming the API
-  for (let batchStart = 0; batchStart < state.imageCount; batchStart += BATCH_SIZE) {
-    const batchEnd = Math.min(batchStart + BATCH_SIZE, state.imageCount);
-    const batchPromises = [];
-    
-    for (let i = batchStart; i < batchEnd; i++) {
-      batchPromises.push(generateOne(i));
-    }
-    
-    const batchResults = await Promise.all(batchPromises);
-    const successfulImages = batchResults.filter((img): img is GeneratedImage => img !== null);
-    allImages.push(...successfulImages);
-  }
-  
-  data = { images: allImages };
-  error = allImages.length === 0 ? { message: 'All sequential generations failed' } : null;
+interface ShoeComponent {
+  material: string;       // e.g., "Suede", "Oiled Leather", "EVA"
+  color: string;          // e.g., "Taupe", "Tobacco Brown"
+  colorHex?: string;      // Optional hex for visual preview
+  confidence: number;     // 0-100 AI confidence
+  notes?: string;         // AI observations
+}
+
+interface ShoeComponents {
+  upper: ShoeComponent;
+  footbed: ShoeComponent;
+  sole: ShoeComponent;
+  buckles?: ShoeComponent;      // Optional (not all shoes have buckles)
+  heelstrap?: ShoeComponent;    // Optional (Boston clogs don't have heelstraps)
+  lining?: ShoeComponent;       // Optional (Arizona sandals don't have lining)
+  analyzedAt: string;           // ISO timestamp
+  analysisVersion: string;      // For future re-analysis
 }
 ```
 
-### 3. Update `handleGenerate` in `CreativeStudioWizard.tsx`
+### 3. Birkenstock Material & Color Reference Library
 
-Use the callback to progressively add images to state:
+Based on research, these are the standard options to present:
 
-```typescript
-const handleGenerate = useCallback(async () => {
-  handleUpdate({ isGenerating: true, generatedImages: [] });
-  
-  // Generate placeholder images for loading state (show remaining slots)
-  const placeholders: GeneratedImage[] = Array.from({ length: state.imageCount }).map((_, i) => ({
-    id: `pending-${i}`,
-    imageUrl: '',
-    status: 'pending' as const,
-    prompt: state.prompt,
-    index: i,
-  }));
-  handleUpdate({ generatedImages: placeholders });
-  
-  // Progressive callback: replace placeholder with real image as each completes
-  const onImageReady = (image: GeneratedImage) => {
-    setState(prev => {
-      // Find the first pending placeholder and replace it, OR just add to end
-      const newImages = [...prev.generatedImages];
-      const pendingIdx = newImages.findIndex(img => img.status === 'pending');
-      
-      if (pendingIdx >= 0) {
-        newImages[pendingIdx] = image;
-      } else {
-        newImages.push(image);
-      }
-      
-      return { ...prev, generatedImages: newImages };
-    });
-  };
-  
-  // Call with progressive callback
-  const images = await generateImages(state, logoUrl, currentBrand?.id, onImageReady);
-  
-  // Final update (replaces any remaining placeholders with failed status)
-  handleUpdate({ 
-    isGenerating: false, 
-    generatedImages: images.length > 0 
-      ? images 
-      : placeholders.map(p => ({ ...p, status: 'failed' as const }))
-  });
-}, [state, handleUpdate, generateImages, logoUrl, currentBrand?.id]);
+**Materials by Component:**
+
+| Component | Materials |
+|-----------|-----------|
+| **Upper** | Suede, Oiled Leather, Smooth Leather, Nubuck, Birko-Flor, Birkibuc, Wool Felt, EVA, Patent Leather, Shearling |
+| **Footbed** | Cork-Latex (Original), Soft Footbed (Blue Label), EVA, Exquisite (Leather-Wrapped) |
+| **Sole** | EVA (Standard), Rubber, Polyurethane (PU), Cork |
+| **Buckles** | Metal (Brass), Metal (Silver), Metal (Copper), Matte Plastic, Antique Brass |
+| **Lining** | Shearling (Cream), Shearling (Black), Suede, Wool Felt, Microfiber |
+
+**Color Presets:**
+
+| Color Name | Hex Code | Notes |
+|------------|----------|-------|
+| Taupe | #B8A99A | Most popular suede |
+| Tobacco | #6F4E37 | Oiled leather classic |
+| Mocha | #967969 | Warm brown |
+| Stone | #928E85 | Grey-beige |
+| Black | #1C1C1C | Matte black |
+| Habana | #5C4033 | Dark brown leather |
+| Cognac | #834C24 | Warm reddish-brown |
+| Sand | #C2B280 | Light neutral |
+| White | #FFFFFF | EVA/Birko-Flor |
+| Navy | #1E3A5F | Birko-Flor |
+| Antique White | #FAEBD7 | Shearling lining |
+
+---
+
+## New Edge Function: `analyze-shoe-components`
+
+### Purpose
+Analyzes all available angles of a shoe SKU to extract detailed component information.
+
+### System Prompt
+
+```
+You are an expert footwear analyst specializing in Birkenstock and similar sandals/clogs. 
+Analyze the provided product images to identify EACH COMPONENT of the shoe.
+
+For EACH component, extract:
+1. Material type (be specific: "oiled leather" not just "leather")
+2. Color (use descriptive names: "tobacco brown" not just "brown")
+3. Your confidence in the identification (0-100)
+
+COMPONENTS TO IDENTIFY:
+
+**UPPER** (Required)
+The main body of the shoe that covers/surrounds the foot.
+Common materials: Suede, Oiled Leather, Smooth Leather, Nubuck, Birko-Flor, Birkibuc, Wool Felt, EVA, Patent Leather, Shearling
+
+**FOOTBED** (Required)
+The interior surface the foot rests on.
+Look for: Cork-latex (visible cork texture), Soft Footbed (blue label visible), EVA (smooth/molded), Leather-wrapped (Exquisite line)
+Color is usually natural cork brown or cream if shearling-lined
+
+**SOLE** (Required)
+The bottom outsole of the shoe.
+Common types: EVA (lightweight, textured), Rubber (heavier, grip pattern), PU (Super Birki style)
+Colors: Usually black, brown, white, or tan
+
+**BUCKLES** (Optional - only if present)
+Adjustment hardware on straps.
+Types: Metal (brass/gold, silver, copper, antique brass) or Matte Plastic (EVA models)
+Note: Some styles like the Boston clog have 1 buckle, Arizona has 2
+
+**HEELSTRAP** (Optional - only if present)
+Back strap that wraps behind the heel.
+Note: Clogs (Boston, Kyoto) do NOT have heelstraps. Sandals (Arizona, Florida) DO have heelstraps.
+Material usually matches the upper.
+
+**LINING** (Optional - only if visible/present)
+Interior lining material.
+Types: Shearling (fluffy, cream or black), Wool Felt, Suede (thin), Microfiber
+Note: Many styles have no lining - just exposed cork footbed
+
+IMPORTANT:
+- Analyze ALL provided images to get the most accurate assessment
+- If a component is not visible or doesn't exist for this shoe type, mark it as null
+- Be very specific about colors - "tobacco brown oiled leather" is better than "brown"
+- For buckles, note the finish/color of the metal
 ```
 
-### 4. Update Gallery to Handle Mixed State
-
-The `GeneratedImagesGallery` already supports mixed states (pending + completed), but we should ensure it gracefully handles the transition:
+### Tool Definition
 
 ```typescript
-// In GeneratedImagesGallery.tsx - existing logic handles this well
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-  {images.map((image) => (
-    image.status === 'pending' ? (
-      <GeneratedImageCardSkeleton key={image.id} />
-    ) : (
-      <GeneratedImageCard key={image.id} image={image} ... />
-    )
-  ))}
+{
+  name: 'extract_shoe_components',
+  parameters: {
+    type: 'object',
+    properties: {
+      upper: {
+        type: 'object',
+        properties: {
+          material: { type: 'string', description: 'Specific material type' },
+          color: { type: 'string', description: 'Descriptive color name' },
+          colorHex: { type: 'string', description: 'Approximate hex code if determinable' },
+          confidence: { type: 'number', description: '0-100 confidence score' },
+          notes: { type: 'string', description: 'Any relevant observations' }
+        },
+        required: ['material', 'color', 'confidence']
+      },
+      footbed: { /* same structure */ },
+      sole: { /* same structure */ },
+      buckles: { /* same structure, nullable */ },
+      heelstrap: { /* same structure, nullable */ },
+      lining: { /* same structure, nullable */ }
+    },
+    required: ['upper', 'footbed', 'sole']
+  }
+}
+```
+
+### Trigger Logic
+
+The analysis runs as a **background task** after SKU creation:
+
+```typescript
+// In SmartUploadModal.tsx or CreateSKUModal.tsx, after saving SKU:
+EdgeRuntime.waitUntil(
+  supabase.functions.invoke('analyze-shoe-components', {
+    body: { skuId: newSku.id }
+  })
+);
+```
+
+---
+
+## UI Components
+
+### 1. Component Display & Override Panel (in Product Picker)
+
+After selecting a SKU in the Product Picker Modal, show a new **"Shoe Components"** section:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 📦 Selected: Boston Tobacco Oiled Leather Clog                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│ Shoe Components              [✓] Attach Reference Images (toggle)           │
+│                                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ UPPER                                               [ Override ▾ ]      │ │
+│ │ Oiled Leather • Tobacco Brown                       [▣ #6F4E37]        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ FOOTBED                                             [ Override ▾ ]      │ │
+│ │ Cork-Latex • Natural Brown                          [▣ #8B7355]        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ SOLE                                                [ Override ▾ ]      │ │
+│ │ EVA • Black                                         [▣ #1C1C1C]        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ BUCKLE                                              [ Override ▾ ]      │ │
+│ │ Metal • Antique Brass                               [▣ #B5651D]        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ LINING                                              [ Override ▾ ]      │ │
+│ │ Shearling • Cream                                   [▣ #FAEBD7]        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│ 💡 Override any component to customize this product before generation       │
+│    (No overrides = exact product reproduction)                               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2. Override Dropdown/Popover
+
+When user clicks "Override ▾", show:
+
+```text
+┌────────────────────────────────────────┐
+│ UPPER Material                         │
+│ ┌────────────────────────────────────┐ │
+│ │ ○ Oiled Leather (current)          │ │
+│ │ ○ Suede                            │ │
+│ │ ○ Smooth Leather                   │ │
+│ │ ○ Nubuck                           │ │
+│ │ ○ Birko-Flor                       │ │
+│ │ ○ EVA                              │ │
+│ │ ○ Shearling                        │ │
+│ └────────────────────────────────────┘ │
+│                                        │
+│ UPPER Color                            │
+│ ┌────────────────────────────────────┐ │
+│ │ [⬤][⬤][⬤][⬤][⬤][⬤][⬤][⬤]       │ │
+│ │ Taupe  Tobacco Mocha Black ...     │ │
+│ │                                    │ │
+│ │ Custom: [#______] [🎨 Picker]      │ │
+│ └────────────────────────────────────┘ │
+│                                        │
+│ [Reset to Original]        [Apply ✓]  │
+└────────────────────────────────────────┘
+```
+
+### 3. Reference Images Toggle
+
+A simple toggle switch with the selected product:
+
+```typescript
+<div className="flex items-center gap-2">
+  <Switch 
+    checked={attachReferenceImages}
+    onCheckedChange={setAttachReferenceImages}
+  />
+  <span className="text-sm">Attach Reference Images</span>
 </div>
 ```
 
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useImageGeneration.ts` | Add `onImageReady` callback parameter; rewrite sequential loop to use parallel batches with progressive callbacks |
-| `src/components/creative-studio/CreativeStudioWizard.tsx` | Update `handleGenerate` to use progressive callback |
-| `src/components/creative-studio/GeneratedImagesGallery.tsx` | Minor: ensure mixed pending/completed rendering works smoothly |
+Default: **ON** (attach images)
 
 ---
 
-## Performance Impact
+## Prompt Modification Logic
 
-| Scenario | Current Time | New Time | Improvement |
-|----------|-------------|----------|-------------|
-| 4 images (sequential) | ~180s | ~90s | 50% faster |
-| 4 images (first visible) | ~180s | ~45s | 75% faster perceived |
-| 8 images | ~360s | ~180s | 50% faster |
+### Key Principle: Preserve Existing Behavior When No Overrides
+
+```typescript
+// In generate-image edge function, when building creative brief:
+
+if (request.componentOverrides && hasAnyOverrides(request.componentOverrides)) {
+  // User has customized components - inject override section
+  sections.push("=== PRODUCT COMPONENT OVERRIDES ===");
+  sections.push("⚠️ IMPORTANT: The user has customized specific shoe components.");
+  sections.push("Generate the product with THESE modifications while maintaining");
+  sections.push("the original silhouette and proportions from reference images:");
+  sections.push("");
+  
+  for (const [component, override] of Object.entries(request.componentOverrides)) {
+    if (override.material !== original.material || override.color !== original.color) {
+      sections.push(`${component.toUpperCase()}: ${override.material} in ${override.color}`);
+      sections.push(`  (Original was: ${original.material} in ${original.color})`);
+    }
+  }
+  
+  sections.push("");
+  sections.push("Keep all OTHER components exactly as shown in reference images.");
+  sections.push("The overall shoe silhouette/shape must remain unchanged.");
+} else {
+  // NO overrides - use existing product identity section as-is
+  // (This is the current behavior that works well)
+}
+```
+
+### Reference Image Toggle
+
+```typescript
+// In generate-image edge function:
+const shouldAttachReferences = request.attachReferenceImages !== false; // Default true
+
+if (shouldAttachReferences && productUrls.length > 0) {
+  // Existing logic to attach up to 10 images
+  const attachCount = Math.min(productUrls.length, 10);
+  // ... attach images
+} else {
+  // Skip attaching product reference images
+  console.log('Reference images disabled by user - prompt-only generation');
+}
+```
 
 ---
 
-## Edge Cases
+## State Management
 
-1. **Partial failures**: If 2/4 images fail, the successful ones still appear immediately
-2. **All failures**: Remaining placeholders convert to failed state at the end
-3. **Rate limiting**: Batch size of 2-3 prevents API overload while still providing parallelism
-4. **Integrity analysis**: Already triggers per-image, so progressive display works seamlessly
+### ProductShootState Updates
 
+```typescript
+// In types.ts, add to ProductShootState:
+interface ComponentOverride {
+  material: string;
+  color: string;
+  colorHex?: string;
+}
+
+interface ProductShootState {
+  // ... existing fields ...
+  
+  // Component overrides (null = use analyzed defaults)
+  componentOverrides?: {
+    upper?: ComponentOverride;
+    footbed?: ComponentOverride;
+    sole?: ComponentOverride;
+    buckles?: ComponentOverride;
+    heelstrap?: ComponentOverride;
+    lining?: ComponentOverride;
+  };
+  
+  // Reference image toggle
+  attachReferenceImages: boolean; // Default: true
+}
+```
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `supabase/migrations/xxx_add_sku_components.sql` | Create | Add `components` JSONB column |
+| `supabase/functions/analyze-shoe-components/index.ts` | Create | Background component analysis |
+| `supabase/functions/generate-image/index.ts` | Modify | Handle overrides + reference toggle |
+| `supabase/config.toml` | Modify | Register new edge function |
+| `src/components/creative-studio/product-shoot/types.ts` | Modify | Add ComponentOverride types |
+| `src/components/creative-studio/product-shoot/ShoeComponentsPanel.tsx` | Create | Component display + override UI |
+| `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` | Create | Material/color picker popover |
+| `src/components/creative-studio/product-shoot/ProductPickerModal.tsx` | Modify | Integrate ShoeComponentsPanel |
+| `src/lib/birkenstockMaterials.ts` | Create | Material/color reference data |
+| `src/hooks/useShoeComponents.ts` | Create | Fetch/poll component analysis |
+| `src/components/creative-studio/CreativeStudioWizard.tsx` | Modify | Pass overrides to generation |
+
+---
+
+## Implementation Phases
+
+### Phase 1: Database + Analysis (Backend)
+1. Run migration to add `components` column
+2. Create `analyze-shoe-components` edge function with full system prompt
+3. Trigger analysis in background after SKU creation
+
+### Phase 2: UI Components (Frontend)
+1. Create material/color reference library (`birkenstockMaterials.ts`)
+2. Build `ShoeComponentsPanel` with analyzed data display
+3. Build `ComponentOverridePopover` with material dropdowns + color picker
+4. Integrate into `ProductPickerModal`
+
+### Phase 3: Generation Integration
+1. Add `componentOverrides` and `attachReferenceImages` to generation request
+2. Modify `generate-image` to inject override prompts ONLY when overrides exist
+3. Handle reference image toggle
+
+### Phase 4: Testing & Polish
+1. Test with various Birkenstock models (Boston, Arizona, Kyoto)
+2. Verify overrides produce expected results
+3. Confirm no-override path is unchanged
+
+---
+
+## Edge Cases & Considerations
+
+1. **Analysis Not Ready**: Show skeleton/loading state with "Analyzing components..." message
+2. **Analysis Failed**: Show fallback with manual entry option
+3. **Non-Footwear Products**: Skip component panel for bags/accessories (check `category` or `product_type`)
+4. **Re-Analysis**: Add "Re-analyze" button to manually trigger if results look wrong
+5. **Multiple Products**: When multiple SKUs are selected, component panel should handle gracefully (maybe show only for first selected)
