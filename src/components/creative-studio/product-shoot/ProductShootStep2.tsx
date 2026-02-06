@@ -17,9 +17,11 @@ import { OnFootConfigurator } from "./OnFootConfigurator";
 import { LifestyleConfigurator } from "./LifestyleConfigurator";
 import { ProductFocusConfigurator } from "./ProductFocusConfigurator";
 import { ProductAnglePreview } from "./ProductAnglePreview";
+import { ShoeComponentsPanel } from "./ShoeComponentsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
+import { useShoeComponents, useComponentOverrides } from "@/hooks/useShoeComponents";
 import { useQuery } from "@tanstack/react-query";
 import { parseSkuDisplayInfo, formatSkuAttributes } from "@/lib/skuDisplayUtils";
 import { 
@@ -88,6 +90,37 @@ export const ProductShootStep2 = ({
   
   // Cache for SKU data (for products selected from modal that aren't in recentSkus)
   const [skuCache, setSkuCache] = useState<Map<string, ProductSKU>>(new Map());
+  
+  // Reference images toggle (local state synced to parent)
+  const [attachReferenceImages, setAttachReferenceImages] = useState(
+    state.attachReferenceImages ?? true
+  );
+
+  // Shoe component analysis hooks
+  const {
+    components,
+    isLoading: isLoadingComponents,
+    isAnalyzing,
+    triggerAnalysis,
+    error: componentsError,
+  } = useShoeComponents({ skuId: state.selectedProductId });
+
+  const {
+    overrides,
+    setComponentOverride,
+    resetOverrides,
+    hasOverrides,
+  } = useComponentOverrides(components);
+
+  // Sync overrides to parent state when they change
+  useEffect(() => {
+    onStateChange({ componentOverrides: hasOverrides ? overrides : undefined });
+  }, [overrides, hasOverrides]);
+
+  // Sync reference images toggle to parent state
+  useEffect(() => {
+    onStateChange({ attachReferenceImages });
+  }, [attachReferenceImages]);
 
   // Fetch top 3 SKUs for inline display (prioritize recently used, then newest)
   const { data: recentSkus = [] } = useQuery({
@@ -434,6 +467,24 @@ export const ProductShootStep2 = ({
                 >
                   Browse All Products...
                 </Button>
+
+                {/* Component Customization Panel - Show when product selected */}
+                {state.selectedProductId && (
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <ShoeComponentsPanel
+                      components={components}
+                      overrides={overrides}
+                      onOverrideChange={setComponentOverride}
+                      onResetAll={resetOverrides}
+                      attachReferenceImages={attachReferenceImages}
+                      onAttachReferenceImagesChange={setAttachReferenceImages}
+                      isLoading={isLoadingComponents}
+                      isAnalyzing={isAnalyzing}
+                      onTriggerAnalysis={triggerAnalysis}
+                      error={componentsError}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </CollapsibleContent>
