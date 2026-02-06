@@ -276,18 +276,18 @@ export const ProductShootStep2 = ({
   const handleSkuSelect = (
     sku: ProductSKU, 
     components?: import('@/lib/birkenstockMaterials').ShoeComponents | null,
-    overrides?: import('@/lib/birkenstockMaterials').ComponentOverrides,
-    attachReferenceImages?: boolean,
+    overridesParam?: import('@/lib/birkenstockMaterials').ComponentOverrides,
+    attachRefsParam?: boolean,
     fromModal: boolean = false
   ) => {
     setSelectedSku(sku);
     onStateChange({
       selectedProductId: sku.id,
       recoloredProductUrl: sku.composite_image_url || sku.angles[0]?.thumbnail_url,
-      // Pass component overrides to state for generation
-      componentOverrides: overrides,
-      // Pass reference image toggle (default true)
-      attachReferenceImages: attachReferenceImages ?? true,
+      // Preserve existing overrides if none provided (don't wipe them out)
+      componentOverrides: overridesParam !== undefined ? overridesParam : state.componentOverrides,
+      // Preserve current toggle state if not explicitly provided
+      attachReferenceImages: attachRefsParam ?? state.attachReferenceImages ?? true,
     });
     
     // Only update display order if selecting from modal (Browse More)
