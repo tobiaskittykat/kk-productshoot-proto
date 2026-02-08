@@ -1,48 +1,86 @@
 
 
-# Improve Shoe Component Lining Detection
+# Add Toe Post Awareness to Shoe Component System
 
-## Problem
+## Background
 
-The AI analysis prompt currently describes lining as optional and says "Many styles have no lining - just exposed cork footbed." This biases the model toward returning `null` for lining. But nearly all standard Birkenstocks have a **suede footbed lining** -- the thin microfiber/suede layer that sits on top of the cork-latex base. This is an important component for customization (e.g., changing its color).
+On Birkenstock thong-style sandals (Gizeh, Ramses, Mayari), there is a **toe post** -- the vertical strap between the big toe and second toe, with a small **pin/rivet** at its base.
 
-Because the analysis returns `null`, the `ShoeComponentsPanel` filters it out entirely (it only renders components where `comp.material` is truthy), so users never even see the lining row and can't override it.
+Based on research of actual Birkenstock products:
+- The **toe post strap** color follows the **sole** color (not the upper, as previously assumed)
+- The **toe post pin/rivet** follows the **buckle** hardware color and finish
+
+This means when users customize the sole color or buckle finish, the AI needs to know about these relationships to render the product correctly.
+
+## Approach: Prompt Awareness (No New Component)
+
+The toe post does not need its own standalone component in the UI because:
+- Its strap color is always derived from the sole
+- Its pin color is always derived from the buckles
+- Users can already control both sole and buckle colors
+
+Instead, we add **relationship rules** to the prompts so the AI correctly renders the toe post when generating images.
 
 ## Changes
 
-### 1. `supabase/functions/analyze-shoe-components/index.ts` -- Improve the LINING section of the system prompt
+### 1. `supabase/functions/analyze-shoe-components/index.ts`
 
-Update the `LINING` description so the AI knows that:
-- Nearly all standard Birkenstock models have a thin suede lining on the footbed surface
-- Only fully molded EVA shoes (like the Arizona EVA) truly lack a lining
-- When in doubt, default to detecting suede lining rather than returning null
+Update the BUCKLES section of the system prompt to note that on thong-style sandals, the toe post pin is part of the buckle hardware system and should match.
 
-Updated prompt section:
+Add a new general note about the toe post strap following the sole color.
+
 ```
-**LINING** (Required for most models)
-The thin surface layer on TOP of the footbed that the foot directly touches.
-IMPORTANT: Nearly ALL standard Birkenstock models have a suede lining on the footbed.
-This is a thin microfiber/suede layer on top of the cork-latex base — it is NOT the cork itself.
-Types: Suede (most common — thin, soft nap texture on footbed surface), 
-       Shearling (fluffy, cream or black — winter models), 
-       Wool Felt, Microfiber
-Color: Usually natural tan/sand for suede, cream for shearling, black for dark shearling
-Only return null for fully molded EVA shoes (e.g. Arizona EVA) where the entire shoe 
-is one-piece plastic with no separate lining layer.
+**BUCKLES** (Optional - only if present)
+Adjustment hardware on straps.
+Types: Metal (brass/gold, silver, copper, antique brass) or Matte Plastic (EVA models)
+Note: Some styles like the Boston clog have 1 buckle, Arizona has 2
+Note for thong-style sandals (Gizeh, Ramses, Mayari): The small pin/rivet 
+at the top of the toe post is part of the buckle hardware system. It should 
+match the buckle finish (e.g., both brass, both silver). Report the buckle 
+material/color to cover both the strap buckle AND the toe post pin.
 ```
 
-Also bump the `analysisVersion` from `"1.0"` to `"1.1"` so we can distinguish re-analyzed results.
+Add a general note in the IMPORTANT section:
 
-### 2. Redeploy the edge function
+```
+- For thong-style sandals: the toe post STRAP typically matches the SOLE color, 
+  while the toe post PIN/RIVET matches the BUCKLE hardware finish.
+```
 
-After updating the prompt, the `analyze-shoe-components` function needs to be redeployed so the new prompt takes effect. You can then re-analyze your Gizeh to verify lining is detected.
+### 2. `supabase/functions/interpret-shoe-customization/index.ts`
+
+Add rule 16 to the system prompt:
+
+```
+16. For thong-style sandals (Gizeh, Ramses, Mayari): The toe post strap color 
+    follows the SOLE color, and the toe post pin/rivet follows the BUCKLE hardware. 
+    When changing sole color, the toe post strap automatically matches. 
+    When changing buckle finish, the toe post pin automatically matches.
+    No separate component needed.
+```
+
+### 3. `src/lib/birkenstockMaterials.ts`
+
+In `buildComponentOverridePrompt()`, after listing all component overrides, add contextual notes:
+- If sole overrides are present: `"Note: On thong-style sandals (Gizeh, Ramses, Mayari), the toe post strap matches the sole color."`
+- If buckle overrides are present: `"Note: On thong-style sandals, the toe post pin/rivet matches the buckle finish."`
+
+### 4. `supabase/functions/generate-image/index.ts`
+
+In the component overrides section (around line 580), add the same toe post relationship notes when sole or buckle overrides are present, so the prompt agent knows to render the toe post accordingly.
 
 ## Files Changed
 
-- `supabase/functions/analyze-shoe-components/index.ts` (prompt text updated, version bumped)
+| File | Change |
+|------|--------|
+| `supabase/functions/analyze-shoe-components/index.ts` | Add toe post notes to BUCKLES section and IMPORTANT section |
+| `supabase/functions/interpret-shoe-customization/index.ts` | Add rule 16 about toe post relationships |
+| `src/lib/birkenstockMaterials.ts` | Add conditional toe post notes in `buildComponentOverridePrompt()` |
+| `supabase/functions/generate-image/index.ts` | Add toe post relationship notes to override prompt section |
 
-## What Will Happen After This
+## What This Achieves
 
-- Re-running "Analyze Components" on the Gizeh should detect the suede footbed lining
-- The Lining row will appear in the Shoe Components panel, allowing material/color overrides
-- Existing SKUs will need re-analysis to pick up the lining (clicking "Re-analyze Components")
+- When a user changes the **sole** to white, the AI knows the toe post strap should also be white
+- When a user changes the **buckle** to silver, the AI knows the toe post pin should also be silver
+- Analysis correctly reports buckle hardware as covering the toe post pin
+- No new UI components or database changes needed -- all handled through prompt intelligence
