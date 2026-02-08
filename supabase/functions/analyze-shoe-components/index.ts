@@ -41,10 +41,16 @@ Back strap that wraps behind the heel.
 Note: Clogs like the Boston and Kyoto do NOT have heelstraps. However, the Tokyo (a Boston-style clog with a back strap) DOES have a heelstrap. Sandals (Arizona, Florida) also have heelstraps. Analyze the images to determine if one is present.
 Material usually matches the upper.
 
-**LINING** (Optional - only if visible/present)
-Interior lining material.
-Types: Shearling (fluffy, cream or black), Wool Felt, Suede (thin), Microfiber
-Note: Many styles have no lining - just exposed cork footbed
+**LINING** (Required for most models)
+The thin surface layer on TOP of the footbed that the foot directly touches.
+IMPORTANT: Nearly ALL standard Birkenstock models have a suede lining on the footbed.
+This is a thin microfiber/suede layer on top of the cork-latex base — it is NOT the cork itself.
+Types: Suede (most common — thin, soft nap texture on footbed surface), 
+       Shearling (fluffy, cream or black — winter models), 
+       Wool Felt, Microfiber
+Color: Usually natural tan/sand for suede, cream for shearling, black for dark shearling
+Only return null for fully molded EVA shoes (e.g. Arizona EVA) where the entire shoe 
+is one-piece plastic with no separate lining layer.
 
 IMPORTANT:
 - Analyze ALL provided images to get the most accurate assessment
@@ -258,7 +264,7 @@ Deno.serve(async (req) => {
     const componentsWithMeta = {
       ...components,
       analyzedAt: new Date().toISOString(),
-      analysisVersion: "1.0",
+      analysisVersion: "1.1",
     };
 
     // Save to database
