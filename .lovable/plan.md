@@ -1,98 +1,61 @@
 
+# Fix Product Focus Shot Variety
 
-# Fix Toe Post Color Rendering in Image Generation
+## Problem
 
-## The Problem
+When generating multiple Product Focus images (especially in sequential mode), every image comes out with the same composition — shoes sitting parallel. This happens because unlike "On Foot" and "Full Body" shot types, the Product Focus prompt builder has no randomization logic.
 
-The current approach adds toe post instructions as abstract **relationship rules** ("Note: the toe post strap matches the sole color"). The prompt agent (Gemini 2.5 Flash) has to interpret these rules, resolve the actual colors, and weave them into its evocative prose. It frequently fails to do this -- either dropping the instructions entirely or describing them vaguely.
+**On Foot / Full Body (has variety):** Each call to `buildOnFootPrompt()` uses `selectRandomFromOptions()` to pick a random pose, leg style, and trouser color when set to "Auto". Sequential generation calls the builder fresh per image, so each image gets different concrete options.
 
-The image generator then receives a prompt that says nothing specific about the toe post, and renders it however it likes.
-
-## Root Cause
-
-The toe post instructions flow through **two AI layers**, each of which can lose the signal:
-
-1. **Creative Brief** --> Prompt Agent: Abstract rules like "toe post strap matches sole color" get buried as "Notes" at the bottom of the override section. The prompt agent often ignores or softens these.
-2. **Prompt Agent output** --> Image Generator: Even if mentioned, vague phrasing like "the toe post in a matching tone" doesn't give the image model enough to work with.
-
-## Solution: Pre-resolve Colors, Add as Explicit Components
-
-Instead of asking the AI to figure out the relationship, we **pre-resolve the actual colors** and inject the toe post strap and pin as if they were explicit component overrides. This removes all ambiguity.
-
-For example, instead of:
+**Product Focus (no variety):** When `cameraAngle` is set to "Auto", `buildProductFocusPrompt()` outputs the same static text every time:
 ```
-Note: On thong-style sandals, the toe post strap matches the sole color.
+CAMERA ANGLE:
+- AI selects optimal angle to showcase product
+- May use: side profile, three-quarter view, top-down, detail close-up, or sole view
 ```
 
-We inject:
-```
-TOE POST STRAP: must be White (same as sole)
-TOE POST PIN/RIVET: must be Silver (same as buckle hardware)
-```
+The prompt agent sees this vague instruction and defaults to the same "safe" composition each time (parallel pair shot).
 
-This way, both the prompt agent and the image generator see concrete, unambiguous color instructions.
+## Solution
+
+Apply the same `selectRandomFromOptions()` pattern to `buildProductFocusPrompt()`. When camera angle is "Auto", randomly pick one concrete angle option per call. This way:
+- Single image generation: gets one randomly chosen angle
+- Sequential generation (4 images): each image gets a different specific angle, producing genuine variety
+
+Additionally, convert the Product Focus prompt to an evocative narrative style (matching On Foot / Full Body) instead of the current bullet-point format. This gives the prompt agent richer creative direction to work with.
 
 ## Changes
 
-### 1. `supabase/functions/generate-image/index.ts` -- Pre-resolve toe post colors
+### `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
 
-In the component overrides section (~line 580-600), replace the abstract "Note:" lines with concrete, resolved entries:
+**In `buildProductFocusPrompt()`:**
 
-- When sole overrides exist, compute the sole's color and add: `TOE POST STRAP: [resolved sole color] (must match sole -- critical for thong-style sandals like Gizeh, Ramses, Mayari)`
-- When buckle overrides exist, compute the buckle's color and add: `TOE POST PIN/RIVET: [resolved buckle color] (must match buckle hardware finish)`
-- When both exist, add both entries
-- Even when no overrides exist but original components have sole/buckle data, add a note about the default relationship so the prompt agent can describe it accurately
+1. When `config.cameraAngle === 'auto'`, use `selectRandomFromOptions(productFocusAngleOptions, 'auto')` to pick a specific concrete angle instead of outputting the vague "AI selects" text.
 
-### 2. `supabase/functions/generate-image/index.ts` -- Add toe post to prompt agent system prompt
+2. Add narrative descriptions to `productFocusAngleOptions` (similar to how `poseVariationOptions` has both `prompt` and `narrative` fields). These richer descriptions will produce better variety in the final image:
 
-In the system prompt (~line 632-669), add a specific instruction about toe post rendering:
+| Angle | Narrative addition |
+|-------|-------------------|
+| Hero (3/4 Front) | "the classic hero shot, angled at 45 degrees to show depth and dimension..." |
+| Side Profile | "a pure lateral view capturing the full silhouette..." |
+| Top Down | "shot from directly overhead, both shoes side by side, footbed and straps fully visible..." |
+| Sole View | "one shoe flipped to reveal the outsole tread, the other showing the footbed..." |
+| Detail Close-up | "cropped tight on the buckle hardware and strap texture..." |
+| Pair Shot | "both shoes arranged at complementary angles, slightly staggered..." |
+| Lifestyle | "artfully placed in an environmental context with props..." |
 
-```
-8. **TOE POST ACCURACY (THONG-STYLE SANDALS)** - When the brief includes 
-   TOE POST STRAP or TOE POST PIN entries, you MUST describe these colors 
-   explicitly in your prompt. The toe post is the vertical strap between 
-   the big toe and second toe. Its color and the small pin at its base 
-   are critical details that must be specified clearly.
-```
+3. Convert the prompt output to an evocative narrative format (like On Foot uses) instead of bullet points. This gives the prompt agent a richer signal to work with.
 
-### 3. `src/lib/birkenstockMaterials.ts` -- Pre-resolve in `buildComponentOverridePrompt`
+**Result for sequential generation (4 images with Auto angle):**
+- Image 1 might get "Hero (3/4 Front)" with its specific composition description
+- Image 2 might get "Top Down" with overhead framing
+- Image 3 might get "Side Profile" with lateral view
+- Image 4 might get "Detail Close-up" with macro-style framing
 
-Update `buildComponentOverridePrompt()` to also use the pre-resolved approach. Replace the "Note:" lines with explicit entries that include the resolved color values:
-
-```typescript
-// Instead of vague notes, add explicit resolved entries
-if (overrides.sole) {
-  const soleColor = getColorDescription(overrides.sole);
-  lines.push(`TOE POST STRAP: ${soleColor} (must match sole color exactly)`);
-}
-if (overrides.buckles) {
-  const buckleColor = getColorDescription(overrides.buckles);
-  lines.push(`TOE POST PIN/RIVET: ${buckleColor} (must match buckle hardware finish)`);
-}
-```
-
-### 4. `supabase/functions/generate-image/index.ts` -- Add toe post to fidelity instruction
-
-In the COMPONENT OVERRIDE MODE section (~line 726-746), add toe post as an explicit example of contrast language:
-
-```
-- "White toe post strap (matching the White sole, instead of the original Black)"
-- "Silver toe post pin (matching the Silver buckle hardware)"
-```
-
-This teaches the prompt agent how to phrase toe post changes clearly.
-
-## What This Achieves
-
-- The prompt agent receives **concrete colors** (e.g., "TOE POST STRAP: White") instead of abstract rules ("strap matches sole")
-- The image generator's prompt will contain explicit descriptions like "white toe post strap between the toes matching the white sole" instead of nothing or vague references
-- Both AI layers get unambiguous, specific instructions they can act on
-- No UI changes needed -- this is purely a prompt engineering improvement
+Each image receives a concrete, unambiguous angle instruction rather than "AI selects optimal angle."
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/generate-image/index.ts` | Replace abstract toe post "Notes" with pre-resolved color entries; add toe post instruction to system prompt; add toe post examples to fidelity instruction |
-| `src/lib/birkenstockMaterials.ts` | Update `buildComponentOverridePrompt()` to use pre-resolved colors instead of abstract notes |
-
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Add narrative descriptions to `productFocusAngleOptions`; update `buildProductFocusPrompt()` to use `selectRandomFromOptions()` for auto angle; convert output to evocative narrative style |
