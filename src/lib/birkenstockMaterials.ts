@@ -8,6 +8,8 @@ export interface MaterialOption {
   value: string;
   label: string;
   category?: string;
+  fixedColor?: string;
+  fixedColorHex?: string;
 }
 
 // Materials organized by component type with categories for UI grouping
@@ -46,22 +48,22 @@ export const COMPONENT_MATERIALS: Record<string, MaterialOption[]> = {
     { value: 'Cork', label: 'Cork', category: 'Premium' },
   ],
   buckles: [
-    // Metal finishes
-    { value: 'Metal (Brass)', label: 'Metal (Brass/Gold)', category: 'Metal' },
-    { value: 'Metal (Silver)', label: 'Metal (Silver)', category: 'Metal' },
-    { value: 'Metal (Copper)', label: 'Metal (Copper)', category: 'Metal' },
-    { value: 'Metal (Rose Gold)', label: 'Metal (Rose Gold)', category: 'Metal' },
-    { value: 'Antique Brass', label: 'Antique Brass', category: 'Metal' },
+    // Metal finishes (fixed color -- inherent finish)
+    { value: 'Metal (Brass)', label: 'Metal (Brass/Gold)', category: 'Metal', fixedColor: 'Brass/Gold', fixedColorHex: '#B5A642' },
+    { value: 'Metal (Silver)', label: 'Metal (Silver)', category: 'Metal', fixedColor: 'Silver', fixedColorHex: '#C0C0C0' },
+    { value: 'Metal (Copper)', label: 'Metal (Copper)', category: 'Metal', fixedColor: 'Copper', fixedColorHex: '#B87333' },
+    { value: 'Metal (Rose Gold)', label: 'Metal (Rose Gold)', category: 'Metal', fixedColor: 'Rose Gold', fixedColorHex: '#B76E79' },
+    { value: 'Antique Brass', label: 'Antique Brass', category: 'Metal', fixedColor: 'Antique Brass', fixedColorHex: '#6B5B3E' },
+    // Metal with color picker
+    { value: 'Metal (Custom)', label: 'Metal (Custom Color)', category: 'Metal' },
+    { value: 'Metal (Coordinated)', label: 'Metal (Color-Matched)', category: 'Metal' },
     // Plastic finishes
     { value: 'Matte Plastic', label: 'Matte Plastic', category: 'Plastic' },
     { value: 'Matte Plastic (Coordinated)', label: 'Matte Plastic (Color-Matched)', category: 'Plastic' },
-    // Metal color-matched
-    { value: 'Metal (Coordinated)', label: 'Metal (Color-Matched)', category: 'Metal' },
-    // Translucent/Big Buckle options
-    { value: 'Translucent', label: 'Translucent (Clear)', category: 'Special' },
-    { value: 'Translucent Rose Gold', label: 'Translucent (Rose Gold)', category: 'Special' },
-    { value: 'Translucent (Coordinated)', label: 'Translucent Plastic (Color-Matched)', category: 'Special' },
-    { value: 'Metallic Rose Gold', label: 'Metallic (Rose Gold Big Buckle)', category: 'Special' },
+    // Special
+    { value: 'Translucent', label: 'Translucent (Clear)', category: 'Special', fixedColor: 'Clear', fixedColorHex: '#E8E8E8' },
+    { value: 'Translucent (Coordinated)', label: 'Translucent (Color-Matched)', category: 'Special' },
+    { value: 'Metallic Big Buckle', label: 'Metallic Big Buckle', category: 'Special' },
   ],
   heelstrap: [
     { value: 'Suede', label: 'Suede', category: 'Natural Leathers' },
