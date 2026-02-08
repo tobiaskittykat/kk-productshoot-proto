@@ -1,61 +1,102 @@
 
-# Fix Product Focus Shot Variety
+
+# Fix Buckle Branding Accuracy in Analysis and Prompting
 
 ## Problem
 
-When generating multiple Product Focus images (especially in sequential mode), every image comes out with the same composition — shoes sitting parallel. This happens because unlike "On Foot" and "Full Body" shot types, the Product Focus prompt builder has no randomization logic.
+The current system has two issues causing incorrect buckle branding in generated images:
 
-**On Foot / Full Body (has variety):** Each call to `buildOnFootPrompt()` uses `selectRandomFromOptions()` to pick a random pose, leg style, and trouser color when set to "Auto". Sequential generation calls the builder fresh per image, so each image gets different concrete options.
+1. **Hardcoded branding text**: The prompt agent system prompt says `the engraved "Birkenstock" on the buckle` -- but this is wrong for many models. The Mayari buckles actually say **"BIRKEN"** on the larger strap buckle and **"BIRK"** on the smaller buckle bar. Other models may have different engravings or none at all.
 
-**Product Focus (no variety):** When `cameraAngle` is set to "Auto", `buildProductFocusPrompt()` outputs the same static text every time:
+2. **No branding data captured**: The `analyze-shoe-components` function only captures material, color, hex, confidence, and notes for each component. There is no dedicated field for engravings, logos, or branding text. This means the generation pipeline has no model-specific branding data to work with.
+
+## What needs to change
+
+### 1. Add a `branding` field to the component analysis schema
+
+Update `supabase/functions/analyze-shoe-components/index.ts`:
+
+- Add a new top-level `branding` field in the tool definition that captures model-specific branding details:
+
+```text
+branding: {
+  footbedText: string     // e.g. "BIRKENSTOCK" + "MADE IN GERMANY" 
+  footbedLogo: string     // e.g. "Footprint logo stamped in dark ink"
+  buckleEngravings: [     // Array because models have multiple buckles
+    { location: string, text: string, style: string }
+  ]
+  // e.g. [
+  //   { location: "strap buckle bar", text: "BIRKEN", style: "embossed serif capitals" },
+  //   { location: "small buckle bar", text: "BIRK", style: "embossed serif capitals" }
+  // ]
+}
 ```
-CAMERA ANGLE:
-- AI selects optimal angle to showcase product
-- May use: side profile, three-quarter view, top-down, detail close-up, or sole view
+
+- Update the SYSTEM_PROMPT to instruct the AI to carefully read and report the exact text on each buckle bar, the footbed wordmark, and any other branding marks visible in the images. Emphasize precision: "BIRKEN" is NOT the same as "BIRKENSTOCK."
+
+### 2. Surface branding data in the generation prompt
+
+Update `supabase/functions/generate-image/index.ts`:
+
+- In the `=== PRODUCT COMPONENTS (from analysis) ===` section (~line 503-524), check if the stored components include a `branding` field and append it to the creative brief. Example output:
+
+```text
+BRANDING DETAILS (from analysis - use EXACT text):
+- Footbed: embossed "BIRKENSTOCK" wordmark, "MADE IN GERMANY", footprint logo
+- Buckle 1 (strap buckle bar): embossed "BIRKEN" in serif capitals
+- Buckle 2 (small buckle bar): embossed "BIRK" in serif capitals
 ```
 
-The prompt agent sees this vague instruction and defaults to the same "safe" composition each time (parallel pair shot).
+- Update the system prompt's "BIRKENSTOCK LOGO FIDELITY" section (~line 643-650) to be dynamic instead of hardcoded. Replace the current hardcoded text with instructions to use the BRANDING DETAILS from the brief when available, and only fall back to generic instructions when no branding data exists.
 
-## Solution
+### 3. Update the default prompt agent prompt
 
-Apply the same `selectRandomFromOptions()` pattern to `buildProductFocusPrompt()`. When camera angle is "Auto", randomly pick one concrete angle option per call. This way:
-- Single image generation: gets one randomly chosen angle
-- Sequential generation (4 images): each image gets a different specific angle, producing genuine variety
+Update `src/lib/defaultPrompts.ts`:
 
-Additionally, convert the Product Focus prompt to an evocative narrative style (matching On Foot / Full Body) instead of the current bullet-point format. This gives the prompt agent richer creative direction to work with.
+- In `DEFAULT_PROMPT_AGENT_PROMPT`, replace the hardcoded buckle branding example (~line 74-81) with dynamic instructions:
 
-## Changes
+```text
+**BIRKENSTOCK BRANDING FIDELITY (CRITICAL)**:
+- When BRANDING DETAILS are provided in the brief, use the EXACT text specified 
+  for each component. Do NOT assume all buckles say "BIRKENSTOCK" -- many models 
+  have abbreviated engravings like "BIRKEN" or "BIRK" on individual buckle bars.
+- Footbed wordmarks and logos must be described as specified in the branding data.
+- If no BRANDING DETAILS section exists, describe branding as visible in the 
+  reference images without assuming specific text.
+```
 
-### `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
+### 4. Re-analyze existing SKUs
 
-**In `buildProductFocusPrompt()`:**
+After deploying the updated analysis function, the Mayari (and other existing SKUs) will need to be re-analyzed to populate the new `branding` field. This can be triggered from the existing SKU management UI (which already has a re-analyze capability).
 
-1. When `config.cameraAngle === 'auto'`, use `selectRandomFromOptions(productFocusAngleOptions, 'auto')` to pick a specific concrete angle instead of outputting the vague "AI selects" text.
-
-2. Add narrative descriptions to `productFocusAngleOptions` (similar to how `poseVariationOptions` has both `prompt` and `narrative` fields). These richer descriptions will produce better variety in the final image:
-
-| Angle | Narrative addition |
-|-------|-------------------|
-| Hero (3/4 Front) | "the classic hero shot, angled at 45 degrees to show depth and dimension..." |
-| Side Profile | "a pure lateral view capturing the full silhouette..." |
-| Top Down | "shot from directly overhead, both shoes side by side, footbed and straps fully visible..." |
-| Sole View | "one shoe flipped to reveal the outsole tread, the other showing the footbed..." |
-| Detail Close-up | "cropped tight on the buckle hardware and strap texture..." |
-| Pair Shot | "both shoes arranged at complementary angles, slightly staggered..." |
-| Lifestyle | "artfully placed in an environmental context with props..." |
-
-3. Convert the prompt output to an evocative narrative format (like On Foot uses) instead of bullet points. This gives the prompt agent a richer signal to work with.
-
-**Result for sequential generation (4 images with Auto angle):**
-- Image 1 might get "Hero (3/4 Front)" with its specific composition description
-- Image 2 might get "Top Down" with overhead framing
-- Image 3 might get "Side Profile" with lateral view
-- Image 4 might get "Detail Close-up" with macro-style framing
-
-Each image receives a concrete, unambiguous angle instruction rather than "AI selects optimal angle."
-
-## Files Changed
+## Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Add narrative descriptions to `productFocusAngleOptions`; update `buildProductFocusPrompt()` to use `selectRandomFromOptions()` for auto angle; convert output to evocative narrative style |
+| `supabase/functions/analyze-shoe-components/index.ts` | Add `branding` field to tool schema and system prompt; instruct AI to read exact buckle text |
+| `supabase/functions/generate-image/index.ts` | Surface `branding` data in creative brief; make logo fidelity instructions dynamic |
+| `src/lib/defaultPrompts.ts` | Replace hardcoded buckle branding with dynamic instructions that use analysis data |
+
+## Data flow after changes
+
+```text
+Reference Images
+      |
+      v
+analyze-shoe-components  -->  product_skus.components.branding
+      |                         {footbedText, buckleEngravings[], ...}
+      v
+generate-image (creative brief)
+      |
+      "BRANDING DETAILS:
+       Buckle 1: 'BIRKEN' (embossed serif)
+       Buckle 2: 'BIRK' (embossed serif)
+       Footbed: 'BIRKENSTOCK' wordmark"
+      |
+      v
+Prompt Agent --> "...buckles engraved with 'BIRKEN' and 'BIRK' in serif capitals..."
+      |
+      v
+Image Generator --> accurate branding in output
+```
+
