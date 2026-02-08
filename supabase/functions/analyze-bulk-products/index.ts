@@ -34,14 +34,45 @@ interface ProductGroup {
   productAnalysis: ProductAnalysis;
 }
 
+const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
+
+function isSupportedImageFormat(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const ext = pathname.split('.').pop() || '';
+    return SUPPORTED_IMAGE_EXTENSIONS.has(ext);
+  } catch {
+    return false;
+  }
+}
+
 async function analyzeAndGroupProducts(images: ImageInput[], apiKey: string): Promise<{
   groups: ProductGroup[];
   ungrouped: Array<{ id: string; url: string; reason: string }>;
 }> {
-  console.log(`Analyzing ${images.length} images for grouping...`);
+  // Filter out unsupported formats (e.g. .avif) before sending to AI
+  const supportedImages = images.filter(img => isSupportedImageFormat(img.url));
+  const unsupportedImages = images.filter(img => !isSupportedImageFormat(img.url));
+
+  if (unsupportedImages.length > 0) {
+    console.warn(`Skipping ${unsupportedImages.length} images with unsupported formats: ${unsupportedImages.map(i => i.url.split('.').pop()).join(', ')}`);
+  }
+
+  if (supportedImages.length === 0) {
+    return {
+      groups: [],
+      ungrouped: images.map(img => ({
+        id: img.id,
+        url: img.url,
+        reason: 'Unsupported image format. Supported: PNG, JPEG, WebP, GIF.',
+      })),
+    };
+  }
+
+  console.log(`Analyzing ${supportedImages.length} images for grouping (${unsupportedImages.length} skipped)...`);
 
   // Prepare image content for multimodal analysis
-  const imageContents = images.map((img, idx) => ([
+  const imageContents = supportedImages.map((img, idx) => ([
     {
       type: 'image_url',
       image_url: { url: img.url }
@@ -89,7 +120,7 @@ If uncertain, keep images ungrouped.`
             ...imageContents,
             {
               type: 'text',
-              text: `Analyze these ${images.length} product images. Group images that show the SAME product from different angles. Call the group_products function with your analysis.`
+              text: `Analyze these ${supportedImages.length} product images. Group images that show the SAME product from different angles. Call the group_products function with your analysis.`
             }
           ]
         }
@@ -193,7 +224,7 @@ If uncertain, keep images ungrouped.`
   console.log(`AI found ${result.groups?.length || 0} product groups, ${result.ungrouped?.length || 0} ungrouped`);
 
   // Map image IDs back to URLs
-  const imageMap = new Map(images.map(img => [img.id, img.url]));
+  const imageMap = new Map(supportedImages.map(img => [img.id, img.url]));
 
   const groups: ProductGroup[] = (result.groups || []).map((group: any) => ({
     suggestedName: group.suggestedName,
@@ -216,11 +247,18 @@ If uncertain, keep images ungrouped.`
     },
   }));
 
-  const ungrouped = (result.ungrouped || []).map((u: any) => ({
-    id: u.id,
-    url: imageMap.get(u.id) || '',
-    reason: u.reason || 'Could not determine product identity',
-  }));
+  const ungrouped = [
+    ...(result.ungrouped || []).map((u: any) => ({
+      id: u.id,
+      url: imageMap.get(u.id) || '',
+      reason: u.reason || 'Could not determine product identity',
+    })),
+    ...unsupportedImages.map(img => ({
+      id: img.id,
+      url: img.url,
+      reason: 'Unsupported image format. Supported: PNG, JPEG, WebP, GIF.',
+    })),
+  ];
 
   return { groups, ungrouped };
 }
