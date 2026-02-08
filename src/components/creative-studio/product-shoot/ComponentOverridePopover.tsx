@@ -45,6 +45,10 @@ export function ComponentOverridePopover({
   const materials = getMaterialsForComponent(componentType);
   const isModified = selectedMaterial !== currentMaterial || selectedColor !== currentColor;
   
+  // Look up metadata for the selected material
+  const selectedMaterialOption = materials.find(m => m.value === selectedMaterial);
+  const hasFixedColor = selectedMaterialOption?.fixedColor != null;
+  
   // Check if this material is color-matched (inherits from upper)
   const isColorMatched = selectedMaterial === 'Matte Plastic (Coordinated)' || selectedMaterial === 'Metal (Coordinated)' || selectedMaterial === 'Translucent (Coordinated)';
 
@@ -76,6 +80,14 @@ export function ComponentOverridePopover({
       setSelectedHex(upperColorHex || '');
     }
   }, [isColorMatched, upperColor, upperColorHex]);
+
+  // Auto-set color when a fixed-color material is selected
+  useEffect(() => {
+    if (hasFixedColor && selectedMaterialOption) {
+      setSelectedColor(selectedMaterialOption.fixedColor!);
+      setSelectedHex(selectedMaterialOption.fixedColorHex || '');
+    }
+  }, [selectedMaterial, hasFixedColor]);
 
   const handleColorPresetClick = (preset: typeof COLOR_PRESETS[number]) => {
     setSelectedColor(preset.name);
@@ -197,6 +209,22 @@ export function ComponentOverridePopover({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Color automatically synced with upper component
+                </p>
+              </div>
+            ) : hasFixedColor ? (
+              /* Fixed color: show locked state with material's inherent color */
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-5 h-5 rounded border border-border/50 flex-shrink-0"
+                    style={{ backgroundColor: selectedMaterialOption?.fixedColorHex || '#888' }}
+                  />
+                  <span className="text-sm">
+                    <strong>{selectedMaterialOption?.fixedColor}</strong>
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Inherent finish — color defined by material
                 </p>
               </div>
             ) : (
