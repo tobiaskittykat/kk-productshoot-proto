@@ -1,46 +1,48 @@
 
 
-# Add "Translucent Plastic (Color-Matched)" Buckle Option
+# Improve Shoe Component Lining Detection
 
-## What's Missing
+## Problem
 
-There are currently two translucent buckle options — "Translucent (Clear)" and "Translucent (Rose Gold)" — but neither auto-syncs with the upper's color. A color-matched translucent plastic option should exist alongside the existing Matte Plastic and Metal color-matched variants.
+The AI analysis prompt currently describes lining as optional and says "Many styles have no lining - just exposed cork footbed." This biases the model toward returning `null` for lining. But nearly all standard Birkenstocks have a **suede footbed lining** -- the thin microfiber/suede layer that sits on top of the cork-latex base. This is an important component for customization (e.g., changing its color).
+
+Because the analysis returns `null`, the `ShoeComponentsPanel` filters it out entirely (it only renders components where `comp.material` is truthy), so users never even see the lining row and can't override it.
 
 ## Changes
 
-### 1. `src/lib/birkenstockMaterials.ts` -- Add new material entry
+### 1. `supabase/functions/analyze-shoe-components/index.ts` -- Improve the LINING section of the system prompt
 
-Add a new buckle material in the **Plastic** or **Special** category:
+Update the `LINING` description so the AI knows that:
+- Nearly all standard Birkenstock models have a thin suede lining on the footbed surface
+- Only fully molded EVA shoes (like the Arizona EVA) truly lack a lining
+- When in doubt, default to detecting suede lining rather than returning null
 
+Updated prompt section:
 ```
-{ value: 'Translucent (Coordinated)', label: 'Translucent Plastic (Color-Matched)', category: 'Special' }
+**LINING** (Required for most models)
+The thin surface layer on TOP of the footbed that the foot directly touches.
+IMPORTANT: Nearly ALL standard Birkenstock models have a suede lining on the footbed.
+This is a thin microfiber/suede layer on top of the cork-latex base — it is NOT the cork itself.
+Types: Suede (most common — thin, soft nap texture on footbed surface), 
+       Shearling (fluffy, cream or black — winter models), 
+       Wool Felt, Microfiber
+Color: Usually natural tan/sand for suede, cream for shearling, black for dark shearling
+Only return null for fully molded EVA shoes (e.g. Arizona EVA) where the entire shoe 
+is one-piece plastic with no separate lining layer.
 ```
 
-This sits alongside the existing translucent options.
+Also bump the `analysisVersion` from `"1.0"` to `"1.1"` so we can distinguish re-analyzed results.
 
-### 2. `src/hooks/useShoeComponents.ts` -- Extend sync logic
+### 2. Redeploy the edge function
 
-Update the buckle auto-sync condition to also trigger for `Translucent (Coordinated)`:
-
-```
-Before: material === 'Matte Plastic (Coordinated)' || material === 'Metal (Coordinated)'
-After:  material === 'Matte Plastic (Coordinated)' || material === 'Metal (Coordinated)' || material === 'Translucent (Coordinated)'
-```
-
-### 3. `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` -- Extend locked-color detection
-
-Update the `isColorMatched` check to include the new translucent option so the color picker locks and shows "Matches Upper: [color]" when selected.
-
-## Behavior
-
-When a user selects "Translucent Plastic (Color-Matched)" for buckles:
-- The color picker locks and displays "Matches Upper: [Color]"
-- The buckle color auto-syncs with the upper
-- The prompt describes it as e.g. "Translucent (Coordinated) in Moss Green" so the AI generates a tinted translucent buckle matching the upper
+After updating the prompt, the `analyze-shoe-components` function needs to be redeployed so the new prompt takes effect. You can then re-analyze your Gizeh to verify lining is detected.
 
 ## Files Changed
 
-- `src/lib/birkenstockMaterials.ts` (1 line added)
-- `src/hooks/useShoeComponents.ts` (1 condition expanded)
-- `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` (1 condition expanded)
+- `supabase/functions/analyze-shoe-components/index.ts` (prompt text updated, version bumped)
 
+## What Will Happen After This
+
+- Re-running "Analyze Components" on the Gizeh should detect the suede footbed lining
+- The Lining row will appear in the Shoe Components panel, allowing material/color overrides
+- Existing SKUs will need re-analysis to pick up the lining (clicking "Re-analyze Components")
