@@ -1,74 +1,82 @@
 
 
-# Enhance the Hover Popover with Interactive Angle Viewer
+# Remove Duplicate Image — Make Grid Thumbnail the Interactive Preview
 
-## What Changes
+## The Problem
 
-The product grid stays exactly as-is. The hover popover that appears when you hover over a product thumbnail gets upgraded with 4 new features:
+Right now, hovering a product shows a popover with a **second big image** of the same product that's already visible in the grid. That's redundant — you're seeing the same shoe twice.
 
-1. **Default 3/4 featured image** at the top of the popover
-2. **Clickable angle thumbnails** that swap the featured image (session only)
-3. **Fullscreen dialog** when clicking the featured image
-4. **Edit button** (pencil icon) in the top-right corner to open the SKU editor
+## The Fix
 
-## Popover Layout (Before vs After)
+The grid thumbnail **is** the big image. Enhance it directly:
+
+1. **Click the grid thumbnail to go fullscreen** (for the selected product)
+2. **Hover popover shows only the angle strip** — small thumbnails + product name + edit button (no featured image)
+3. **Clicking an angle in the popover swaps the grid thumbnail** to that angle (session only)
+
+## Layout Comparison
 
 ```text
-BEFORE:                          AFTER:
-+---------------------------+    +-------------------------------+
-|  Arizona                  |    |  Arizona              [Edit]  |
-|  Taupe EVA                |    |  Taupe EVA                    |
-+---------------------------+    +-------------------------------+
-| [3/4] [Side] [Sole] [Top]|    |                               |
-+---------------------------+    |    (Featured angle image)     |
-|  4 angles                 |    |    ~140px tall, clickable     |
-+---------------------------+    |    for fullscreen             |
-                                 |                               |
-                                 +-------------------------------+
-                                 | [3/4] [Side] [Sole] [Top]     |
-                                 +-------------------------------+
-                                 |  4 angles                     |
-                                 +-------------------------------+
+BEFORE (hover popover):              AFTER (hover popover):
++-------------------------------+    +-------------------------------+
+|  Gizeh              [Edit]    |    |  Gizeh              [Edit]    |
+|  Navy                         |    |  Navy                         |
++-------------------------------+    +-------------------------------+
+|                               |    | [3/4] [Side] [Sole] [Top]    |
+|    (DUPLICATE big image)      |    +-------------------------------+
+|    Same shoe shown again      |    |  4 angles                     |
+|                               |    +-------------------------------+
++-------------------------------+
+| [3/4] [Side] [Sole] [Top]    |    Grid thumbnail itself:
++-------------------------------+    - Shows active angle (default 3/4)
+|  4 angles                     |    - Click = fullscreen (if selected)
++-------------------------------+    - Click = select (if not selected)
 ```
 
 ## Technical Details
 
-### 1. Enhance `ProductAnglePreview.tsx`
+### 1. `ProductAnglePreview.tsx` — Remove featured image, add angle callback
 
-This is the main change. The component gets upgraded from a static grid to an interactive viewer:
+Changes:
+- **Remove** the featured image section (the `button` with `h-[140px]` image, lines 99-117)
+- **Remove** the fullscreen Dialog (lines 156-180) — fullscreen moves to the parent
+- **Remove** `isFullscreen` state
+- **Add** new prop: `onAngleChange?: (thumbnailUrl: string, fullUrl: string) => void`
+- When a small angle thumbnail is clicked, call `onAngleChange` with that angle's URLs in addition to setting `activeAngleId`
+- Keep: header (name + edit button), angle strip (clickable thumbnails with active highlight), angle count
 
-- Add `useState` for `activeAngleId` -- defaults to the angle where `angle === '3/4'`, falls back to first angle
-- Add `useState` for `isFullscreen` -- controls fullscreen dialog
-- Fetch `full_url` in addition to `thumbnail_url` from `scraped_products` (needed for fullscreen)
-- Add optional `onEditClick` prop for the edit button
-- Render a **featured image** (~140px height) at the top showing the active angle's thumbnail, clickable to open fullscreen
-- Make the small angle thumbnails **clickable** to swap the featured image
-- Add a **pencil icon button** next to the product name (top-right)
-- Add a **fullscreen Dialog** following the same pattern as `ReferenceThumbnail.tsx`
+### 2. `ProductShootStep2.tsx` — Lift angle state, add fullscreen to grid
 
-### 2. Clean up `ProductShootStep2.tsx`
-
-- Remove the `ProductAngleViewer` import (line 20)
-- Remove the `ProductAngleViewer` block above the product grid (lines 386-397)
-- Pass `onEditClick` prop to `ProductAnglePreview` inside the `HoverCardContent` so the edit button triggers the `EditSKUModal`
-
-### 3. Clean up `index.ts`
-
-- Remove the `ProductAngleViewer` barrel export (line 14)
+Changes:
+- **Add state**: `activeAngleUrls: Record<string, { thumbnail: string; full: string }>` — maps SKU ID to the currently selected angle's URLs
+- **Add state**: `fullscreenImage: { url: string; skuName: string; angle?: string } | null` — controls the fullscreen dialog
+- **Grid thumbnail image**: Instead of always using `display_image_url || composite_image_url`, check `activeAngleUrls[sku.id]?.thumbnail` first. This way, clicking an angle in the popover changes the grid image.
+- **Grid thumbnail click behavior**:
+  - If product is **already selected**: open fullscreen dialog (using `activeAngleUrls[sku.id]?.full` or the composite URL)
+  - If product is **not selected**: select it (existing behavior)
+- **Add expand icon**: Show a small zoom/expand icon overlay on the selected product's grid thumbnail (hover-visible, similar to `ReferenceThumbnail`)
+- **Pass `onAngleChange`** to `ProductAnglePreview`: when called, updates `activeAngleUrls` for that SKU
+- **Add fullscreen Dialog** in ProductShootStep2 (simple dialog with full-res image, same pattern as existing code)
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/creative-studio/product-shoot/ProductAnglePreview.tsx` | Add featured image (default 3/4), clickable angle swapping, fullscreen dialog, edit button |
-| `src/components/creative-studio/product-shoot/ProductShootStep2.tsx` | Remove `ProductAngleViewer` usage; pass `onEditClick` to `ProductAnglePreview` |
-| `src/components/creative-studio/product-shoot/index.ts` | Remove `ProductAngleViewer` export |
+| `src/components/creative-studio/product-shoot/ProductAnglePreview.tsx` | Remove featured image and fullscreen dialog; add `onAngleChange` prop |
+| `src/components/creative-studio/product-shoot/ProductShootStep2.tsx` | Add `activeAngleUrls` state for grid image swapping; add fullscreen dialog; split click behavior (select vs. expand) |
 
-### Key Decisions
+### Behavior Summary
 
-- **Session-only state**: The active angle lives in `useState` inside the popover. Each time the hover closes and reopens, it resets to the 3/4 default.
-- **3/4 default**: Matches `angle === '3/4'` from the database -- the pair shot.
-- **Fullscreen pattern**: Reuses the exact same Dialog approach from `ReferenceThumbnail.tsx` (max-w-2xl, object-contain, max-h-[70vh]).
-- **No new components**: Everything lives inside the enhanced `ProductAnglePreview`. The `ProductAngleViewer.tsx` file can be left as-is (dead code) or deleted -- it's no longer imported anywhere.
-- **Grid untouched**: The 3-product selection grid, HoverCard trigger, selection indicators -- all stay exactly the same.
+| Action | Unselected Product | Selected Product |
+|--------|-------------------|-----------------|
+| Click grid thumbnail | Selects the product | Opens fullscreen |
+| Hover grid thumbnail | Shows angle strip popover | Shows angle strip popover |
+| Click angle in popover | Swaps grid thumbnail image | Swaps grid thumbnail image |
+| Click edit in popover | Opens SKU editor | Opens SKU editor |
+
+### Edge Cases
+
+- **Default angle**: When a product first appears, `activeAngleUrls` has no entry for it, so the grid shows the composite image (existing behavior). The popover internally defaults to 3/4 via its own `activeAngleId` state. On first angle click, both sync up.
+- **HoverCard closing**: The `activeAngleId` inside `ProductAnglePreview` resets on each mount (popover open). But `activeAngleUrls` in the parent persists for the session, so the grid thumbnail stays on the last-clicked angle.
+- **No angles available**: Falls back to composite image for grid display; popover shows "No angles available" (existing behavior).
 
