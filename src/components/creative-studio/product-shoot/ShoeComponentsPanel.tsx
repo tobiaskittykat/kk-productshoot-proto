@@ -217,11 +217,6 @@ export function ShoeComponentsPanel({
         <CollapsibleTrigger asChild>
           <button className="w-full flex items-center justify-between py-1 hover:bg-secondary/30 rounded-md px-1 transition-colors">
             <div className="flex items-center gap-2">
-              {isOpen ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
               <h4 className="text-sm font-medium">Shoe Components</h4>
               {hasOverrides && !isOpen && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-medium">
@@ -249,6 +244,11 @@ export function ShoeComponentsPanel({
                   onCheckedChange={onAttachReferenceImagesChange}
                 />
               </div>
+              {isOpen ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
             </div>
           </button>
         </CollapsibleTrigger>
