@@ -528,7 +528,13 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
         sections.push("=== BRANDING DETAILS (from analysis - use EXACT text) ===");
         sections.push("⚠️ CRITICAL: Use the EXACT branding text below. Do NOT assume or generalize.");
         if (branding.footbedText) {
-          sections.push(`Footbed text: ${branding.footbedText}`);
+          const footbedLines = branding.footbedText.split('\n').filter(Boolean);
+          if (footbedLines.length > 1) {
+            const described = footbedLines.map((line: string) => `"${line.trim()}"`).join(', ');
+            sections.push(`Footbed text (multi-line stamp): ${described}`);
+          } else {
+            sections.push(`Footbed text: ${branding.footbedText}`);
+          }
         }
         if (branding.footbedLogo) {
           sections.push(`Footbed logo: ${branding.footbedLogo}`);
