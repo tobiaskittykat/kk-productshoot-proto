@@ -1,107 +1,94 @@
 
 
-# Fix: Heelstrap Leaking into Arizona Prompts + Footbed Missing from Overrides
+# Fix: Multi-Shoe Hallucination + Keep 6 Reference Images
 
-## What's Actually Happening
+## Summary
 
-I traced through the edge function logs and found the exact problem. Here's a real prompt from your Arizona EVA generation:
+The shot type descriptions themselves are well-written and detailed. The issue is that:
+- The Prompt Agent ignores shoe count from the shot direction and writes "a pair of..." for every shot
+- The image generator (Gemini 3 Pro) receives up to 10 reference images of the same shoe and interprets them as separate shoes
+- There is no explicit shoe-count enforcement at any layer
 
+We keep **up to 6 reference images** for detail fidelity, but add strict shoe-count rules at every layer.
+
+## Changes
+
+### 1. Add `shoeCount` to Angle Configs + Inject Entity Count into Prompt Builders
+
+**File:** `src/components/creative-studio/product-shoot/shotTypeConfigs.ts`
+
+Add a `shoeCount: 1 | 2` property to each `productFocusAngleOptions` entry:
+- `hero`: 1
+- `side-profile`: 1
+- `detail-closeup`: 1
+- `top-down`: 2
+- `sole-view`: 2
+- `pair-shot`: 2
+- `lifestyle`: 2
+
+Update `buildProductFocusPrompt` to inject an explicit entity count line right after the opening line:
 ```
-=== PRODUCT COMPONENTS (from analysis) ===
-UPPER: EVA in Taupe
-FOOTBED: EVA in Taupe
-SOLE: EVA in Taupe
-BUCKLES: Matte Plastic in Translucent Brown
-
-=== PRODUCT COMPONENT OVERRIDES ===
-UPPER: EVA in Wine Red (was: EVA in Taupe)
-SOLE: EVA in Wine Red (was: EVA in Taupe)
-BUCKLES: Matte Plastic (Coordinated) in Wine Red
-HEELSTRAP: EVA in Wine Red     <-- PHANTOM! Arizona has no heelstrap
-```
-
-The database correctly has `heelstrap: null` for the Arizona. But when you used quick customization (e.g., "wine red"), the AI returned a heelstrap override anyway. Three things failed:
-
-1. **The quick customization AI** (`interpret-shoe-customization`) hallucinated a heelstrap override even though `currentComponents.heelstrap` was absent from the input
-2. **The client** (`useQuickCustomization.ts`) blindly applied it without checking if the shoe actually has that component
-3. **The prompt builder** (`generate-image/index.ts`, line 609) has an explicit `else if (override && !orig)` branch that includes overrides even when the original component doesn't exist -- it was designed for "additions" but becomes a loophole for phantom components
-
-## About the Footbed
-
-The footbed IS in your prompt -- it's listed in the `PRODUCT COMPONENTS` section (`FOOTBED: EVA in Taupe`). It's just not in the OVERRIDES section because the AI correctly kept it unchanged (Rule 7: footbed stays EVA/cork unless explicitly requested). So the prompt agent does see it. This is working correctly.
-
-## About Sequential Generation
-
-Sequential generation is NOT the cause. Each sequential call uses the same `buildRequestBody` closure, which captures `originalComponents` and `componentOverrides` identically for every image. The heelstrap leak happens earlier, during the quick customization step, before any generation begins.
-
-## The Fix (3 layers of defense)
-
-### Layer 1: AI Instructions (prevent hallucination)
-
-**File:** `supabase/functions/interpret-shoe-customization/index.ts`
-
-Add a new critical rule to the system prompt:
-
-> "ONLY return components that are present and non-null in CURRENT SHOE COMPONENTS above. If a component (e.g., heelstrap) is missing from the current state, the shoe does NOT have that part -- do NOT include it in your response, even for 'all' requests."
-
-Update examples like "all black leather" to add "(if shoe has heelstrap)" qualifiers.
-
-### Layer 2: Client-side guard (catch any hallucination that slips through)
-
-**File:** `src/hooks/useQuickCustomization.ts`
-
-After the AI returns overrides (around line 102, after the retry loop), add a filter:
-
-```typescript
-// Filter out overrides for components the shoe doesn't have
-for (const key of Object.keys(validOverrides)) {
-  if (!currentComponents[key as ComponentType]) {
-    console.warn(`[QuickCustomization] Filtered phantom component: ${key}`);
-    delete validOverrides[key];
-  }
-}
+ENTITY COUNT (MANDATORY): Exactly [1/2] shoe(s) in the frame. Do NOT add extra shoes beyond this count.
 ```
 
-### Layer 3: Prompt builder guard (last line of defense)
+Update `buildOnFootPrompt` to add:
+```
+ENTITY COUNT (MANDATORY): Exactly 2 shoes (one pair worn on feet). Do NOT add extra loose shoes.
+```
+
+Update `buildLifestylePrompt` to add:
+```
+ENTITY COUNT (MANDATORY): Exactly 2 shoes (one pair worn by the model). Do NOT add extra loose shoes.
+```
+
+### 2. Add Entity Count Rule to Prompt Agent System Prompt
 
 **File:** `supabase/functions/generate-image/index.ts`
 
-Change line 609 from:
-```typescript
-} else if (override && !orig) {
-  changedComponents.push(`${type.toUpperCase()}: ...`);
-}
+Add a new critical rule to the prompt agent's system prompt (after rule 9, around line 709):
+
 ```
-To:
-```typescript
-} else if (override && !orig) {
-  // Skip phantom overrides -- if the original shoe doesn't have this
-  // component, don't inject it into the prompt
-  console.warn(`Skipping phantom override for ${type} (no original component)`);
-}
+**ENTITY COUNT (CRITICAL)**:
+- The shot direction specifies how many shoes should appear. Respect this exactly.
+- For SINGLE SHOE angles (hero, side profile, detail close-up): Write "a single [Brand] [Model]" — NOT "a pair of". Only ONE shoe in frame.
+- For PAIR angles (top-down, sole-view, pair-shot, on-foot, full body): Write "a pair of [Brand] [Model]" — exactly TWO shoes.
+- NEVER describe more shoes than the entity count specifies.
+- If the brief says "ENTITY COUNT (MANDATORY): Exactly 1 shoe" — your prompt MUST describe a single shoe, singular language throughout.
 ```
 
-### Layer 4: Analysis hint fix
+### 3. Cap Reference Images to 6 for Image Generator + Add Clarifying Instruction
 
-**File:** `supabase/functions/analyze-shoe-components/index.ts`
+**File:** `supabase/functions/generate-image/index.ts`
 
-Line 46 currently says: *"Sandals (Arizona, Florida) also have heelstraps."*
+In the `generateOne` function (line 1120), change the cap from 10 to 6:
+```typescript
+const attachCount = Math.min(productUrls.length, 6);
+```
 
-Change to: *"Some sandals like the Florida and Milano have heelstraps. Slide sandals like the Arizona and Madrid do NOT have heelstraps -- they are open-back. Analyze the images to determine if a back strap is present."*
+Update the fidelity instruction (line 1127-1130) to include entity-count awareness:
+```
+These [N] images show the SAME SINGLE product from different angles — they are NOT separate products. 
+Generate ONLY the number of shoes specified in the prompt text (1 or 2). 
+Do NOT interpret multiple reference angles as multiple separate shoes.
+```
 
-This doesn't affect the current Arizona (already correctly analyzed as `heelstrap: null`), but prevents future re-analyses from making the same mistake.
+Keep prompt agent reference cap at 10 (it needs all angles for accurate material/detail description).
+
+### 4. Keep Prompt Agent References at Up To 10
+
+No change to the prompt agent section (line 740). The prompt agent (Gemini 2.5 Flash, text-only output) benefits from seeing all angles for accurate description. Only the image generator cap changes.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/interpret-shoe-customization/index.ts` | Add critical rule: only return components present in currentComponents; update examples |
-| `src/hooks/useQuickCustomization.ts` | Add client-side guard to filter overrides for non-existent components |
-| `supabase/functions/generate-image/index.ts` | Change `override && !orig` branch to skip phantom overrides instead of including them |
-| `supabase/functions/analyze-shoe-components/index.ts` | Fix incorrect hint that Arizona has heelstraps |
+| `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` | Add `shoeCount` to angle options; inject entity count constraint into all 3 prompt builders |
+| `supabase/functions/generate-image/index.ts` | Add entity count rule to prompt agent; cap image generator refs to 6; add "same product, different angles" clarification with entity count |
 
-## Summary
+## Expected Outcome
 
-- **Heelstrap in prompt**: Caused by the quick customization AI hallucinating a heelstrap override for a shoe that doesn't have one, with no guard at any level to catch it. Fixed at 3 layers.
-- **Footbed not in overrides**: This is correct behavior -- the footbed wasn't changed, so it's only listed in the base components section (which the prompt agent does see).
-- **Sequential generation**: Not related. The issue occurs during the customization step, before generation begins.
+- Hero, side-profile, detail shots: exactly 1 shoe in frame
+- Pair, sole, top-down, on-foot, full body shots: exactly 2 shoes
+- No more 3+ shoe compositions
+- Detail fidelity preserved with up to 6 reference images
+- Prompt agent still sees all angles (up to 10) for accurate text descriptions
