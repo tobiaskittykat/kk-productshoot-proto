@@ -170,7 +170,7 @@ export const initialProductShootState: ProductShootState = {
     clothing: 'auto',
     useOnBrandDefaults: true,
   },
-  productShotType: 'lifestyle',
+  productShotType: 'product-focus',
   // On-foot specific config
   onFootConfig: {
     gender: 'auto',
