@@ -280,9 +280,9 @@ export const initialCreativeStudioState: CreativeStudioState = {
   outputFormat: 'social-post',
   mediaType: 'image',
   targetPersona: null,
-  useCase: 'lifestyle',
+  useCase: 'product',
   prompt: '',
-  selectedTypeCard: 'lifestyle',
+  selectedTypeCard: 'product',
 
   concepts: [],
   savedConcepts: [],
