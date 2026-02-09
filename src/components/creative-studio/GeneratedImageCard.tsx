@@ -1,5 +1,5 @@
 import { useState, DragEvent } from 'react';
-import { Download, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, Check, GripVertical, Eye } from 'lucide-react';
+import { Download, RefreshCw, Pencil, Trash2, Loader2, AlertTriangle, Check, GripVertical } from 'lucide-react';
 import { GeneratedImage } from './types';
 import { cn } from '@/lib/utils';
 import { ProductIntegrityBadge } from './product-shoot/ProductIntegrityBadge';
@@ -116,13 +116,7 @@ export const GeneratedImageCard = ({
   const handleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     
-    // Toggle selection if handler provided
-    if (onToggleSelect && image.status === 'completed') {
-      onToggleSelect(image);
-      return;
-    }
-    
-    // Fallback to original onSelect behavior
+    // Click card body = open detail/maximize modal
     if (onSelect && image.status === 'completed') {
       onSelect(image);
     }
@@ -217,13 +211,6 @@ export const GeneratedImageCard = ({
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onSelect?.(image); }}
-              className="p-2.5 rounded-full bg-white/90 hover:bg-white text-foreground transition-colors"
-              title="View Details"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-            <button
               onClick={(e) => { e.stopPropagation(); handleDownload(); }}
               className="p-2.5 rounded-full bg-white/90 hover:bg-white text-foreground transition-colors"
               title="Download"
@@ -243,6 +230,22 @@ export const GeneratedImageCard = ({
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
+        )}
+
+        {/* Selection Checkbox - bottom-right corner */}
+        {onToggleSelect && image.status === 'completed' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(image); }}
+            className={cn(
+              "absolute bottom-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all",
+              isSelected
+                ? "bg-accent text-accent-foreground shadow-md"
+                : "bg-black/40 text-white opacity-0 group-hover:opacity-100"
+            )}
+            title={isSelected ? "Deselect" : "Select"}
+          >
+            <Check className="w-3.5 h-3.5" />
+          </button>
         )}
 
         {/* Hover Overlay for failed/NSFW - just delete button */}
