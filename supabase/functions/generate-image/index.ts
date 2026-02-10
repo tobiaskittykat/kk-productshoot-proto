@@ -538,22 +538,39 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       }
 
       // === BRANDING DETAILS (from component analysis) ===
+      // Shot-type-aware: only inject branding elements that are actually visible
       const branding = (orig as any).branding;
+      const visualShotType = request.productShootConfig?.shotType;
       if (branding) {
         sections.push("=== BRANDING DETAILS (from analysis - use EXACT text) ===");
         sections.push("⚠️ CRITICAL: Use the EXACT branding text below. Do NOT assume or generalize.");
-        if (branding.footbedText) {
-          const footbedLines = branding.footbedText.split('\n').filter(Boolean);
-          if (footbedLines.length > 1) {
-            const described = footbedLines.map((line: string) => `"${line.trim()}"`).join(', ');
-            sections.push(`Footbed text (multi-line stamp): ${described}`);
-          } else {
-            sections.push(`Footbed text: ${branding.footbedText}`);
+        
+        // Footbed text/logo: skip for on-foot/lifestyle (hidden by foot),
+        // use simplified dynamic descriptor for productFocus
+        if (visualShotType === 'onFoot' || visualShotType === 'lifestyle') {
+          // Footbed is hidden — skip entirely
+          console.log(`[branding] Skipping footbed branding for shot type: ${visualShotType}`);
+        } else if (visualShotType === 'productFocus') {
+          // Use dynamic material from analyzed components instead of verbose text
+          const footbedMaterial = orig.footbed?.material || 'cork';
+          sections.push(`Footbed: branded ${footbedMaterial} footbed with maker's stamp and logo (as shown in reference images)`);
+        } else {
+          // No shot type specified or unknown — include full branding as before
+          if (branding.footbedText) {
+            const footbedLines = branding.footbedText.split('\n').filter(Boolean);
+            if (footbedLines.length > 1) {
+              const described = footbedLines.map((line: string) => `"${line.trim()}"`).join(', ');
+              sections.push(`Footbed text (multi-line stamp): ${described}`);
+            } else {
+              sections.push(`Footbed text: ${branding.footbedText}`);
+            }
+          }
+          if (branding.footbedLogo) {
+            sections.push(`Footbed logo: ${branding.footbedLogo}`);
           }
         }
-        if (branding.footbedLogo) {
-          sections.push(`Footbed logo: ${branding.footbedLogo}`);
-        }
+        
+        // Buckle engravings: always include (visible in all shot types)
         if (branding.buckleEngravings && Array.isArray(branding.buckleEngravings)) {
           branding.buckleEngravings.forEach((engraving: any, i: number) => {
             sections.push(`Buckle ${i + 1} (${engraving.location}): "${engraving.text}" in ${engraving.style}`);
@@ -698,9 +715,10 @@ CRITICAL RULES:
     **⚠️ BRANDING FIDELITY (CRITICAL)**:
     - When a "BRANDING DETAILS" section is provided in the brief, use the EXACT text specified for each component.
     - Do NOT assume all buckles say "BIRKENSTOCK" — many models have abbreviated engravings like "BIRKEN" or "BIRK" on individual buckle bars. Use ONLY what the branding data specifies.
-    - Footbed wordmarks and logos must be described as specified in the branding data.
+    - Buckle engravings must use the EXACT text specified in BRANDING DETAILS.
+    - For footbed branding, defer to what is visible in reference images rather than attempting to render specific text. If a simplified footbed descriptor is provided (e.g., "branded Cork-Latex footbed with maker's stamp"), use that natural description instead of verbose stamp text.
     - If NO "BRANDING DETAILS" section exists in the brief, describe branding as visible in the reference images without assuming specific text. Fall back to generic: "signature branding on footbed and buckle hardware."
-    - Your final prompt MUST explicitly describe and emphasize these branding elements to ensure the image generator renders them faithfully.
+    - Your final prompt MUST explicitly describe buckle engravings to ensure fidelity. For footbed branding, a natural reference to the maker's stamp is sufficient.
     - **EMPHASIZE PRODUCT FIDELITY NATURALLY**: Weave product integrity requirements into your evocative description. The product must match reference images EXACTLY - same silhouette, same hardware placement, same materials, same branding. Make this emphasis feel natural, not like a checklist.
 
 4. **BRAND GUIDELINES (MUST RESPECT)**:
