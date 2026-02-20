@@ -1,79 +1,57 @@
 
 
-# Replace Edit Product Modal with Full-Page Inline Editor
+# Make Product Editor Fully User-Friendly with Enlarged Image View
 
-## Problem
-The Edit Product modal (`max-w-lg`, ~32rem wide) is too narrow to be usable. The AI Analysis panel alone contains 3 collapsible sections with inline fields, and combined with Product Name, SKU Code, Description, and the image grid, everything is cramped and hard to interact with.
+## Overview
+Two changes: (1) overhaul the `EditableAnalysisPanel` so all fields use proper, visible form inputs and sections are open by default on the edit page, and (2) add click-to-enlarge on product images using a fullscreen Dialog.
 
-## Solution
-Replace the modal with a full-page edit view at `/products/:id` that uses the full screen width with a two-column layout:
+## Changes
 
-**Left column (wider):** Product metadata + AI Analysis
-- Product Name, SKU Code, Description fields with proper spacing
-- Editable AI Analysis panel (components, branding, classification) with room to breathe
+### 1. EditableAnalysisPanel -- proper inputs and open by default
 
-**Right column (narrower):** Product Images
-- Image grid showing all angles with delete/add controls
-- Larger thumbnails since we have more space
+**File: `src/components/creative-studio/product-shoot/EditableAnalysisPanel.tsx`**
 
-**Top bar:** Product name as title, with Back, Delete, and Save Changes buttons
+- Add `initialOpen?: boolean` prop (default `false` for backward compat)
+- Use `initialOpen` to set initial `open` state: `useState(initialOpen ?? false)`
+- **InlineField**: Replace the raw `<input>` with the shadcn `Input` component. Add `Label` above the field. Increase text from `text-xs` to `text-sm`.
+- **InlineTextarea**: Replace raw `<textarea>` with shadcn `Textarea`. Add `Label` above.
+- **EditableComponentRow**: Wrap each row in a card-style div (`bg-background rounded-lg border p-3`) instead of just a bottom border. Increase color picker from 16px to 24px. Use `text-sm` for labels.
+- **SectionHeader**: Increase label text from `text-[11px]` to `text-sm`. Make "Edited" badge more visible (`text-xs` instead of `text-[9px]`). Larger reset button.
+- **Outer wrapper**: Remove the collapsible trigger's tiny text sizes. Use `text-sm` throughout.
 
-## What Changes
+### 2. ProductEdit page -- image enlargement + grid improvements
 
-### 1. New page: `src/pages/ProductEdit.tsx`
-- Full-page layout with sticky header (Back button, product name, Save/Delete actions)
-- Two-column grid below: left for metadata + analysis, right for images
-- All existing logic from `EditSKUModal` (state, save, delete, upload) moves here
-- No modal wrapper -- just a regular page
+**File: `src/pages/ProductEdit.tsx`**
 
-### 2. Route: Add `/products/:id` to `App.tsx`
+- Add state: `const [enlargedImage, setEnlargedImage] = useState<string | null>(null)`
+- Wrap each image thumbnail in a clickable area -- clicking opens a Dialog showing the full-size image
+- Add an `Expand` icon overlay on hover (similar to `ReferenceThumbnail` pattern already in the codebase)
+- Add a fullscreen `Dialog` at the bottom of the component that shows `enlargedImage` when set
+- Switch image grid from `grid-cols-3` to `grid-cols-2` for larger thumbnails
+- Pass `initialOpen={true}` to `EditableAnalysisPanel`
 
-### 3. Products page: Replace edit modal with navigation
-- In `Products.tsx`, clicking the Edit button navigates to `/products/:id` instead of opening a modal
-- Remove `EditSKUModal` import and `editingSkuId` state
-
-### 4. Keep `EditSKUModal` for other entry points
-- The ProductPickerModal still uses it as a quick-edit fallback
-- But the primary editing flow is now the full page
-
-## Layout
+### 3. Image Enlarge Dialog markup (in ProductEdit)
 
 ```text
-+-------------------------------------------------------+
-| <- Back to Products    Boston Taupe Suede    [Delete] [Save] |
-+-------------------------------------------------------+
-|                          |                            |
-|  Product Name            |  Product Images (4)        |
-|  [___________________]   |  +----+ +----+ +----+      |
-|                          |  |    | |    | |    |      |
-|  SKU Code                |  +----+ +----+ +----+      |
-|  [___________________]   |  +----+ +------+           |
-|                          |  |    | | +Add |           |
-|  Description             |  +----+ +------+           |
-|  [___________________]   |                            |
-|  [___________________]   |                            |
-|                          |                            |
-|  > AI Analysis -- v1.3   |                            |
-|    Component Breakdown   |                            |
-|    Upper: Suede, Taupe   |                            |
-|    Sole: EVA, Brown      |                            |
-|    ...                   |                            |
-|    Branding Details      |                            |
-|    Classification        |                            |
-+-------------------------------------------------------+
+<Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+  <DialogContent className="max-w-3xl p-0 overflow-hidden">
+    <img src={enlargedImage} className="w-full max-h-[80vh] object-contain bg-secondary" />
+  </DialogContent>
+</Dialog>
 ```
 
-## Files
+Each image thumbnail gets:
+- `cursor-pointer` and `onClick={() => setEnlargedImage(url)}`
+- An `Expand` icon that appears on hover (top-left corner, like ReferenceThumbnail)
+
+## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/pages/ProductEdit.tsx` | **New** -- full-page product editor with two-column layout |
-| `src/App.tsx` | Add route `/products/:id` pointing to `ProductEdit` |
-| `src/pages/Products.tsx` | Replace modal open with `navigate(/products/${id})`, remove EditSKUModal usage |
+| `src/components/creative-studio/product-shoot/EditableAnalysisPanel.tsx` | Add `initialOpen` prop; upgrade all fields to proper Input/Textarea components; increase text sizes; card-style component rows; larger color pickers |
+| `src/pages/ProductEdit.tsx` | Add image enlarge Dialog; switch to 2-col grid; pass `initialOpen={true}`; add Expand icon overlay on thumbnails |
 
 ## What stays the same
-- `EditSKUModal` remains available for other contexts (ProductPickerModal)
-- `EditableAnalysisPanel` component is reused as-is
-- All save/delete/upload logic stays identical, just moves to the page component
+- All save/delete/upload logic unchanged
 - Database schema unchanged
-
+- EditableAnalysisPanel backward-compatible (other callers still get collapsed by default)
