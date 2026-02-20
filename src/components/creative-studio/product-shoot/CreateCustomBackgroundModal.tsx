@@ -102,6 +102,19 @@ export const CreateCustomBackgroundModal = ({
 
       setPrompt(data.prompt);
       setAiAnalysis(data.analysis);
+
+      // Auto-fill name if empty
+      if (!name.trim() && data.analysis?.mood) {
+        const autoName = data.analysis.mood
+          .split(/[\s,]+/)
+          .slice(0, 4)
+          .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+        setName(autoName);
+      } else if (!name.trim()) {
+        setName("Custom Background");
+      }
+
       toast({ title: "Background analyzed!", description: "Edit the prompt if you'd like to refine it." });
     } catch (err) {
       console.error("Analysis error:", err);
@@ -127,7 +140,7 @@ export const CreateCustomBackgroundModal = ({
   };
 
   const canAnalyze = referenceUrls.length > 0 && !isAnalyzing;
-  const canSave = name.trim() && prompt.trim() && !isSaving;
+  const canSave = name.trim() && prompt.trim() && !isSaving && !isAnalyzing;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
