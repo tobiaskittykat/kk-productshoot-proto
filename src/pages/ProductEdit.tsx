@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save } from 'lucide-react';
+import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save, Expand } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +45,7 @@ export default function ProductEdit() {
   const [editedDescription, setEditedDescription] = useState<DescriptionJson | null>(null);
   const [originalComponents, setOriginalComponents] = useState<ComponentsJson | null>(null);
   const [originalDescription, setOriginalDescription] = useState<DescriptionJson | null>(null);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   const { data: skuData, isLoading } = useQuery({
     queryKey: ['edit-sku', skuId],
@@ -306,7 +308,7 @@ export default function ProductEdit() {
               </div>
             </div>
 
-            {/* AI Analysis — now has full width to breathe */}
+            {/* AI Analysis — open by default on this page */}
             <EditableAnalysisPanel
               components={editedComponents}
               description={editedDescription}
@@ -314,6 +316,7 @@ export default function ProductEdit() {
               onDescriptionChange={setEditedDescription}
               originalComponents={originalComponents}
               originalDescription={originalDescription}
+              initialOpen={true}
             />
           </div>
 
@@ -321,22 +324,33 @@ export default function ProductEdit() {
           <div className="lg:col-span-2">
             <div className="sticky top-20">
               <Label className="mb-3 block">Product Images ({totalAngles})</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {angles.map(angle => (
                   <div key={angle.id} className="relative aspect-square group rounded-lg overflow-hidden bg-muted">
                     <img
                       src={angle.thumbnail_url}
                       alt="Product angle"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => setEnlargedImage(angle.thumbnail_url)}
                     />
+                    {/* Expand overlay */}
+                    <button
+                      onClick={() => setEnlargedImage(angle.thumbnail_url)}
+                      className="absolute top-1.5 left-1.5 w-7 h-7 bg-foreground/60 text-background rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="View full size"
+                    >
+                      <Expand className="w-3.5 h-3.5" />
+                    </button>
+                    {/* Delete button */}
                     <button
                       onClick={() => handleDeleteAngle(angle.id)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1.5 right-1.5 w-7 h-7 bg-destructive text-destructive-foreground rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove image"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                     {angle.angle && (
-                      <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-foreground/60 text-background text-[10px] rounded">
+                      <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-foreground/60 text-background text-xs rounded">
                         {angle.angle}
                       </div>
                     )}
@@ -348,15 +362,23 @@ export default function ProductEdit() {
                     <img
                       src={upload.previewUrl}
                       alt="New upload"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => setEnlargedImage(upload.previewUrl)}
                     />
                     <button
-                      onClick={() => handleRemovePending(upload.id)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setEnlargedImage(upload.previewUrl)}
+                      className="absolute top-1.5 left-1.5 w-7 h-7 bg-foreground/60 text-background rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="View full size"
                     >
-                      <X className="w-3 h-3" />
+                      <Expand className="w-3.5 h-3.5" />
                     </button>
-                    <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-accent text-accent-foreground text-[10px] rounded">
+                    <button
+                      onClick={() => handleRemovePending(upload.id)}
+                      className="absolute top-1.5 right-1.5 w-7 h-7 bg-destructive text-destructive-foreground rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-accent text-accent-foreground text-xs rounded">
                       New
                     </div>
                   </div>
@@ -365,11 +387,11 @@ export default function ProductEdit() {
                 {/* Add more */}
                 <label className={cn(
                   "aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30",
-                  "flex flex-col items-center justify-center gap-1 cursor-pointer",
+                  "flex flex-col items-center justify-center gap-1.5 cursor-pointer",
                   "hover:border-accent hover:bg-accent/5 transition-colors"
                 )}>
-                  <Upload className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">Add</span>
+                  <Upload className="w-6 h-6 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Add Images</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -390,6 +412,19 @@ export default function ProductEdit() {
           </div>
         </div>
       </main>
+
+      {/* Enlarged image dialog */}
+      <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+        <DialogContent className="max-w-3xl p-1 overflow-hidden">
+          {enlargedImage && (
+            <img
+              src={enlargedImage}
+              alt="Product image full size"
+              className="w-full max-h-[80vh] object-contain rounded bg-secondary"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
