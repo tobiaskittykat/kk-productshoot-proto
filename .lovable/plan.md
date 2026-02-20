@@ -1,64 +1,79 @@
 
 
-# Fix Memory Limit Failures in Image Generation
+# Replace Edit Product Modal with Full-Page Inline Editor
 
 ## Problem
-The `generate-image` edge function crashes with "Memory limit exceeded" when generating 4 images in parallel. Each image holds large base64 data (~5-10MB for 4K) plus multiple product reference images in memory simultaneously. When the function crashes, the error handler never runs, leaving rows stuck in `pending` status until client-side polling times out (150s).
+The Edit Product modal (`max-w-lg`, ~32rem wide) is too narrow to be usable. The AI Analysis panel alone contains 3 collapsible sections with inline fields, and combined with Product Name, SKU Code, Description, and the image grid, everything is cramped and hard to interact with.
 
-## Root Cause
-Line 1370: `await Promise.all(pendingIds.map((id, i) => generateOne(id, i)))` -- all 4 images are generated concurrently, meaning 4 large base64 image responses are held in memory at the same time.
+## Solution
+Replace the modal with a full-page edit view at `/products/:id` that uses the full screen width with a two-column layout:
 
-## Solution: Sequential Generation + Stuck Row Cleanup
+**Left column (wider):** Product metadata + AI Analysis
+- Product Name, SKU Code, Description fields with proper spacing
+- Editable AI Analysis panel (components, branding, classification) with room to breathe
 
-### 1. Sequential generation in edge function
+**Right column (narrower):** Product Images
+- Image grid showing all angles with delete/add controls
+- Larger thumbnails since we have more space
 
-Replace `Promise.all` (line 1370) with a simple sequential loop:
+**Top bar:** Product name as title, with Back, Delete, and Save Changes buttons
+
+## What Changes
+
+### 1. New page: `src/pages/ProductEdit.tsx`
+- Full-page layout with sticky header (Back button, product name, Save/Delete actions)
+- Two-column grid below: left for metadata + analysis, right for images
+- All existing logic from `EditSKUModal` (state, save, delete, upload) moves here
+- No modal wrapper -- just a regular page
+
+### 2. Route: Add `/products/:id` to `App.tsx`
+
+### 3. Products page: Replace edit modal with navigation
+- In `Products.tsx`, clicking the Edit button navigates to `/products/:id` instead of opening a modal
+- Remove `EditSKUModal` import and `editingSkuId` state
+
+### 4. Keep `EditSKUModal` for other entry points
+- The ProductPickerModal still uses it as a quick-edit fallback
+- But the primary editing flow is now the full page
+
+## Layout
 
 ```text
-// Before (crashes with 4 parallel images):
-await Promise.all(pendingIds.map((id, i) => generateOne(id, i)));
-
-// After (one at a time, each base64 is GC'd before the next):
-for (let i = 0; i < pendingIds.length; i++) {
-  await generateOne(pendingIds[i], i);
-}
++-------------------------------------------------------+
+| <- Back to Products    Boston Taupe Suede    [Delete] [Save] |
++-------------------------------------------------------+
+|                          |                            |
+|  Product Name            |  Product Images (4)        |
+|  [___________________]   |  +----+ +----+ +----+      |
+|                          |  |    | |    | |    |      |
+|  SKU Code                |  +----+ +----+ +----+      |
+|  [___________________]   |  +----+ +------+           |
+|                          |  |    | | +Add |           |
+|  Description             |  +----+ +------+           |
+|  [___________________]   |                            |
+|  [___________________]   |                            |
+|                          |                            |
+|  > AI Analysis -- v1.3   |                            |
+|    Component Breakdown   |                            |
+|    Upper: Suede, Taupe   |                            |
+|    Sole: EVA, Brown      |                            |
+|    ...                   |                            |
+|    Branding Details      |                            |
+|    Classification        |                            |
++-------------------------------------------------------+
 ```
 
-This ensures only one large base64 image is in memory at a time. Each image's data is garbage-collected after upload before the next one starts. No reduction in reference images attached -- the prompt agent and product refs stay exactly the same.
-
-### 2. Stuck row cleanup
-
-Add a cleanup step at the start of `runBackgroundGeneration` that marks any `pending` rows older than 3 minutes as `failed`. This prevents stale rows from accumulating when crashes do happen:
-
-```text
-// Clean up old stuck pending rows for this user
-await bgSupabase
-  .from('generated_images')
-  .update({ status: 'failed', error_message: 'Generation timed out (server)' })
-  .eq('user_id', userId)
-  .eq('status', 'pending')
-  .lt('created_at', new Date(Date.now() - 3 * 60 * 1000).toISOString());
-```
-
-### 3. Client-side polling: reduce timeout
-
-Reduce polling timeout from 150s to 120s (since sequential generation of 4 images at ~30-60s each could take up to ~4 minutes, but with cleanup in place, stuck rows get resolved faster). Actually, keep at 150s since sequential 4x could take ~2-4 min. The cleanup handles the edge case.
-
-## Files Modified
+## Files
 
 | File | Change |
 |------|--------|
-| `supabase/functions/generate-image/index.ts` | Replace `Promise.all` with sequential loop; add stuck-row cleanup at start of background generation |
+| `src/pages/ProductEdit.tsx` | **New** -- full-page product editor with two-column layout |
+| `src/App.tsx` | Add route `/products/:id` pointing to `ProductEdit` |
+| `src/pages/Products.tsx` | Replace modal open with `navigate(/products/${id})`, remove EditSKUModal usage |
 
-## What Does NOT Change
-- Number of product reference images attached (stays at up to 6)
-- Prompt agent logic
-- Image quality or resolution
-- Client-side polling logic (stays at 150s timeout, 4s interval)
-
-## Tradeoff
-Sequential generation means total batch time increases from ~60s (parallel) to ~120-240s (sequential). But this is acceptable because:
-- Images appear progressively as each one completes (the client polls every 4s)
-- The alternative (parallel) crashes and produces zero images
-- Users already see individual images appear via the `onRowReady` callback pattern
+## What stays the same
+- `EditSKUModal` remains available for other contexts (ProductPickerModal)
+- `EditableAnalysisPanel` component is reused as-is
+- All save/delete/upload logic stays identical, just moves to the page component
+- Database schema unchanged
 
