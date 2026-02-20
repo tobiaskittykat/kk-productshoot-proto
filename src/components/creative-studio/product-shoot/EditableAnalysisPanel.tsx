@@ -3,9 +3,12 @@ import { ChevronDown, ChevronRight, Cpu, Layers, Tag, Stamp, Info, RotateCcw, Pl
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-// ── Types ──────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────
 
 interface ComponentData {
   material?: string;
@@ -51,6 +54,7 @@ interface EditableAnalysisPanelProps {
   onDescriptionChange: (d: DescriptionJson) => void;
   originalComponents: ComponentsJson | null;
   originalDescription: DescriptionJson | null;
+  initialOpen?: boolean;
 }
 
 // ── Constants ──────────────────────────────────────────
@@ -70,54 +74,58 @@ function isEdited(current: any, original: any): boolean {
   return JSON.stringify(current) !== JSON.stringify(original);
 }
 
-// ── Inline field ───────────────────────────────────────
+// ── Form field components ─────────────────────────────
 
-function InlineField({
+function FieldRow({
   label,
   value,
   onChange,
   placeholder,
-  className,
+  id,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  className?: string;
+  id?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-2 text-xs", className)}>
-      <span className="text-muted-foreground font-medium min-w-[80px] flex-shrink-0">{label}</span>
-      <input
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || '—'}
-        className="flex-1 bg-transparent border-b border-border/50 focus:border-primary/50 outline-none py-0.5 text-foreground/80 placeholder:text-muted-foreground/50 transition-colors"
+        className="h-9 text-sm"
       />
     </div>
   );
 }
 
-function InlineTextarea({
+function FieldTextarea({
   label,
   value,
   onChange,
   placeholder,
+  id,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  id?: string;
 }) {
   return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className="text-muted-foreground font-medium min-w-[80px] flex-shrink-0 pt-1">{label}</span>
-      <textarea
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
+      <Textarea
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || '—'}
         rows={2}
-        className="flex-1 bg-transparent border border-border/50 focus:border-primary/50 outline-none rounded px-2 py-1 text-foreground/80 placeholder:text-muted-foreground/50 transition-colors resize-none"
+        className="text-sm resize-none min-h-[60px]"
       />
     </div>
   );
@@ -139,35 +147,33 @@ function EditableComponentRow({
   };
 
   return (
-    <div className="py-2 border-b border-border/30 last:border-0 space-y-1.5">
+    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
       <div className="flex items-center gap-2">
         {data.colorHex && (
           <input
             type="color"
             value={data.colorHex}
             onChange={(e) => update('colorHex', e.target.value)}
-            className="w-4 h-4 rounded-full border border-border/50 cursor-pointer p-0 overflow-hidden flex-shrink-0"
+            className="w-6 h-6 rounded border border-border cursor-pointer p-0 overflow-hidden flex-shrink-0"
             style={{ appearance: 'none', WebkitAppearance: 'none' }}
           />
         )}
-        <span className="text-xs font-medium text-foreground min-w-[70px]">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
         {data.confidence != null && (
           <Badge
             variant="secondary"
-            className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted text-muted-foreground ml-auto"
+            className="text-[11px] px-2 py-0.5 h-5 font-normal ml-auto"
           >
             {Math.round(data.confidence)}%
           </Badge>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2 pl-6">
-        <InlineField label="Material" value={data.material || ''} onChange={(v) => update('material', v)} />
-        <InlineField label="Color" value={data.color || ''} onChange={(v) => update('color', v)} />
+      <div className="grid grid-cols-2 gap-3">
+        <FieldRow label="Material" value={data.material || ''} onChange={(v) => update('material', v)} id={`${label}-material`} />
+        <FieldRow label="Color" value={data.color || ''} onChange={(v) => update('color', v)} id={`${label}-color`} />
       </div>
       {(data.notes !== undefined || data.notes === '') && (
-        <div className="pl-6">
-          <InlineField label="Notes" value={data.notes || ''} onChange={(v) => update('notes', v)} placeholder="Optional notes..." />
-        </div>
+        <FieldRow label="Notes" value={data.notes || ''} onChange={(v) => update('notes', v)} placeholder="Optional notes..." id={`${label}-notes`} />
       )}
     </div>
   );
@@ -178,29 +184,32 @@ function EditableComponentRow({
 function SectionHeader({
   icon: Icon,
   label,
+  subtitle,
   edited,
   onReset,
 }: {
   icon: React.ElementType;
   label: string;
+  subtitle?: string;
   edited?: boolean;
   onReset?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 mb-2">
-      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-        {label}
-      </span>
+    <div className="flex items-center gap-2 mb-3">
+      <Icon className="w-4 h-4 text-muted-foreground" />
+      <div className="flex-1">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
       {edited && (
-        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-3.5 font-normal text-primary border-primary/30">
+        <Badge variant="outline" className="text-xs px-2 py-0.5 font-normal text-primary border-primary/30">
           Edited
         </Badge>
       )}
       {edited && onReset && (
-        <button onClick={onReset} className="ml-auto text-muted-foreground hover:text-foreground transition-colors" title="Reset to AI values">
-          <RotateCcw className="w-3 h-3" />
-        </button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReset} title="Reset to AI values">
+          <RotateCcw className="w-3.5 h-3.5" />
+        </Button>
       )}
     </div>
   );
@@ -215,8 +224,9 @@ export function EditableAnalysisPanel({
   onDescriptionChange,
   originalComponents,
   originalDescription,
+  initialOpen = false,
 }: EditableAnalysisPanelProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
 
   const hasComponents = components && typeof components === 'object';
   const hasDescription = description && typeof description === 'object';
@@ -335,34 +345,34 @@ export function EditableAnalysisPanel({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="rounded-lg bg-muted/50 border border-border/50 overflow-hidden">
-        <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/80 transition-colors text-left">
+      <div className="rounded-lg bg-muted/30 border border-border overflow-hidden">
+        <CollapsibleTrigger className="flex items-center gap-2 w-full px-4 py-3 hover:bg-muted/50 transition-colors text-left">
           {open ? (
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           )}
-          <Cpu className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide flex-shrink-0">
+          <Cpu className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm font-medium text-foreground flex-shrink-0">
             AI Analysis
           </span>
-          <span className="text-[11px] text-muted-foreground/70 truncate">
+          <span className="text-xs text-muted-foreground truncate">
             — {summaryText}
           </span>
           {anyEdited && (
-            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-3.5 font-normal text-primary border-primary/30 ml-auto flex-shrink-0">
+            <Badge variant="outline" className="text-xs px-2 py-0.5 font-normal text-primary border-primary/30 ml-auto flex-shrink-0">
               Modified
             </Badge>
           )}
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-3 pb-3 space-y-4">
+          <div className="px-4 pb-4 space-y-6">
             {/* Section 1: Component Breakdown */}
             {detectedComponents.length > 0 && (
               <div>
-                <SectionHeader icon={Layers} label="Component Breakdown" edited={componentsEdited} onReset={resetComponents} />
-                <div className="rounded-md bg-background/50 border border-border/30 px-3 py-1">
+                <SectionHeader icon={Layers} label="Component Breakdown" subtitle="Material and color details per component" edited={componentsEdited} onReset={resetComponents} />
+                <div className="space-y-3">
                   {detectedComponents.map(({ key, label }) => (
                     <EditableComponentRow
                       key={key}
@@ -378,44 +388,52 @@ export function EditableAnalysisPanel({
             {/* Section 2: Construction & Classification */}
             {hasClassification && (
               <div>
-                <SectionHeader icon={Tag} label="Construction & Classification" edited={classificationEdited} onReset={resetClassification} />
-                <div className="grid gap-2">
+                <SectionHeader icon={Tag} label="Construction & Classification" subtitle="Product type and style attributes" edited={classificationEdited} onReset={resetClassification} />
+                <div className="rounded-lg border border-border bg-background p-4 space-y-3">
                   {hasComponents && (
-                    <InlineField
+                    <FieldRow
                       label="Construction"
                       value={components!.strapConstruction || ''}
                       onChange={(v) => onComponentsChange({ ...components!, strapConstruction: v })}
+                      id="classification-construction"
                     />
                   )}
                   {hasDescription && (
                     <>
-                      <InlineField
-                        label="Product Type"
-                        value={description!.product_type || ''}
-                        onChange={(v) => onDescriptionChange({ ...description!, product_type: v })}
-                      />
-                      <InlineField
-                        label="Hardware"
-                        value={description!.hardware_finish || ''}
-                        onChange={(v) => onDescriptionChange({ ...description!, hardware_finish: v })}
-                      />
-                      <InlineField
+                      <div className="grid grid-cols-2 gap-3">
+                        <FieldRow
+                          label="Product Type"
+                          value={description!.product_type || ''}
+                          onChange={(v) => onDescriptionChange({ ...description!, product_type: v })}
+                          id="classification-type"
+                        />
+                        <FieldRow
+                          label="Hardware Finish"
+                          value={description!.hardware_finish || ''}
+                          onChange={(v) => onDescriptionChange({ ...description!, hardware_finish: v })}
+                          id="classification-hardware"
+                        />
+                      </div>
+                      <FieldRow
                         label="Colors"
                         value={(description!.colors || []).join(', ')}
                         onChange={(v) => onDescriptionChange({ ...description!, colors: v.split(',').map(s => s.trim()).filter(Boolean) })}
                         placeholder="Comma-separated..."
+                        id="classification-colors"
                       />
-                      <InlineField
+                      <FieldRow
                         label="Materials"
                         value={(description!.materials || []).join(', ')}
                         onChange={(v) => onDescriptionChange({ ...description!, materials: v.split(',').map(s => s.trim()).filter(Boolean) })}
                         placeholder="Comma-separated..."
+                        id="classification-materials"
                       />
-                      <InlineField
-                        label="Style"
+                      <FieldRow
+                        label="Style Keywords"
                         value={(description!.style_keywords || []).join(', ')}
                         onChange={(v) => onDescriptionChange({ ...description!, style_keywords: v.split(',').map(s => s.trim()).filter(Boolean) })}
                         placeholder="Comma-separated..."
+                        id="classification-style"
                       />
                     </>
                   )}
@@ -426,67 +444,67 @@ export function EditableAnalysisPanel({
             {/* Section 3: Branding Details */}
             {(hasBranding || hasComponents) && (
               <div>
-                <SectionHeader icon={Stamp} label="Branding Details" edited={brandingEdited} onReset={resetBranding} />
-                <div className="space-y-3">
+                <SectionHeader icon={Stamp} label="Branding Details" subtitle="Logos, engravings, and markings" edited={brandingEdited} onReset={resetBranding} />
+                <div className="rounded-lg border border-border bg-background p-4 space-y-4">
                   {/* Buckle Engravings */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] text-muted-foreground font-medium">Buckle Engravings</span>
-                      <button
-                        onClick={addEngraving}
-                        className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <Plus className="w-3 h-3" /> Add
-                      </button>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs text-muted-foreground">Buckle Engravings</Label>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addEngraving}>
+                        <Plus className="w-3.5 h-3.5" /> Add
+                      </Button>
                     </div>
                     {(branding?.buckleEngravings || []).length > 0 ? (
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {(branding?.buckleEngravings || []).map((eng, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs bg-background/50 rounded px-2 py-1.5 border border-border/30">
-                            <input
+                          <div key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
+                            <Input
                               value={eng.text || ''}
                               onChange={(e) => updateEngraving(i, 'text', e.target.value)}
                               placeholder="Text"
-                              className="flex-1 bg-transparent border-b border-border/30 focus:border-primary/50 outline-none py-0.5 font-mono text-foreground"
+                              className="h-8 text-sm flex-1 font-mono"
                             />
-                            <input
+                            <Input
                               value={eng.style || ''}
                               onChange={(e) => updateEngraving(i, 'style', e.target.value)}
                               placeholder="Style"
-                              className="w-20 bg-transparent border-b border-border/30 focus:border-primary/50 outline-none py-0.5 text-muted-foreground"
+                              className="h-8 text-sm w-24"
                             />
-                            <input
+                            <Input
                               value={eng.location || ''}
                               onChange={(e) => updateEngraving(i, 'location', e.target.value)}
                               placeholder="Location"
-                              className="w-24 bg-transparent border-b border-border/30 focus:border-primary/50 outline-none py-0.5 text-muted-foreground"
+                              className="h-8 text-sm w-28"
                             />
-                            <button onClick={() => removeEngraving(i)} className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
-                              <X className="w-3 h-3" />
-                            </button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeEngraving(i)}>
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[11px] text-muted-foreground/60 italic">No engravings detected</p>
+                      <p className="text-xs text-muted-foreground italic">No engravings detected</p>
                     )}
                   </div>
 
-                  <InlineField
+                  <FieldRow
                     label="Footbed Logo"
                     value={branding?.footbedLogo || ''}
                     onChange={(v) => updateBranding('footbedLogo', v)}
+                    id="branding-logo"
                   />
-                  <InlineTextarea
+                  <FieldTextarea
                     label="Footbed Text"
                     value={branding?.footbedText || ''}
                     onChange={(v) => updateBranding('footbedText', v)}
-                    placeholder="e.g. BIRKENSTOCK\nMADE IN GERMANY"
+                    placeholder="e.g. BIRKENSTOCK&#10;MADE IN GERMANY"
+                    id="branding-text"
                   />
-                  <InlineField
-                    label="Other"
+                  <FieldRow
+                    label="Other Branding"
                     value={branding?.otherBranding || ''}
                     onChange={(v) => updateBranding('otherBranding', v)}
+                    id="branding-other"
                   />
                 </div>
               </div>
@@ -496,17 +514,17 @@ export function EditableAnalysisPanel({
             {(version || analyzedAt) && (
               <div>
                 <SectionHeader icon={Info} label="Analysis Metadata" />
-                <div className="grid gap-1 text-xs">
+                <div className="rounded-lg border border-border bg-background p-4 space-y-2 text-sm">
                   {version && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground font-medium min-w-[80px]">Version</span>
-                      <span className="text-foreground/80">{version}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground min-w-[80px]">Version</span>
+                      <span className="text-foreground">{version}</span>
                     </div>
                   )}
                   {analyzedAt && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground font-medium min-w-[80px]">Analyzed</span>
-                      <span className="text-foreground/80">{analyzedAt}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground min-w-[80px]">Analyzed</span>
+                      <span className="text-foreground">{analyzedAt}</span>
                     </div>
                   )}
                 </div>
