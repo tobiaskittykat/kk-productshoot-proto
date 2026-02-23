@@ -1,72 +1,96 @@
 
 
-# Analyze Uploaded Color/Material Sample Swatch
+# Dedicated Remix Prompt Agent
 
 ## Problem
-When a user uploads a color/material sample swatch in the Component Override Popover, nothing happens -- it just stores the image. The user expects the swatch to be analyzed by AI to automatically detect the material type, color name, and hex code, then pre-fill those values in the override form so they can review and adjust.
+The Remix flow sends a flat, mechanical prompt with raw section headers (`=== PRODUCT COMPONENT OVERRIDES ===`) directly to the image model. Meanwhile, "New Shoot" gets a rich narrative prompt via the Prompt Agent. Reusing the full creative director agent is overkill for remix — it's designed for from-scratch scene descriptions with moodboards, visual worlds, campaigns, etc. Remix just needs a focused editing instruction with the product described first and overrides woven in naturally.
 
 ## Solution
-Create a new edge function `analyze-color-sample` that uses Gemini Vision to analyze the uploaded swatch image and return a detected material, color name, and hex code. After upload, the popover calls this function and auto-fills the material/color fields with the results. The user can then review and change before applying.
+Create a lightweight **Remix Prompt Agent** — a simpler system prompt and a dedicated brief builder, both inside `generate-image/index.ts`. No new edge function needed; just a new function `craftRemixPromptWithAgent()` that:
+
+1. Builds a remix-specific brief (product identity + components + overrides + branding — no moodboard/campaign/visual world noise)
+2. Calls the AI with a short, focused system prompt that says "you write image editing instructions"
+3. Returns a narrative editing prompt starting with product description
 
 ## Changes
 
-### 1. New Edge Function: `supabase/functions/analyze-color-sample/index.ts`
+### File: `supabase/functions/generate-image/index.ts`
 
-A lightweight Gemini Vision call that receives:
-- `imageUrl`: the uploaded swatch URL
-- `componentType`: which component this is for (upper, sole, etc.)
+**1. New function: `craftRemixPromptWithAgent()`**
 
-Returns structured output via tool calling:
-- `material`: best match from the known material list for that component
-- `color`: descriptive color name (matched to our palette when possible)
-- `colorHex`: hex code
+A simplified version of `craftPromptWithAgent()` with:
+- A short system prompt (~300 words vs ~2000) focused on editing instructions
+- Brief structure: Product Identity first, then base components, then overrides with contrast language, then branding details, then text removal if requested
+- No moodboard, visual world, campaign concept, content pillars, audience, or shot-type sections
 
-Uses `google/gemini-2.5-flash` for speed since this is a simple visual classification task.
+System prompt essence:
+```
+You craft image EDITING prompts for footwear replacement on existing photos.
 
-### 2. Update `ComponentOverridePopover.tsx`
+RULES:
+1. Start with "Edit this image:" 
+2. Lead with the replacement product description (brand, model, material, color, silhouette)
+3. Describe component overrides as natural material/color changes, not raw data
+4. Include branding details (buckle engravings, footbed stamps) woven into prose
+5. End with: keep model, pose, background, lighting, composition identical
+6. Output ONLY the editing prompt — no headers, no bullet points
 
-After a successful upload (line ~157 where `setSampleImageUrl` is called):
-- Add an `isAnalyzing` state
-- Call `supabase.functions.invoke('analyze-color-sample', { body: { imageUrl, componentType } })`
-- On success, auto-set `selectedMaterial`, `selectedColor`, and `selectedHex` from the response
-- Show a small "Analyzing..." spinner on the thumbnail while processing
-- If analysis fails, silently fall back to the current behavior (upload only, no auto-fill)
+PRODUCT FIDELITY:
+- Replacement must match reference images exactly
+- Preserve silhouette, hardware placement, proportions
+- When overrides exist, describe ONLY what changes and emphasize unchanged parts stay as-is
+```
 
-The UI flow becomes:
-1. User clicks "Upload swatch photo"
-2. Image uploads to storage (existing behavior)
-3. Thumbnail appears with a spinner overlay saying "Analyzing..."
-4. AI returns material + color -- fields auto-populate
-5. User reviews, adjusts if needed, clicks Apply
+**2. Replace remix prompt block (lines 1191-1222)**
 
-### 3. UI indicator on the sample thumbnail
+Instead of building flat `remixParts` array, call `craftRemixPromptWithAgent()`:
 
-While analyzing, show a small `Loader2` spinner overlay on the 16x16 thumbnail with "Analyzing..." text. Once complete, the spinner disappears and the material/color fields reflect the detected values.
-
-## Technical Details
-
-### Edge Function Prompt Strategy
-The function will provide the component's available material list as context so the AI picks from known options. The color palette is also provided so it returns a matching preset name + hex when possible, or a custom descriptive name + hex otherwise.
-
-### Tool Calling Schema
-```text
-{
-  name: "identify_material_color",
-  parameters: {
-    material: { type: "string", enum: [...materials for component] },
-    color: { type: "string" },
-    colorHex: { type: "string", pattern: "^#[0-9A-F]{6}$" },
-    confidence: { type: "number" }
-  }
+```typescript
+if (body.remixMode) {
+  refinedPrompt = await craftRemixPromptWithAgent(body, apiKey);
+  console.log("[BG] Remix mode — used remix prompt agent");
 }
+```
+
+**3. Brief builder: `buildRemixBrief()`**
+
+Structured sections in priority order:
+1. **Product Identity** — brand, model, material, color (reflecting overrides if present)
+2. **Base Components** — all original materials from analysis
+3. **Component Changes** — override contrast lines (reuse `buildOverrideLines()` output but strip raw headers)
+4. **Branding** — buckle engravings, footbed stamps (from `originalComponents.branding`)
+5. **Sample Swatches** — note which components have attached swatch images
+6. **Text Removal** — if `remixRemoveText` is true
+
+No campaign, moodboard, visual world, audience, or shot-type sections.
+
+## What This Produces
+
+Before (current flat prompt):
+```
+Edit this image: replace the footwear/shoes with the EXACT product...
+
+=== PRODUCT COMPONENT OVERRIDES ===
+The user has customized specific shoe components.
+Apply these modifications while maintaining the original silhouette:
+
+UPPER: Suede in Coral (original was: Suede in Tobacco Brown)
+HEELSTRAP: Suede in Coral (original was: Oiled Leather in Tobacco Brown)
+
+Keep all OTHER components exactly as shown in reference images.
+
+The replacement product is: Birkenstock Tokyo in Brown Suede.
+```
+
+After (agent-crafted narrative):
+```
+Edit this image: replace the footwear with the Birkenstock Tokyo clog in warm coral suede. The upper and heel strap should both be rendered in a soft coral-toned suede, replacing the original tobacco brown. All other components — the contoured cork-latex footbed, the flexible EVA sole, and the adjustable buckle hardware with its embossed "BIRKENSTOCK" lettering — must remain exactly as shown in the reference images. Maintain the identical model pose, background setting, lighting, and composition. Only the shoes change.
 ```
 
 ## Files Summary
 
 | File | Change |
 |------|--------|
-| `supabase/functions/analyze-color-sample/index.ts` | New edge function -- Gemini Vision swatch analysis |
-| `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` | Call analysis after upload, auto-fill material/color fields, show analyzing state |
+| `supabase/functions/generate-image/index.ts` | Add `craftRemixPromptWithAgent()` + `buildRemixBrief()` functions; replace flat remix prompt block with agent call |
 
-No database migrations needed.
-
+No new files, no database changes, no frontend changes.
