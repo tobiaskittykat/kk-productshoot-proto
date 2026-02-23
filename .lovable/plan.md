@@ -1,45 +1,82 @@
 
 
-# Sync Component Colors to Product Subtitle
+# Add Color/Material Sample Image to Component Overrides
 
-## Problem
-When you edit the upper color (e.g., changing "Burgundy" to "Zinfandel") in the component editor, the product list still shows "Burgundy Suede" because the subtitle is derived from `description.colors` -- a separate field that doesn't update when components change.
+## Overview
+Add the ability to upload a color/material sample image (e.g., a swatch photo, fabric close-up, or Pantone card) per component override. The sample can optionally be attached to the image generation request so the AI sees the exact color/texture reference. The sample URL is also persisted in generation metadata for traceability.
 
-## Solution
-When saving the product, automatically sync the primary color from the edited components into `description.colors` so the product list always reflects the latest color.
+## How It Works
+
+1. **Upload a sample image** -- In the ComponentOverridePopover, a small upload area lets you attach a photo of the desired color/material (stored in the `product-images` bucket under `{userId}/color-samples/`)
+2. **Toggle "Attach to generation"** -- A checkbox per component controls whether the sample image is sent to the AI alongside the text override
+3. **AI receives it** -- The generate-image edge function adds the sample image(s) to the prompt payload with a label like "Color/material reference swatch for UPPER"
+4. **Metadata tracking** -- The sample URLs are saved in the `settings` JSONB of `generated_images` so you can see them in the Image Detail Modal
 
 ## Changes
 
-### File: `src/pages/ProductEdit.tsx`
+### 1. Extend `ComponentOverride` type
+**File:** `src/lib/birkenstockMaterials.ts`
 
-In the `handleSave` function (around line 150), before building `finalDescription`, sync the upper component's color into the description's colors array:
-
+Add optional fields to `ComponentOverride`:
 ```text
-// Before building finalDescription, sync upper color into description.colors
-const syncedDescription = { ...(editedDescription || {}) };
-if (editedComponents?.upper?.color) {
-  syncedDescription.colors = [editedComponents.upper.color];
+export interface ComponentOverride {
+  material: string;
+  color: string;
+  colorHex?: string;
+  sampleImageUrl?: string;      // uploaded swatch/sample URL
+  attachSampleToGen?: boolean;  // whether to send it to AI (default: false)
 }
-if (editedComponents?.upper?.material) {
-  syncedDescription.materials = [editedComponents.upper.material];
-}
-const finalDescription = { ...syncedDescription, summary: description };
 ```
 
-This replaces the current line:
+### 2. Add sample upload UI to `ComponentOverridePopover`
+**File:** `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx`
+
+Below the color picker section, add a "Color/Material Sample" area:
+- Small upload dropzone (click-to-upload or drag) -- accepts image files
+- Shows a thumbnail preview when uploaded
+- Checkbox: "Attach sample to generation" (default off)
+- Upload goes to Supabase storage: `product-images/{userId}/color-samples/{timestamp}.{ext}`
+- Remove button to clear the sample
+
+### 3. Pass sample image URLs to the edge function
+**File:** `src/hooks/useImageGeneration.ts`
+
+In `buildRequestBody`, collect all component overrides that have `sampleImageUrl` and `attachSampleToGen === true` into a new field:
 ```text
-const finalDescription = { ...(editedDescription || {}), summary: description };
+componentSampleImages: [
+  { component: 'upper', url: 'https://...sample.jpg' },
+]
 ```
 
-### What This Does
-- When you save after changing the upper color to "Zinfandel", `description.colors` becomes `["Zinfandel"]`
-- The product list calls `parseSkuDisplayInfo(name, description)` which reads `description.colors[0]`
-- The subtitle will now correctly show "Birkenstock - Zinfandel Suede"
+### 4. Edge function: attach sample images to AI prompt
+**File:** `supabase/functions/generate-image/index.ts`
 
-### Files Summary
+- Add `componentSampleImages` to the request type
+- In the prompt agent call and/or direct generation call, include these as additional image inputs with a descriptive label: "Reference swatch for {COMPONENT} color/material -- match this exactly"
+- In the override text block, add a note: "A color/material reference swatch is attached for {COMPONENT}"
+
+### 5. Persist in metadata
+**File:** `supabase/functions/generate-image/index.ts`
+
+In the settings JSONB written to `generated_images`, add:
+```text
+componentSampleImages: body.componentSampleImages || []
+```
+
+### 6. Show in Image Detail Modal
+**File:** `src/components/creative-studio/ImageDetailModal.tsx`
+
+In the metadata/references section, if `settings.componentSampleImages` exists and is non-empty, show thumbnails labeled by component (e.g., "Upper Sample", "Sole Sample").
+
+## Files Summary
 
 | File | Change |
 |------|--------|
-| `src/pages/ProductEdit.tsx` | Sync upper color and material into description.colors/materials on save |
+| `src/lib/birkenstockMaterials.ts` | Add `sampleImageUrl` and `attachSampleToGen` to `ComponentOverride` |
+| `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx` | Add sample image upload area + attach toggle |
+| `src/hooks/useImageGeneration.ts` | Collect attached samples into `componentSampleImages` in request body |
+| `supabase/functions/generate-image/index.ts` | Accept samples, attach to AI messages, persist in metadata |
+| `src/components/creative-studio/ImageDetailModal.tsx` | Display sample thumbnails in metadata section |
 
-No database or backend changes needed.
+No database migrations needed -- uses existing `product-images` storage bucket and existing `settings` JSONB column.
+
