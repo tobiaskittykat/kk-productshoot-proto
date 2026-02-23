@@ -1,35 +1,45 @@
 
 
-# Add Product Identity to Remix Prompt
+# Sync Component Colors to Product Subtitle
 
 ## Problem
-In Remix mode, when no component overrides are applied, the prompt just says "replace the footwear with the EXACT product shown in the reference images" without naming the shoe. Adding the product name and color gives the AI an extra signal alongside the reference images.
+When you edit the upper color (e.g., changing "Burgundy" to "Zinfandel") in the component editor, the product list still shows "Burgundy Suede" because the subtitle is derived from `description.colors` -- a separate field that doesn't update when components change.
 
 ## Solution
-Add one line to the remix prompt that names the product (e.g., "The replacement product is: Birkenstock Boston in Taupe Suede").
+When saving the product, automatically sync the primary color from the edited components into `description.colors` so the product list always reflects the latest color.
 
 ## Changes
 
-### File: `supabase/functions/generate-image/index.ts` (~line 1166)
+### File: `src/pages/ProductEdit.tsx`
 
-After the existing line about matching reference images precisely, add a block that checks if `productIdentity` or `productNames` exist and inserts a short identity line:
+In the `handleSave` function (around line 150), before building `finalDescription`, sync the upper component's color into the description's colors array:
 
 ```text
-// After line 1167 ("The replacement shoes must match...")
-if (body.productIdentity) {
-  const pi = body.productIdentity;
-  const parts = [pi.brandName, pi.modelName].filter(Boolean).join(' ');
-  const attrs = [pi.color, pi.material].filter(Boolean).join(' ');
-  if (parts) {
-    remixParts.push(`The replacement product is: ${parts}${attrs ? ` in ${attrs}` : ''}.`);
-  }
-} else if (body.productNames?.length) {
-  remixParts.push(`The replacement product is: ${body.productNames[0]}.`);
+// Before building finalDescription, sync upper color into description.colors
+const syncedDescription = { ...(editedDescription || {}) };
+if (editedComponents?.upper?.color) {
+  syncedDescription.colors = [editedComponents.upper.color];
 }
+if (editedComponents?.upper?.material) {
+  syncedDescription.materials = [editedComponents.upper.material];
+}
+const finalDescription = { ...syncedDescription, summary: description };
 ```
 
-This produces output like:
-- "The replacement product is: Birkenstock Boston in Taupe Suede."
-- "The replacement product is: Birkenstock Arizona in Black Leather."
+This replaces the current line:
+```text
+const finalDescription = { ...(editedDescription || {}), summary: description };
+```
 
-Only one file changes; no frontend or database modifications needed.
+### What This Does
+- When you save after changing the upper color to "Zinfandel", `description.colors` becomes `["Zinfandel"]`
+- The product list calls `parseSkuDisplayInfo(name, description)` which reads `description.colors[0]`
+- The subtitle will now correctly show "Birkenstock - Zinfandel Suede"
+
+### Files Summary
+
+| File | Change |
+|------|--------|
+| `src/pages/ProductEdit.tsx` | Sync upper color and material into description.colors/materials on save |
+
+No database or backend changes needed.
