@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/kittykat-logo-transparent.png";
 
 const BETA_PASSWORD = "@dmin1";
-const STORAGE_KEY = "beta_access";
+const STORAGE_KEY = "beta_access_v2";
 
 export default function BetaGate({ children }: { children: ReactNode }) {
   const [granted, setGranted] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
