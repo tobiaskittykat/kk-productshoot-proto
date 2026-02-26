@@ -1,62 +1,48 @@
 
 
-# Add Prompt and Meta View to Set-Up Product Results
+# Soften Footbed Branding Instructions Instead of Removing
 
-## Overview
-The Set-Up Product flow generates images but currently only shows a basic grid with Approve/Redo buttons. Unlike other modules (New Shoot, Remix, Lifestyle) that use `ImageDetailModal` to display prompt text, reference images, generation settings, and integrity analysis, the setup flow discards all this metadata. This plan adds a click-to-view detail flow.
+## Problem
+Currently the code either includes full footbed branding details (causing the AI to distort the shoe to show them) or skips them entirely. The user wants a middle ground: include the branding info but instruct the AI that it's only partly visible from certain angles and should NOT alter the product's shape to reveal it.
 
 ## Changes
 
-### File: `src/components/creative-studio/product-shoot/SetupProductStep2.tsx`
+### File: `supabase/functions/generate-image/index.ts`
 
-**1. Store full GeneratedImage data in angle results**
+**1. Add "natural visibility" qualifier for non-top-down product-focus angles (lines 666-704)**
 
-Update the `AngleResult` interface to include the full `GeneratedImage` object:
+Instead of the current binary skip/include logic, introduce three tiers:
+
+- **Hidden (skip entirely)**: `on-foot`, `lifestyle`, `side-profile`, `detail-closeup` -- the footbed is genuinely not visible at all
+- **Partially visible (new)**: `hero`, `pair`, `sole-view` -- the footbed may be glimpsed but is mostly obscured by the shoe's opening angle. Include branding details BUT prefix with a strong directive:
+  ```
+  "⚠️ NATURAL VISIBILITY ONLY: The footbed is only partially visible from this angle.
+   Do NOT enlarge the shoe opening, distort proportions, or alter the product shape
+   to reveal interior details. Show only what would naturally be seen from this
+   camera perspective. The following branding exists on the footbed for reference:"
+  ```
+- **Fully visible (unchanged)**: `top-down` -- include full branding details as today
+
+**2. Merge component overrides into PRODUCT COMPONENTS section (lines 633-653)**
+
+Previously approved fix: when overrides exist for a component type, use the override values instead of the original analyzed values in the main components list. This prevents conflicting descriptions (e.g., "dark brown EVA sole" vs user-selected "black EVA sole").
+
 ```typescript
-interface AngleResult {
-  angleId: ProductFocusAngle;
-  imageUrl: string | null;
-  isGenerating: boolean;
-  approved: boolean;
-  error?: string;
-  generatedImage?: GeneratedImage; // Full metadata for detail view
+for (const type of componentTypes) {
+  const override = request.componentOverrides?.[type];
+  const comp = override || orig[type];
+  if (comp && comp.material) {
+    const color = override
+      ? getColorDescription(override)
+      : (comp.color || 'N/A');
+    componentLines.push(`${type.toUpperCase()}: ${comp.material} in ${color}`);
+  }
 }
 ```
 
-Update the `handleGenerate` and `handleRegenerate` callbacks to store `images[0]` in the result:
-```typescript
-{ ...r, imageUrl: images[0]?.imageUrl || null, generatedImage: images[0] || undefined, isGenerating: false, ... }
-```
+## What Changes for Users
+- Hero, pair, and sole-view shots will still mention footbed branding exists, but the AI is explicitly told not to warp the shoe to show it
+- Top-down shots remain unchanged (full branding emphasis)
+- On-foot/lifestyle/side-profile remain unchanged (branding skipped)
+- Component overrides will be reflected accurately in the prompt
 
-**2. Add ImageDetailModal integration**
-
-- Import `ImageDetailModal` and `GeneratedImage` type
-- Add state for selected image and modal visibility:
-  ```typescript
-  const [detailImage, setDetailImage] = useState<GeneratedImage | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  ```
-- Make each result image clickable -- clicking opens the detail modal with the stored `GeneratedImage`
-- Add the `ImageDetailModal` component at the bottom of the JSX, wired to the state
-
-**3. Make result images clickable**
-
-Wrap the image in the results grid with a click handler:
-```typescript
-<div 
-  className="cursor-pointer" 
-  onClick={() => {
-    if (result.generatedImage) {
-      setDetailImage(result.generatedImage);
-      setIsDetailOpen(true);
-    }
-  }}
->
-```
-
-Add a subtle hover overlay with an "info" or "expand" icon to signal clickability.
-
-## What Users Will See
-- After generating setup product images, clicking any result image opens the same detail modal used across all other modules
-- The modal shows: the refined prompt sent to the AI, reference images used, AI model, resolution, aspect ratio, and product integrity analysis (if available)
-- All existing functionality (Approve, Redo, Save) remains unchanged
