@@ -630,23 +630,27 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       }
     }
     
-    // === PRODUCT COMPONENTS (always include when available) ===
+    // === PRODUCT COMPONENTS (merged with overrides) ===
     if (request.originalComponents) {
       const orig = request.originalComponents;
       const componentTypes = ['upper', 'footbed', 'sole', 'buckles', 'heelstrap', 'lining'];
       const componentLines: string[] = [];
 
       for (const type of componentTypes) {
-        const comp = orig[type];
+        const override = request.componentOverrides?.[type];
+        const comp = override || orig[type];
         if (comp && comp.material) {
+          const color = override
+            ? getColorDescription(override)
+            : (comp.color || 'N/A');
           componentLines.push(
-            `${type.toUpperCase()}: ${comp.material} in ${comp.color || 'N/A'}`
+            `${type.toUpperCase()}: ${comp.material} in ${color}`
           );
         }
       }
 
       if (componentLines.length > 0) {
-        sections.push("=== PRODUCT COMPONENTS (from analysis) ===");
+        sections.push("=== PRODUCT COMPONENTS ===");
         sections.push("Accurately describe these materials and features in your prompt:");
         componentLines.forEach(line => sections.push(line));
         sections.push("");
@@ -663,11 +667,37 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
         // Footbed text/logo: skip for on-foot/lifestyle (hidden by foot),
         // use simplified dynamic descriptor for productFocus
         const productFocusAngle = request.productShootConfig?.productFocusConfig?.cameraAngle;
-        if (visualShotType === 'on-foot' || visualShotType === 'lifestyle'
-            || (visualShotType === 'product-focus' && (productFocusAngle === 'side-profile' || productFocusAngle === 'detail-closeup'))) {
+        
+        // Three-tier footbed visibility:
+        // 1. Hidden: on-foot, lifestyle, side-profile, detail-closeup — footbed not visible at all
+        // 2. Partially visible: hero, pair, sole-view — mention branding but instruct NOT to distort
+        // 3. Fully visible: top-down — include full branding details
+        const isHiddenAngle = visualShotType === 'on-foot' || visualShotType === 'lifestyle'
+            || (visualShotType === 'product-focus' && (productFocusAngle === 'side-profile' || productFocusAngle === 'detail-closeup'));
+        const isFullyVisibleAngle = visualShotType === 'product-focus' && productFocusAngle === 'top-down';
+        const isPartiallyVisibleAngle = !isHiddenAngle && !isFullyVisibleAngle && visualShotType === 'product-focus';
+        
+        if (isHiddenAngle) {
           // Footbed is hidden — skip entirely
           console.log(`[branding] Skipping footbed branding for shot type: ${visualShotType}, angle: ${productFocusAngle}`);
-        } else if (visualShotType === 'product-focus') {
+        } else if (isPartiallyVisibleAngle) {
+          // Footbed may be glimpsed but should NOT cause distortion
+          console.log(`[branding] Partial footbed visibility for angle: ${productFocusAngle}`);
+          sections.push("⚠️ NATURAL VISIBILITY ONLY: The footbed is only partially visible from this angle.");
+          sections.push("Do NOT enlarge the shoe opening, distort proportions, or alter the product shape");
+          sections.push("to reveal interior details. Show only what would naturally be seen from this");
+          sections.push("camera perspective. The following branding exists on the footbed for reference:");
+          const footbedMaterial = orig.footbed?.material || 'cork';
+          const textMethod = branding.footbedTextMethod || 'stamped';
+          if (branding.footbedText) {
+            sections.push(`Footbed: branded ${footbedMaterial} footbed with ${textMethod} text: "${branding.footbedText}"`);
+          }
+          if (branding.footbedLogo) {
+            const logoMethod = branding.footbedLogoMethod ? ` (${branding.footbedLogoMethod})` : '';
+            sections.push(`Footbed logo: ${branding.footbedLogo}${logoMethod}`);
+          }
+        } else if (isFullyVisibleAngle) {
+          // Top-down: full branding emphasis
           const footbedMaterial = orig.footbed?.material || 'cork';
           const textMethod = branding.footbedTextMethod || 'stamped';
           if (branding.footbedText) {
@@ -686,7 +716,7 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
             sections.push(`Footbed logo: ${branding.footbedLogo}${logoMethod}`);
           }
         } else {
-          // No shot type specified or unknown — include full branding as before
+          // No shot type specified or unknown — include full branding as fallback
           const textMethod = branding.footbedTextMethod || 'stamped';
           if (branding.footbedText) {
             const footbedLines = branding.footbedText.split('\n').filter(Boolean);
@@ -716,11 +746,16 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       }
     }
     
-    // === COMPONENT OVERRIDES (only when user has customized) ===
+    // Component overrides are now merged into PRODUCT COMPONENTS above.
+    // Keep toe-post sync and buckle shape notes when overrides exist.
     if (request.componentOverrides && request.originalComponents) {
       const overrideLines = buildOverrideLines(request.componentOverrides, request.originalComponents);
-      if (overrideLines.length > 0) {
-        overrideLines.forEach(line => sections.push(line));
+      // Only include toe-post sync and buckle shape lines (skip the header/component lines)
+      const supplementalLines = overrideLines.filter(line => 
+        line.startsWith('TOE POST') || line.startsWith('BUCKLE SHAPE') || line === ''
+      );
+      if (supplementalLines.length > 0) {
+        supplementalLines.forEach(line => sections.push(line));
       }
     }
     
