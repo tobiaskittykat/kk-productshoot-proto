@@ -84,6 +84,33 @@ export function useColorSamples() {
     return null;
   }, [user?.id, currentBrand?.id]);
 
+  const updateSample = useCallback(async (id: string, updates: {
+    material?: string;
+    color?: string;
+    color_hex?: string;
+  }) => {
+    const existing = samples.find(s => s.id === id);
+    const merged = {
+      material: updates.material ?? existing?.material,
+      color: updates.color ?? existing?.color,
+      color_hex: updates.color_hex ?? existing?.color_hex,
+    };
+    const name = [merged.material, merged.color].filter(Boolean).join(' – ') || 'Untitled';
+
+    const { error } = await supabase
+      .from('color_samples' as any)
+      .update({ ...merged, name })
+      .eq('id', id);
+
+    if (!error) {
+      setSamples(prev => prev.map(s => s.id === id
+        ? { ...s, ...merged, name }
+        : s
+      ));
+    }
+    return !error;
+  }, [samples]);
+
   const deleteSample = useCallback(async (id: string) => {
     const { error } = await supabase
       .from('color_samples' as any)
@@ -95,5 +122,5 @@ export function useColorSamples() {
     }
   }, []);
 
-  return { samples, isLoading, saveSample, deleteSample, refetch: fetchSamples };
+  return { samples, isLoading, saveSample, updateSample, deleteSample, refetch: fetchSamples };
 }
