@@ -998,7 +998,7 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
         </div>
         
         {/* Floating Footer - Show for Step 2 (both Product Shot and Lifestyle) */}
-        {floating.active && state.step === 2 && (
+        {floating.active && state.step === 2 && !(state.useCase === 'product' && state.productShoot.shootMode === 'setup') && (
           <div
             ref={footerRef}
             className="fixed bottom-4 z-50 bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-xl px-6 py-4"
