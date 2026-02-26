@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronDown, Check, RotateCcw, Pipette, Upload, X, Loader2, BookOpen } from 'lucide-react';
+import { ChevronDown, Check, RotateCcw, Pipette, Upload, X, Loader2, BookOpen, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,11 @@ export function ComponentOverridePopover({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-  const { samples, saveSample } = useColorSamples();
+  const { samples, saveSample, updateSample, deleteSample } = useColorSamples();
+  const [editingSampleId, setEditingSampleId] = useState<string | null>(null);
+  const [editMaterial, setEditMaterial] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [editHex, setEditHex] = useState('');
 
   const RECENT_COLORS_KEY = 'component-override-recent-colors';
   type RecentColor = { name: string; hex: string };
@@ -445,26 +449,100 @@ export function ComponentOverridePopover({
                 </p>
                 <div className="grid grid-cols-5 gap-1.5 max-h-[80px] overflow-y-auto">
                   {samples.slice(0, 10).map((sample) => (
-                    <button
-                      key={sample.id}
-                      type="button"
-                      onClick={() => {
-                        setSampleImageUrl(sample.image_url);
-                        setAttachSampleToGen(true);
-                        if (sample.material) {
-                          const matchedMat = materials.find(m => m.value === sample.material);
-                          if (matchedMat) setSelectedMaterial(matchedMat.value);
-                        }
-                        if (sample.color) setSelectedColor(sample.color);
-                        if (sample.color_hex) setSelectedHex(sample.color_hex);
-                      }}
-                      className="relative w-full aspect-square rounded-md border border-border/50 overflow-hidden hover:border-accent transition-all"
-                      title={sample.name || `${sample.material} – ${sample.color}`}
-                    >
-                      <img src={sample.image_url} alt={sample.name || 'Swatch'} className="w-full h-full object-cover" />
-                    </button>
+                    <div key={sample.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSampleImageUrl(sample.image_url);
+                          setAttachSampleToGen(true);
+                          if (sample.material) {
+                            const matchedMat = materials.find(m => m.value === sample.material);
+                            if (matchedMat) setSelectedMaterial(matchedMat.value);
+                          }
+                          if (sample.color) setSelectedColor(sample.color);
+                          if (sample.color_hex) setSelectedHex(sample.color_hex);
+                        }}
+                        className="relative w-full aspect-square rounded-md border border-border/50 overflow-hidden hover:border-accent transition-all"
+                        title={sample.name || `${sample.material} – ${sample.color}`}
+                      >
+                        <img src={sample.image_url} alt={sample.name || 'Swatch'} className="w-full h-full object-cover" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSampleId(sample.id);
+                          setEditMaterial(sample.material || '');
+                          setEditColor(sample.color || '');
+                          setEditHex(sample.color_hex || '');
+                        }}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded bg-background/80 border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Edit swatch"
+                      >
+                        <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
+                      </button>
+                    </div>
                   ))}
                 </div>
+                {/* Inline edit panel */}
+                {editingSampleId && (() => {
+                  const editSample = samples.find(s => s.id === editingSampleId);
+                  if (!editSample) return null;
+                  return (
+                    <div className="mt-2 p-2.5 rounded-lg border border-border bg-muted/30 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <img src={editSample.image_url} alt="Editing" className="w-8 h-8 rounded border border-border/50 object-cover flex-shrink-0" />
+                        <span className="text-xs font-medium text-foreground truncate">Editing swatch</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground">Material</Label>
+                          <Input value={editMaterial} onChange={e => setEditMaterial(e.target.value)} className="h-7 text-xs" placeholder="e.g. Suede" />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground">Color</Label>
+                          <Input value={editColor} onChange={e => setEditColor(e.target.value)} className="h-7 text-xs" placeholder="e.g. Thyme" />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground">Hex</Label>
+                          <Input value={editHex} onChange={e => setEditHex(e.target.value)} className="h-7 text-xs font-mono" placeholder="#8B9467" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={async () => {
+                            await deleteSample(editingSampleId);
+                            setEditingSampleId(null);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Delete
+                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setEditingSampleId(null)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={async () => {
+                              await updateSample(editingSampleId, {
+                                material: editMaterial || undefined,
+                                color: editColor || undefined,
+                                color_hex: editHex || undefined,
+                              });
+                              setEditingSampleId(null);
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             
