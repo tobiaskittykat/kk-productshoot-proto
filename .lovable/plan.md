@@ -1,23 +1,34 @@
 
-# Fix Image Generation Timeout
+
+# Refine Hero (3/4 Front) Camera Angle Prompt
 
 ## Problem
-Gemini Pro image generation takes 60-100 seconds per image. When generating 4 images sequentially, total time is 240-400 seconds. The current polling timeout is 150 seconds (2.5 minutes), causing most batches to time out with "Generation timed out after 150s".
+The current hero angle prompt uses vague language like "three-quarter front view at 45-degree angle" and "single shoe angled toward camera" without specifying camera height, exact shoe orientation, or what should be visible. This leads to inconsistent generations.
 
-## Solution
-Increase the polling timeout from 150 seconds to 480 seconds (8 minutes). This comfortably covers 4 sequential images at even the slowest generation times (~100s each).
+## Refined Prompt (Based on Gemini Analysis)
 
-## Changes
+**Current `prompt`** (short hint):
+> "three-quarter front view at 45-degree angle, classic hero product shot showing depth and dimension, single shoe angled toward camera"
 
-**File: `src/lib/imagePolling.ts`** (line 29)
-- Change default `maxWaitMs` from `150000` to `480000`
-- Update comment from "2.5 minutes" to "8 minutes"
+**New `prompt`**:
+> "neutral eye-level three-quarter view, shoe rotated 30-45 degrees with toe toward bottom-right and heel toward center-left, capturing full side profile of sole, structural volume of upper, and clear view into interior footbed"
 
-**File: `src/hooks/useImageGeneration.ts`** (lines 608 and 783)
-- Change both explicit `maxWaitMs: 150000` calls to `maxWaitMs: 480000`
+**Current `narrative`** (full composition text used in actual prompt building):
+> "the classic hero shot, camera positioned at a 45-degree angle to capture depth and dimension. A single shoe angled toward the lens, revealing both the lateral profile and the top of the footbed in one commanding frame. This is the definitive e-commerce angle -- authoritative, dimensional, and immediately recognizable."
 
-## Technical Details
-- Based on edge function logs: Image 1 took ~109s, Image 2 took ~67s after that
-- 4 images worst case: 4 x 100s = 400s, so 480s gives ~80s buffer
-- No other code paths or behavior changes needed -- just the timeout value
-- The polling interval (4s) stays the same so completed images still appear progressively
+**New `narrative`**:
+> "the classic hero shot in a neutral, eye-level three-quarter perspective. The camera is level with the top edge of the shoe's upper. The shoe is rotated roughly 30 to 45 degrees away from the camera, with the toe directed toward the bottom-right corner and the heel pointing toward the center-left. The front of the shoe is physically closer to the lens than the heel, creating a natural sense of depth and scale. This specific orientation ensures the full side profile of the sole is visible, the structural volume of the upper is showcased, and the concave interior footbed is clearly seen. This is the definitive e-commerce angle -- authoritative, dimensional, and immediately recognizable."
+
+## Key Improvements
+- **Camera height specified**: "neutral, eye-level" with the top edge of the shoe's upper -- no ambiguity about low/high angle
+- **Exact orientation**: "toe toward bottom-right, heel toward center-left" instead of vague "angled toward camera"
+- **Rotation degree**: "30 to 45 degrees away from camera" -- precise range
+- **Depth cue**: "front of shoe closer to lens than heel" -- tells the AI exactly how to render perspective
+- **Visibility checklist**: Explicitly states what must be visible (sole profile, upper volume, interior footbed)
+
+## File Changed
+**`src/components/creative-studio/product-shoot/shotTypeConfigs.ts`** (lines 419-426)
+- Update `prompt` field for the `hero` angle option
+- Update `narrative` field for the `hero` angle option
+
+No other files need changes -- the prompt builder (`buildProductFocusPrompt`) already reads these fields dynamically.
