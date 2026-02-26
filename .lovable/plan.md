@@ -1,56 +1,44 @@
 
 
-# Add Region Grouping to Scene Gallery
+# Auto-Assign Region to Scene Uploads
 
 ## Overview
-Add a "region" dimension to scene images so users can organize scenes by market region (USA, Europe, APAC, MEA). Region is a business concept (not visually detectable), so users will assign it manually via a dropdown. The UI will show region filter pills above the existing category pills.
+Remove the manual "Upload to region" dropdown and instead have the AI automatically detect and assign the region during upload. Users can still reassign the region after upload via the hover dropdown on each scene card.
 
-## Database Change
+## Changes
 
-Add a `region` column to `scene_images`:
+### 1. Update classify-scene edge function to also return region
+**File: `supabase/functions/classify-scene/index.ts`**
+- Add `region` to the tool schema with enum: `["usa", "europe", "apac", "mea", "all"]`
+- Update the prompt to instruct the AI to detect the likely geographic region based on visual cues (architecture style, signage, vegetation, cultural context)
+- Return `{ category, name, region }`
+
+### 2. Remove "Upload to" selector from BackgroundSelector
+**File: `src/components/creative-studio/product-shoot/BackgroundSelector.tsx`**
+- Remove the `uploadRegion` state and the "Upload to:" Select dropdown (lines 410-424)
+- Remove `MapPin` from imports (no longer needed)
+- The `createScene.mutate({ file })` call no longer passes a manual region -- it will come from the AI classification
+
+### 3. Update useSceneImages hook to use AI-assigned region
+**File: `src/hooks/useSceneImages.ts`**
+- In the `createScene` mutation, use the `region` returned by classify-scene instead of the manually passed region
+- Keep the `region` parameter as optional override, but default to the AI-classified value
+
+### 4. Migration: Update existing scenes with correct regions
+Run a one-time SQL update to assign the correct regions to existing scene images based on the user's earlier instructions:
+- "wood deck with white fence" -> `usa`
+- "boules court with bench" -> `europe`
+- "train station" and "busy city" -> `apac`
 
 ```sql
-ALTER TABLE public.scene_images 
-ADD COLUMN region text NOT NULL DEFAULT 'all';
+UPDATE public.scene_images SET region = 'usa' WHERE name ILIKE '%deck%' OR name ILIKE '%fence%';
+UPDATE public.scene_images SET region = 'europe' WHERE name ILIKE '%boules%' OR name ILIKE '%bench%' OR name ILIKE '%court%';
+UPDATE public.scene_images SET region = 'apac' WHERE name ILIKE '%train%' OR name ILIKE '%station%' OR name ILIKE '%city%' OR name ILIKE '%urban%';
 ```
-
-No new RLS policies needed -- existing policies cover the column.
-
-## Regions
-
-```text
-all (default/unassigned) | usa | europe | apac | mea
-```
-
-## UI Changes
-
-### BackgroundSelector.tsx -- Scene tab
-
-1. **Region filter row** -- horizontal pills above the category pills: "All Regions", "USA", "Europe", "APAC", "MEA" (with count badges, same style as category pills)
-2. **Filtering** -- scenes are filtered by BOTH region AND category (intersection)
-3. **Region assignment on upload** -- after uploading a scene, a small dropdown appears on the new scene card (or a pre-upload region selector) to assign region. Default: "All" (unassigned)
-4. **Region badge on cards** -- small region label on scene thumbnails so users can see at a glance
-
-### Region selector before upload
-Add a small dropdown/select above the grid: "Upload to region: [USA v]" so new uploads are automatically tagged with the selected region. This avoids needing a separate edit step.
-
-## Hook Changes
-
-### useSceneImages.ts
-- Add `region` to `SceneImage` interface
-- Export `SCENE_REGIONS` constant
-- Update `createScene` mutation to accept `{ file: File, region?: string }` instead of just `File`
-- Add `updateSceneRegion` mutation for reassigning existing scenes
 
 ## Files Modified
-
-1. **Migration SQL** -- Add `region` column to `scene_images`
-2. **`src/hooks/useSceneImages.ts`** -- Add region to interface, SCENE_REGIONS constant, update createScene to accept region, add updateSceneRegion mutation
-3. **`src/components/creative-studio/product-shoot/BackgroundSelector.tsx`** -- Add region filter pills, region selector for uploads, region badge on cards, dual filtering (region + category)
-
-## Technical Details
-
-- Add UPDATE RLS policy for `scene_images` (currently missing) so users can change the region of existing scenes
-- Region filter state stored as local component state (like `sceneCategory`)
-- Filtering: `filteredScenes = sceneImages.filter(s => (region === 'all' || s.region === region) && (category === 'all' || s.category === category))`
+1. `supabase/functions/classify-scene/index.ts` -- Add region detection to AI classification
+2. `src/components/creative-studio/product-shoot/BackgroundSelector.tsx` -- Remove manual region upload selector
+3. `src/hooks/useSceneImages.ts` -- Use AI-classified region from classify-scene response
+4. Migration SQL -- Update existing scenes with correct regions
 
