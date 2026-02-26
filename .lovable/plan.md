@@ -1,34 +1,34 @@
 
 
-# Refine Hero (3/4 Front) Camera Angle Prompt
+# Refine Side Profile Camera Angle Prompt
 
 ## Problem
-The current hero angle prompt uses vague language like "three-quarter front view at 45-degree angle" and "single shoe angled toward camera" without specifying camera height, exact shoe orientation, or what should be visible. This leads to inconsistent generations.
+The current side profile prompt says "product facing left" which contradicts the Gemini analysis (toe to the right, heel to the left). It also lacks specifics about camera height, what should/shouldn't be visible, and vertical centering.
 
-## Refined Prompt (Based on Gemini Analysis)
+## Changes
 
-**Current `prompt`** (short hint):
-> "three-quarter front view at 45-degree angle, classic hero product shot showing depth and dimension, single shoe angled toward camera"
+**File**: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` (lines 430-431)
+
+**Current `prompt`**:
+> "pure lateral side profile view, single shoe centered, showing full silhouette from true side angle, product facing left"
 
 **New `prompt`**:
-> "neutral eye-level three-quarter view, shoe rotated 30-45 degrees with toe toward bottom-right and heel toward center-left, capturing full side profile of sole, structural volume of upper, and clear view into interior footbed"
+> "precise eye-level side profile, shoe perfectly horizontal with toe pointing right and heel pointing left, flat lateral silhouette emphasizing full length of sole and upper contour, interior hidden"
 
-**Current `narrative`** (full composition text used in actual prompt building):
-> "the classic hero shot, camera positioned at a 45-degree angle to capture depth and dimension. A single shoe angled toward the lens, revealing both the lateral profile and the top of the footbed in one commanding frame. This is the definitive e-commerce angle -- authoritative, dimensional, and immediately recognizable."
+**Current `narrative`**:
+> "a pure lateral view capturing the full silhouette. A single shoe centered in frame, photographed from a true side angle with the product facing left. The entire profile line -- from heel counter through the arch to the toe -- reads as one clean, uninterrupted silhouette against the background."
 
 **New `narrative`**:
-> "the classic hero shot in a neutral, eye-level three-quarter perspective. The camera is level with the top edge of the shoe's upper. The shoe is rotated roughly 30 to 45 degrees away from the camera, with the toe directed toward the bottom-right corner and the heel pointing toward the center-left. The front of the shoe is physically closer to the lens than the heel, creating a natural sense of depth and scale. This specific orientation ensures the full side profile of the sole is visible, the structural volume of the upper is showcased, and the concave interior footbed is clearly seen. This is the definitive e-commerce angle -- authoritative, dimensional, and immediately recognizable."
+> "a precise, eye-level side profile perspective. The camera is positioned directly perpendicular to the side of the shoe, perfectly level with it. The shoe is oriented perfectly horizontal, with the toe pointing directly to the right edge of the frame and the heel aligned toward the left. The shoe sits flat on its sole, centered vertically in the frame to emphasize its silhouette and proportions. This composition captures a flat, two-dimensional lateral silhouette, showcasing the full length and contour of both the sole and the upper while the interior footbed remains obscured from view."
 
 ## Key Improvements
-- **Camera height specified**: "neutral, eye-level" with the top edge of the shoe's upper -- no ambiguity about low/high angle
-- **Exact orientation**: "toe toward bottom-right, heel toward center-left" instead of vague "angled toward camera"
-- **Rotation degree**: "30 to 45 degrees away from camera" -- precise range
-- **Depth cue**: "front of shoe closer to lens than heel" -- tells the AI exactly how to render perspective
-- **Visibility checklist**: Explicitly states what must be visible (sole profile, upper volume, interior footbed)
+- **Camera position**: "directly perpendicular to the side" and "eye-level" -- removes ambiguity
+- **Toe direction corrected**: "toe right, heel left" matches the reference thumbnail (was incorrectly "facing left")
+- **Vertical centering**: "centered vertically in the frame" -- ensures balanced composition
+- **Flat on sole**: Specifies the shoe sits flat, not tilted
+- **Interior hidden**: Explicitly states the footbed is obscured from this angle
+- **2D silhouette emphasis**: "flat, two-dimensional lateral silhouette" tells the AI exactly what visual quality to achieve
 
-## File Changed
-**`src/components/creative-studio/product-shoot/shotTypeConfigs.ts`** (lines 419-426)
-- Update `prompt` field for the `hero` angle option
-- Update `narrative` field for the `hero` angle option
+## Scope
+Single file change, two fields updated. No other files affected.
 
-No other files need changes -- the prompt builder (`buildProductFocusPrompt`) already reads these fields dynamically.
