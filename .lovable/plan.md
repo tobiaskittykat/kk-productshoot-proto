@@ -1,39 +1,65 @@
-# Fix Hero Angle: Shoe Must Rest Flat on Surface
+
+# Skip Footbed Branding for Side Profile Angle
 
 ## Problem
+In the side-profile angle, the footbed interior is explicitly hidden ("interior hidden" in prompt, "interior footbed remains obscured from view" in narrative). However, the edge function still injects footbed text/logo branding into the prompt for all `product-focus` angles. This confuses the AI -- it tries to show footbed branding text that shouldn't be visible from this perspective.
 
-The hero (3/4 front) angle sometimes generates the shoe tilted or floating, with only the toe touching the ground (as seen in the user's reference image). The current prompt and narrative lack any grounding instruction — they describe rotation and camera position but never say the shoe should be resting flat.
+## Root Cause
+The edge function filters branding by `shotType` (e.g., `on-foot`, `lifestyle`, `product-focus`) but doesn't know which **angle** within `product-focus` is selected. The side-profile angle hides the footbed, but the branding injection doesn't account for this.
 
-## Changes
+## Solution
+Two small changes to pass the camera angle to the edge function and skip footbed branding when angle is `side-profile`.
 
-**File**: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` (lines 422-423)
+### 1. Pass the camera angle to the edge function
 
-### Prompt (line 422)
+**File**: `src/hooks/useImageGeneration.ts` (~line 480)
 
-**Current**:
+Add `cameraAngle` to the `productFocusConfig` object that's sent inside `productShootConfig`:
 
-> "neutral eye-level three-quarter view, shoe rotated 30-45 degrees with toe toward bottom-right and heel toward center-left, capturing full side profile of sole, structural volume of upper, and clear view into interior footbed"
+```
+productFocusConfig: {
+  ...state.productShoot.productFocusConfig,
+  cameraAngle: state.productShoot.productFocusConfig?.cameraAngle
+}
+```
 
-**New** (added grounding clause):
+### 2. Update the edge function to skip footbed branding for side-profile
 
-> "neutral eye-level three-quarter view, shoe resting flat on surface with entire sole, rotated 30-45 degrees with toe toward bottom-right and heel toward center-left, capturing full side profile of sole, structural volume of upper, and clear view into interior footbed"
+**File**: `supabase/functions/generate-image/index.ts` (~line 660)
 
-### Narrative (line 423)
+Current logic:
+```
+if (visualShotType === 'on-foot' || visualShotType === 'lifestyle') {
+  // Footbed is hidden -- skip entirely
+}
+```
 
-**Current** (excerpt -- no grounding language):
+Updated logic -- also check for side-profile angle:
+```
+const productFocusAngle = request.productShootConfig?.productFocusConfig?.cameraAngle;
+if (visualShotType === 'on-foot' || visualShotType === 'lifestyle'
+    || (visualShotType === 'product-focus' && productFocusAngle === 'side-profile')) {
+  // Footbed is hidden -- skip entirely
+}
+```
 
-> "...The front of the shoe is physically closer to the lens than the heel, creating a natural sense of depth and scale. This specific orientation ensures..."
+### 3. Update the edge function's type definition to accept productFocusConfig
 
-**New** (added grounding sentence after the depth/scale sentence):
+**File**: `supabase/functions/generate-image/index.ts` (~line 178)
 
-> "...The front of the shoe is physically closer to the lens than the heel, creating a natural sense of depth and scale. The shoe rests flat and stable on the surface -- it is not tilted, propped, or floating. This specific orientation ensures..."
+Add to the `productShootConfig` interface:
+```
+productFocusConfig?: {
+  cameraAngle?: string;
+  lighting?: string;
+};
+```
 
-## Why This Wording Works
-
-- **"resting flat on surface"** in the prompt is concise and unambiguous
-- **"not tilted, propped, or floating"** uses negative reinforcement to explicitly ban the failure mode seen in the reference image
-- Placed early in the prompt (before rotation details) so the AI treats it as a foundational constraint
+## What This Achieves
+- Side-profile shots will no longer receive footbed text/logo in the branding section
+- All other product-focus angles (hero, top-down, sole-view, etc.) continue to receive footbed branding as before
+- No changes to the shot prompt or narrative -- purely a branding injection fix
 
 ## Scope
-
-Single file, two fields updated (lines 422-423). No other files affected.
+- `src/hooks/useImageGeneration.ts` -- pass `productFocusConfig` through
+- `supabase/functions/generate-image/index.ts` -- add type + skip logic
