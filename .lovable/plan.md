@@ -1,34 +1,33 @@
 
 
-# Refine Side Profile Camera Angle Prompt
+# Refine Top-Down Camera Angle Prompt
 
 ## Problem
-The current side profile prompt says "product facing left" which contradicts the Gemini analysis (toe to the right, heel to the left). It also lacks specifics about camera height, what should/shouldn't be visible, and vertical centering.
+The current top-down prompt contains product-specific references ("straps", "buckles", "embossed branding") which violates the model-agnostic principle. Product details like these are already injected dynamically by the prompt builder via the `=== PRODUCT COMPONENTS ===` and `=== BRANDING DETAILS ===` sections. The prompt also lacks precise spatial instructions about shoe orientation and alignment.
 
 ## Changes
 
-**File**: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` (lines 430-431)
+**File**: `src/components/creative-studio/product-shoot/shotTypeConfigs.ts` (lines 438-439)
 
 **Current `prompt`**:
-> "pure lateral side profile view, single shoe centered, showing full silhouette from true side angle, product facing left"
+> "overhead top-down view of pair, both shoes visible side by side, footbed and straps fully visible from above, embossed branding readable"
 
 **New `prompt`**:
-> "precise eye-level side profile, shoe perfectly horizontal with toe pointing right and heel pointing left, flat lateral silhouette emphasizing full length of sole and upper contour, interior hidden"
+> "direct overhead bird's-eye view of pair, both shoes vertically aligned pointing toward top of frame, symmetrical side-by-side with uniform gap, full interior footbed and top surface of uppers visible, outer sides and soles hidden"
 
 **Current `narrative`**:
-> "a pure lateral view capturing the full silhouette. A single shoe centered in frame, photographed from a true side angle with the product facing left. The entire profile line -- from heel counter through the arch to the toe -- reads as one clean, uninterrupted silhouette against the background."
+> "shot from directly overhead, looking straight down at both shoes placed side by side. The footbed, straps, buckles, and any embossed branding are fully visible and readable from this bird's-eye perspective. The symmetry of the pair creates a graphic, almost architectural composition."
 
 **New `narrative`**:
-> "a precise, eye-level side profile perspective. The camera is positioned directly perpendicular to the side of the shoe, perfectly level with it. The shoe is oriented perfectly horizontal, with the toe pointing directly to the right edge of the frame and the heel aligned toward the left. The shoe sits flat on its sole, centered vertically in the frame to emphasize its silhouette and proportions. This composition captures a flat, two-dimensional lateral silhouette, showcasing the full length and contour of both the sole and the upper while the interior footbed remains obscured from view."
+> "a direct overhead, bird's-eye view looking straight down onto the pair. Both shoes are vertically aligned, pointing directly toward the top of the frame. They are arranged in a symmetrical, side-by-side composition, positioned parallel to one another with a small, uniform gap between them. This angle provides a complete view of the interior footbed and the top surface of the uppers, highlighting the internal contours and the overall top-down silhouette of the pair. The outer sides and soles are entirely hidden from this perspective."
 
 ## Key Improvements
-- **Camera position**: "directly perpendicular to the side" and "eye-level" -- removes ambiguity
-- **Toe direction corrected**: "toe right, heel left" matches the reference thumbnail (was incorrectly "facing left")
-- **Vertical centering**: "centered vertically in the frame" -- ensures balanced composition
-- **Flat on sole**: Specifies the shoe sits flat, not tilted
-- **Interior hidden**: Explicitly states the footbed is obscured from this angle
-- **2D silhouette emphasis**: "flat, two-dimensional lateral silhouette" tells the AI exactly what visual quality to achieve
+- **Product-agnostic**: Removed "straps", "buckles", "embossed branding" -- these are injected dynamically by the prompt builder and don't belong here
+- **Shoe orientation specified**: "vertically aligned, pointing toward top of frame" -- prevents random rotations
+- **Gap defined**: "small, uniform gap between them" -- prevents inconsistent spacing
+- **Parallel alignment**: "positioned parallel to one another" -- prevents angled/fanned arrangements
+- **Visibility checklist**: Explicitly states what's visible (footbed, top of uppers) and what's hidden (outer sides, soles)
 
 ## Scope
-Single file change, two fields updated. No other files affected.
+Single file change, two fields updated (lines 438-439). `shoeCount` remains 2. No other files affected.
 
