@@ -1,44 +1,46 @@
 
 
-# Auto-Assign Region to Scene Uploads
+# Translate Hex Codes to Descriptive Color Names
 
-## Overview
-Remove the manual "Upload to region" dropdown and instead have the AI automatically detect and assign the region during upload. Users can still reassign the region after upload via the hover dropdown on each scene card.
+## Problem
+When users enter a custom hex code (e.g. `#FF69B4`) that doesn't match an existing preset, the color name is set to "Custom". This shows up confusingly in the UI and flows into prompts as just the raw hex code, which the AI struggles with.
 
-## Changes
+## Solution
+Add a `hexToColorName` utility that finds the **nearest named color** from an extended palette. This replaces "Custom" with a real descriptive name (e.g., "Hot Pink") both in the UI and in prompts.
 
-### 1. Update classify-scene edge function to also return region
-**File: `supabase/functions/classify-scene/index.ts`**
-- Add `region` to the tool schema with enum: `["usa", "europe", "apac", "mea", "all"]`
-- Update the prompt to instruct the AI to detect the likely geographic region based on visual cues (architecture style, signage, vegetation, cultural context)
-- Return `{ category, name, region }`
+## Approach: Nearest-Color Matching via Delta-E (simplified)
 
-### 2. Remove "Upload to" selector from BackgroundSelector
-**File: `src/components/creative-studio/product-shoot/BackgroundSelector.tsx`**
-- Remove the `uploadRegion` state and the "Upload to:" Select dropdown (lines 410-424)
-- Remove `MapPin` from imports (no longer needed)
-- The `createScene.mutate({ file })` call no longer passes a manual region -- it will come from the AI classification
+Create a utility function that:
+1. First checks the existing `COLOR_PRESETS` for an exact match
+2. If no exact match, converts hex to RGB and finds the **perceptually closest** color from an extended named-color palette (~140 CSS named colors + the Birkenstock presets)
+3. Returns the closest color name (e.g., `#FF10F0` -> "Magenta", `#8B4513` -> "Saddle Brown")
 
-### 3. Update useSceneImages hook to use AI-assigned region
-**File: `src/hooks/useSceneImages.ts`**
-- In the `createScene` mutation, use the `region` returned by classify-scene instead of the manually passed region
-- Keep the `region` parameter as optional override, but default to the AI-classified value
+Uses simple Euclidean distance in RGB space (good enough for color naming, no external dependencies needed).
 
-### 4. Migration: Update existing scenes with correct regions
-Run a one-time SQL update to assign the correct regions to existing scene images based on the user's earlier instructions:
-- "wood deck with white fence" -> `usa`
-- "boules court with bench" -> `europe`
-- "train station" and "busy city" -> `apac`
+## Files
 
-```sql
-UPDATE public.scene_images SET region = 'usa' WHERE name ILIKE '%deck%' OR name ILIKE '%fence%';
-UPDATE public.scene_images SET region = 'europe' WHERE name ILIKE '%boules%' OR name ILIKE '%bench%' OR name ILIKE '%court%';
-UPDATE public.scene_images SET region = 'apac' WHERE name ILIKE '%train%' OR name ILIKE '%station%' OR name ILIKE '%city%' OR name ILIKE '%urban%';
-```
+### 1. `src/lib/colorNames.ts` (new)
+- Extended color name palette (~140 entries from CSS named colors + Birkenstock presets)
+- `hexToColorName(hex: string): string` -- returns nearest color name
+- `hexToRgb(hex: string): [number, number, number]` helper
+- Distance function using weighted RGB (human perception weighting: R*0.3, G*0.59, B*0.11)
 
-## Files Modified
-1. `supabase/functions/classify-scene/index.ts` -- Add region detection to AI classification
-2. `src/components/creative-studio/product-shoot/BackgroundSelector.tsx` -- Remove manual region upload selector
-3. `src/hooks/useSceneImages.ts` -- Use AI-classified region from classify-scene response
-4. Migration SQL -- Update existing scenes with correct regions
+### 2. `src/lib/birkenstockMaterials.ts`
+- Export a `findColorPreset` that also checks extended names (or keep as-is since the new util covers it)
+
+### 3. `src/components/creative-studio/product-shoot/ComponentOverridePopover.tsx`
+- In `handleCustomHexChange`: instead of setting `selectedColor` to `'Custom'`, call `hexToColorName(hex)` to get a descriptive name
+- In the native color picker `onChange`: same treatment
+- UI now shows e.g. "Selected: Hot Pink (#FF69B4)" instead of "Selected: Custom (#FF69B4)"
+
+### 4. `supabase/functions/generate-image/index.ts`
+- Replace the hardcoded `colorNames` map in `getColorDescription()` with the same nearest-color logic (duplicated server-side since edge functions can't import from `src/`)
+- This ensures prompts say "Saddle Brown (#8B4513)" instead of just "#8B4513"
+
+## Key Details
+
+- The extended palette includes all CSS named colors (Tomato, Salmon, Orchid, Sienna, etc.) plus Birkenstock-specific names (Taupe, Habana, Cognac, etc.)
+- Birkenstock presets take priority in matching so brand-specific names are preferred
+- No new dependencies -- pure math (weighted RGB distance)
+- The color name is stored alongside the hex in the override, so both travel together through the system
 
