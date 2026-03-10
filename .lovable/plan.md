@@ -1,26 +1,20 @@
 
-Objective
-Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
-## STATUS: ✅ IMPLEMENTED (2026-03-02)
+You're right that GitHub doesn't allow forking a repo into the same account that owns it. That's a GitHub limitation — forks must go to a different account or organization.
 
-### What was done
+**Alternatives that keep it under the same account:**
 
-**Frontend (single-field serialization):**
-- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
-- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
-- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
-- `useQuickCustomization` — AI override responses baked into canonical format before applying
-- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
-- `SetupProductStep2` — removed `colorHex` from merged component creation
-- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
+1. **"Use this template"** — Go to your repo on GitHub → **Settings** → check **"Template repository"**. Then go back to the repo's main page and click **"Use this template" → "Create a new repository"**. This creates a clean, independent copy under the same account with a new name.
 
-**Backend (already had bake logic):**
-- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
-- Build fingerprint: `hex-inline-v1-2026-03-02`
+2. **Duplicate manually via CLI** — If you're comfortable with the command line:
+   ```text
+   git clone --bare https://github.com/YOUR_USER/YOUR_REPO.git
+   cd YOUR_REPO.git
+   git push --mirror https://github.com/YOUR_USER/NEW_REPO_NAME.git
+   cd ..
+   rm -rf YOUR_REPO.git
+   ```
+   (Create the empty `NEW_REPO_NAME` repo on GitHub first.)
 
-### Verification criteria
-- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
-- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
-- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
-- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
+The **template** approach is the easiest — just two clicks once you enable it in repo settings.
+
