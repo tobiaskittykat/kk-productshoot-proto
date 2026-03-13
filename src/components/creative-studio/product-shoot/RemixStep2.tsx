@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronDown, ChevronRight, Upload, Package, Settings2, Clock, Check, X, ImageIcon, Trash2, Expand, FolderOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, Upload, Package, Settings2, Clock, Check, X, ImageIcon, Trash2, Expand, FolderOpen, Sparkles, Shuffle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ProductSKU } from "./ProductSKUPicker";
 import { ProductPickerModal } from "./ProductPickerModal";
 import { SmartUploadModal } from "./SmartUploadModal";
 import { CreateSKUModal } from "./CreateSKUModal";
 import { EditSKUModal } from "./EditSKUModal";
 import { ShoeComponentsPanel } from "./ShoeComponentsPanel";
+import { RoulettePromptCards, RoulettePrompt } from "./RoulettePromptCards";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
@@ -24,6 +26,7 @@ import { ProductShootState, initialProductShootState } from "./types";
 import { aspectRatios, resolutions } from "../types";
 import { AdGalleryModal } from "./AdGalleryModal";
 import { useAdCreatives } from "@/hooks/useAdCreatives";
+import { useToast } from "@/hooks/use-toast";
 
 interface RemixStep2Props {
   state: ProductShootState;
