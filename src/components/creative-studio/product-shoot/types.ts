@@ -219,6 +219,11 @@ export const initialProductShootState: ProductShootState = {
   // Component customization defaults
   componentOverrides: undefined,
   attachReferenceImages: true, // Default: attach reference images
+  
+  // Remix variation mode defaults
+  remixVariationMode: 'swap',
+  roulettePrompts: null,
+  isAnalyzingScene: false,
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)
