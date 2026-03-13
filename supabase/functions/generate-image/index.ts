@@ -288,7 +288,7 @@ function _nearestColorName(hex: string): string {
 // After this, .color = "Dark Slate Gray (#005477)" and .colorHex is deleted.
 // Every downstream code path that reads .color automatically carries the hex.
 function _bakeHexIntoComponent(comp: { material: string; color: string; colorHex?: string }): void {
-  if (!comp) return;
+  if (!comp || typeof comp !== 'object') return;
   comp.material = (comp.material || '').trim();
   comp.color = (comp.color || '').trim();
   if (comp.colorHex) {
