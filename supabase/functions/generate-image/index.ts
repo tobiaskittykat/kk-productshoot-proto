@@ -1569,6 +1569,10 @@ async function runBackgroundGeneration(params: {
       // Craft refined prompt (can take a few seconds)
       refinedPrompt = await craftPromptWithAgent(body, apiKey);
     }
+    // Append text removal AFTER prompt agent (agent tends to drop it)
+    if (body.remixRemoveText) {
+      refinedPrompt += "\n\nCRITICAL: Remove ALL text, logos, watermarks, and ad copy overlaid on the image. Inpaint those areas seamlessly to match the surrounding background. The final image must contain zero overlaid text or graphics.";
+    }
     console.log("[BG] Refined prompt:", refinedPrompt);
 
     // Generate each image in parallel
