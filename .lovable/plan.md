@@ -1,52 +1,114 @@
-Objective
-Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
-## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-### What was done
+# Bulk Product Import API for External Crawler
 
-**Frontend (single-field serialization):**
-- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
-- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
-- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
-- `useQuickCustomization` — AI override responses baked into canonical format before applying
-- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
-- `SetupProductStep2` — removed `colorHex` from merged component creation
-- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
+## What You Need
 
-**Backend (already had bake logic):**
-- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
-- Build fingerprint: `hex-inline-v1-2026-03-02`
+Your external crawler needs an API endpoint to POST product metadata + images into the system. The endpoint must:
+- Accept product data (model, name, color, image URLs or raw image bytes)
+- Mirror images into storage under a smart folder structure
+- Create `product_skus` and `scraped_products` records automatically
+- Handle thousands of images without timeouts
+- Return the storage base URL so your crawler knows where files land
 
-### Verification criteria
-- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
-- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
-- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
-- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
+## Architecture
 
-## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
+```text
+Your Crawler
+    │
+    ▼
+POST /functions/v1/bulk-import-products
+    │
+    ├─ Mode A: "register" — crawler sends metadata + image URLs
+    │   → Edge function downloads & stores images
+    │
+    ├─ Mode B: "upload" — crawler sends pre-uploaded storage paths
+    │   → Edge function just creates DB records
+    │
+    └─ Both modes create product_skus + scraped_products rows
+```
 
-## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
+Storage path convention: `{user_id}/{sku_id}/{angle}.jpg`
 
-### What was done (v3 — tier rewrite)
+## Files to Create/Change
 
-**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
-- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
-- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
-- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
-- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
-- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
-- Updated descriptions to match new definitions
+### 1. New edge function: `supabase/functions/bulk-import-products/index.ts`
 
-**Fixed source image framing in `generate-image`:**
-- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
-- Previously attached image with no context — model didn't know how to use it
+Accepts JSON payload:
+```typescript
+{
+  apiKey: string,           // user's auth token
+  brandId: string,
+  products: [{
+    model: string,          // "Arizona"
+    productName: string,    // "Arizona Big Buckle Leather"
+    color: string,          // "New Dressy Black"
+    sourceUrl?: string,     // original PDP URL
+    imageUrls: string[],    // array of CDN URLs to mirror
+  }]
+}
+```
 
-**Frontend (`RoulettePromptCards`):**
-- Updated tier icons: 🎞️ / 🔄 / 🎬
-- Labels now driven by `tierColors` map with correct names
+Processing per product:
+1. Generate a stable `sku_id` from `productName + color` (deterministic UUID or slug)
+2. Upsert into `product_skus` (name, category=sandal, description JSON with model/color/sourceUrl)
+3. For each image URL: detect angle from filename pattern (`_top`, `_side`, `_sole`, `_pair`, `_detail`, `_look`, `_closeup`, hero = default), download, upload to `product-images/{user_id}/{sku_id}/{angle}.jpg`, insert into `scraped_products`
+4. After all angles uploaded, call `composite-product-images` to generate the grid thumbnail
+5. Return summary: `{ created: N, skipped: N, errors: [...] }`
 
-### Files changed
-- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
-- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
-- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
+Key design for scale:
+- Process products **sequentially** (one at a time) to avoid memory issues
+- Process images within a product in **parallel** (batch of ~5 concurrent downloads)
+- Use `upsert` with `external_id` to make the endpoint idempotent — re-running won't duplicate
+- 300s edge function timeout is enough for ~10-20 products per call; crawler should batch accordingly
+
+### 2. Angle detection logic (inside the edge function)
+
+Birkenstock URLs have predictable patterns:
+- `1031752.jpg` → hero (front)
+- `1031752_top.jpg` → top-down
+- `1031752_side.jpg` → side
+- `1031752_sole.jpg` → sole
+- `1031752_pair.jpg` → pair
+- `1031752_detail.jpg` → detail
+- `1031752_f_look_f.jpg` → lifestyle/on-foot
+- `1031752_f_closeup_f.jpg` → close-up
+
+This auto-tagging means your products arrive pre-organized with correct angle labels.
+
+### 3. `supabase/config.toml` — Add JWT-free entry
+
+```toml
+[functions.bulk-import-products]
+verify_jwt = false
+```
+
+Auth is validated in-code via the `apiKey` field (service role key or user JWT).
+
+### 4. Response includes storage info
+
+The response will include the base storage URL pattern so your crawler knows the convention:
+```json
+{
+  "storageBase": "https://hqjfjrwoyvtlhqcupceu.supabase.co/storage/v1/object/public/product-images",
+  "pathPattern": "{user_id}/{sku_id}/{angle}.{ext}",
+  "created": 285,
+  "totalImages": 2520
+}
+```
+
+### What your crawler needs to do
+
+Call the endpoint in batches of ~15 products per request:
+```bash
+curl -X POST https://hqjfjrwoyvtlhqcupceu.supabase.co/functions/v1/bulk-import-products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "YOUR_JWT_OR_SERVICE_KEY",
+    "brandId": "YOUR_BRAND_ID",
+    "products": [ ... up to 15 products ... ]
+  }'
+```
+
+Loop through all 285 products in ~19 batches. Each batch takes ~30-60s depending on image download speed.
+
