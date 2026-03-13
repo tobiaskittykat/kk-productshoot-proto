@@ -26,33 +26,27 @@ Make component colors truly single-field across the full pipeline so the payload
 
 ## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-## STATUS: ✅ IMPLEMENTED (2026-03-13) — v2: Natural Language Prompts
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-### What was done (v2 rewrite)
+### What was done (v3 — tier rewrite)
 
-**Edge Function (`reference-roulette-prompts`) — full rewrite:**
-- Phase A now outputs 3 natural language "Edit this image:" prompts (not JSON)
-- Each tier (faithful/moderate/creative) describes the scene in rich sensory prose with camera/lens/grain details
-- Footwear uses `[PRODUCT_PLACEHOLDER]` for Phase B integration
-- Phase B rewrites each prompt to integrate product details, replacing the placeholder
-- Response format: `{ tier, label, description, naturalPrompt }` per tier
-- Removed NB2 JSON schema entirely — all output is natural language
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-**Updated `generate-image` Edge Function:**
-- `skipPromptAgent` path now uses `body.structuredPrompt.naturalPrompt` as the prompt
-- Source image framed as **edit target** (same as remix mode) — no more "generate NEW" instruction
-- This preserves the campaign's visual DNA: grain, color grade, lighting, film stock
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-**Frontend:**
-- `RoulettePrompt` type: replaced `prompt`/`structured` fields with `naturalPrompt`
-- `RoulettePromptCards`: displays/edits natural language prompt (not JSON), removed `font-mono`
-- `RemixStep2`: maps response `naturalPrompt` field, simplified prompt edit handler
-- `useImageGeneration`: passes `{ naturalPrompt }` as `structuredPrompt`, uses `naturalPrompt` as `prompt`
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
 ### Files changed
-- `supabase/functions/reference-roulette-prompts/index.ts` (REWRITTEN)
-- `supabase/functions/generate-image/index.ts` — naturalPrompt path + edit-target framing
-- `src/components/creative-studio/product-shoot/types.ts` — RoulettePrompt type updated
-- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` (REWRITTEN)
-- `src/components/creative-studio/product-shoot/RemixStep2.tsx` — naturalPrompt mapping
-- `src/hooks/useImageGeneration.ts` — naturalPrompt flow
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
