@@ -226,6 +226,7 @@ export const initialProductShootState: ProductShootState = {
   remixVariationMode: 'swap',
   roulettePrompts: null,
   isAnalyzingScene: false,
+  remixEnabledTiers: { faithful: true, moderate: true, creative: false },
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)
