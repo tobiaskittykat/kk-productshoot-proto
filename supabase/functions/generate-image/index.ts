@@ -321,7 +321,7 @@ function bakeHexIntoColors(body: GenerateImageRequest): void {
   if (body.originalComponents) {
     for (const key of Object.keys(body.originalComponents) as (keyof typeof body.originalComponents)[]) {
       const comp = body.originalComponents[key];
-      if (comp) _bakeHexIntoComponent(comp as any);
+      if (comp && typeof comp === 'object') _bakeHexIntoComponent(comp as any);
     }
   }
 }
