@@ -1581,8 +1581,23 @@ async function runBackgroundGeneration(params: {
           { type: "text", text: refinedPrompt }
         ];
 
+        // ROULETTE mode: source image = scene reference, not edit target
+        if (body.skipPromptAgent && body.structuredPrompt && body.sourceImageUrl?.startsWith('http')) {
+          messageContent.unshift({
+            type: "image_url",
+            image_url: { url: body.sourceImageUrl }
+          });
+          let rouletteInstruction = "SCENE REFERENCE IMAGE: Use this image as visual inspiration for the scene, environment, and mood. Generate a NEW image following the structured JSON prompt below — do NOT simply edit or reproduce this image. The JSON prompt defines the exact pose, composition, camera angle, and creative direction to follow.";
+          if (body.remixRemoveText) {
+            rouletteInstruction += "\n\nIMPORTANT: Do NOT include any text, logos, watermarks, or ad copy in the generated image.";
+          }
+          messageContent.unshift({
+            type: "text",
+            text: rouletteInstruction
+          });
+        }
         // Add source image for editing (image-to-image) — used by both editMode and remixMode
-        if ((body.editMode || body.remixMode) && body.sourceImageUrl && body.sourceImageUrl.startsWith('http')) {
+        else if ((body.editMode || body.remixMode) && body.sourceImageUrl && body.sourceImageUrl.startsWith('http')) {
           messageContent.unshift({
             type: "image_url",
             image_url: { url: body.sourceImageUrl }
