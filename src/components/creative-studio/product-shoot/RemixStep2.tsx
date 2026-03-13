@@ -503,21 +503,11 @@ export const RemixStep2 = ({
             }}
             onPromptEdit={(tier, newPrompt) => {
               if (!roulettePrompts) return;
-              try {
-                const parsed = JSON.parse(newPrompt);
-                onStateChange({
-                  roulettePrompts: roulettePrompts.map(p =>
-                    p.tier === tier ? { ...p, prompt: newPrompt, structured: parsed } : p
-                  ),
-                });
-              } catch {
-                // Invalid JSON — just update the string for now
-                onStateChange({
-                  roulettePrompts: roulettePrompts.map(p =>
-                    p.tier === tier ? { ...p, prompt: newPrompt } : p
-                  ),
-                });
-              }
+              onStateChange({
+                roulettePrompts: roulettePrompts.map(p =>
+                  p.tier === tier ? { ...p, naturalPrompt: newPrompt } : p
+                ),
+              });
             }}
           />
         </div>
@@ -607,8 +597,7 @@ export const RemixStep2 = ({
                 tier: p.tier,
                 label: p.label,
                 description: p.description,
-                prompt: p.prompt,
-                structured: p.structured,
+                naturalPrompt: p.naturalPrompt,
                 enabled: true,
                 imageCount: 2,
               }));

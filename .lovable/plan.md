@@ -1,83 +1,58 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Roulette Variations: Natural Language Prompts from Phase A/B + Edit-mode Framing
+### What was done
 
-## Problem
-1. The roulette pipeline generates **raw JSON** prompts — the image model works far better with natural language prose (as proven by the normal shoot and remix flows)
-2. The source image is framed as "scene reference, generate NEW" — which throws away the campaign's visual DNA (grain, color grade, vintage feel, lighting)
-3. No language telling the model "same photo session, different moment"
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-## Solution
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-Rewrite the `reference-roulette-prompts` edge function to produce **natural language "Edit this image:" prompts** directly (no Phase C needed). In `generate-image`, use the same edit-target framing as remix mode.
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-### 1. `supabase/functions/reference-roulette-prompts/index.ts` — Full rewrite of prompts
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-**Phase A** — Change all 3 system prompts from "return JSON" to "return a natural language editing prompt":
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v2: Natural Language Prompts
 
-- **Faithful**: "Analyze this image forensically. Write an 'Edit this image:' prompt that recreates this EXACT shot — same pose, same angle, same framing, same lighting, same grain, same color grade. Only the footwear changes. The result must be indistinguishable from the original session."
+### What was done (v2 rewrite)
 
-- **Moderate**: "Analyze this image. Write an 'Edit this image:' prompt for a different moment from the SAME photo session. Same model, same location, same lighting setup, same film stock/grain. But: slightly different pose (shift weight, alter hand placement), marginally different camera angle or framing. The visual DNA (color grade, grain, mood) must be identical."
+**Edge Function (`reference-roulette-prompts`) — full rewrite:**
+- Phase A now outputs 3 natural language "Edit this image:" prompts (not JSON)
+- Each tier (faithful/moderate/creative) describes the scene in rich sensory prose with camera/lens/grain details
+- Footwear uses `[PRODUCT_PLACEHOLDER]` for Phase B integration
+- Phase B rewrites each prompt to integrate product details, replacing the placeholder
+- Response format: `{ tier, label, description, naturalPrompt }` per tier
+- Removed NB2 JSON schema entirely — all output is natural language
 
-- **Creative**: "Analyze this image. Write an 'Edit this image:' prompt for a bold editorial shot from the SAME campaign session. Same model, same location DNA, same lighting rig and film stock. But: dramatically different pose, bolder camera angle, more artistic framing. The grain, color rendering, and atmosphere must still feel like the same shoot."
+**Updated `generate-image` Edge Function:**
+- `skipPromptAgent` path now uses `body.structuredPrompt.naturalPrompt` as the prompt
+- Source image framed as **edit target** (same as remix mode) — no more "generate NEW" instruction
+- This preserves the campaign's visual DNA: grain, color grade, lighting, film stock
 
-All three prompts should:
-- Start output with "Edit this image:"
-- Describe what they SEE in rich sensory prose (not JSON)
-- Include camera/lens/film stock details naturally woven in
-- Set `clothing.footwear` to a placeholder like "[PRODUCT — see Phase B]"
-- Return plain text, not JSON
+**Frontend:**
+- `RoulettePrompt` type: replaced `prompt`/`structured` fields with `naturalPrompt`
+- `RoulettePromptCards`: displays/edits natural language prompt (not JSON), removed `font-mono`
+- `RemixStep2`: maps response `naturalPrompt` field, simplified prompt edit handler
+- `useImageGeneration`: passes `{ naturalPrompt }` as `structuredPrompt`, uses `naturalPrompt` as `prompt`
 
-**Phase B** — Change from "edit JSON fields" to "rewrite the prompt with product integrated":
-
-System prompt becomes: "You receive a natural language image editing prompt and product details. Rewrite the prompt to integrate the product into the footwear description. Keep EVERYTHING else identical — same prose, same mood, same camera details. Only replace the footwear placeholder with a rich description of the actual product. Output the final editing prompt only — no headers, no explanation."
-
-**Response format** changes from `{ structured, prompt }` to `{ naturalPrompt }` per tier:
-```
-{
-  prompts: [
-    { tier: "faithful", label: "Close Recreation", description: "...", naturalPrompt: "Edit this image: ..." },
-    { tier: "moderate", label: "Subtle Variation", description: "...", naturalPrompt: "Edit this image: ..." },
-    { tier: "creative", label: "Creative Reimagining", description: "...", naturalPrompt: "Edit this image: ..." }
-  ]
-}
-```
-
-### 2. `supabase/functions/generate-image/index.ts` (~lines 1559-1597)
-
-- **Prompt selection**: Use `body.structuredPrompt.naturalPrompt` (or fall back to stringified structured) as `refinedPrompt`
-- Append `remixRemoveText` instruction if set
-- **Source image framing**: Use the SAME framing as remix mode — no special "scene reference" instruction. The prompt itself starts with "Edit this image:" which is sufficient. Remove the current roulette-specific block (lines 1584-1597) and let it fall through to the existing editMode block.
-
-### 3. `src/hooks/useImageGeneration.ts` (~line 532-541)
-
-- Pass `structuredPrompt` with the `naturalPrompt` field
-- Set `prompt` to `roulettePrompt.naturalPrompt` instead of `JSON.stringify`
-
-### 4. `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx`
-
-- Display/edit `naturalPrompt` in the textarea (not JSON)
-- Label changes from "Advanced: Edit JSON prompt" to "Edit prompt"
-- Update `RoulettePrompt` type: add `naturalPrompt: string`, keep `prompt` for backward compat
-
-### 5. `src/components/creative-studio/product-shoot/types.ts`
-
-- Update `RoulettePrompt` type to include `naturalPrompt`
-
-### 6. `src/components/creative-studio/product-shoot/RemixStep2.tsx`
-
-- Update where roulette response is mapped to include `naturalPrompt`
-
-### Data flow after fix
-```text
-Phase A: Scene image → 3 natural language "Edit this image:" prompts (footwear placeholder)
-Phase B: Inject product details → 3 final "Edit this image:" prompts with real product
-         ↓
-Frontend shows natural language in editable cards
-         ↓
-generate-image receives natural language prompt
-  → source image framed as edit target (same as remix)
-  → model preserves grain, color grade, mood, film stock
-  → tier controls how much pose/angle/framing changes
-```
-
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` (REWRITTEN)
+- `supabase/functions/generate-image/index.ts` — naturalPrompt path + edit-target framing
+- `src/components/creative-studio/product-shoot/types.ts` — RoulettePrompt type updated
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` (REWRITTEN)
+- `src/components/creative-studio/product-shoot/RemixStep2.tsx` — naturalPrompt mapping
+- `src/hooks/useImageGeneration.ts` — naturalPrompt flow
