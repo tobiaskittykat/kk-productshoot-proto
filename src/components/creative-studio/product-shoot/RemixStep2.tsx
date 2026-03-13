@@ -807,11 +807,20 @@ export const RemixStep2 = ({
               </div>
               
               {/* Total images info */}
-              {remixSourceImages.length > 0 && (
-                <p className="text-xs text-muted-foreground border-t border-border pt-3">
-                  Total: {remixSourceImages.length} source{remixSourceImages.length > 1 ? 's' : ''} × {imageCount} = <strong>{remixSourceImages.length * imageCount} images</strong>
-                </p>
-              )}
+              {remixSourceImages.length > 0 && (() => {
+                const rouletteTotal = state.roulettePrompts
+                  ?.filter(p => p.enabled)
+                  .reduce((sum, p) => sum + p.imageCount, 0) ?? 0;
+                const isVariations = state.remixVariationMode === 'variations' && rouletteTotal > 0;
+                return (
+                  <p className="text-xs text-muted-foreground border-t border-border pt-3">
+                    {isVariations
+                      ? <>Total: <strong>{rouletteTotal} images</strong> across {state.roulettePrompts?.filter(p => p.enabled).length} tiers</>
+                      : <>Total: {remixSourceImages.length} source{remixSourceImages.length > 1 ? 's' : ''} × {imageCount} = <strong>{remixSourceImages.length * imageCount} images</strong></>
+                    }
+                  </p>
+                );
+              })()}
             </div>
           </CollapsibleContent>
         </div>
