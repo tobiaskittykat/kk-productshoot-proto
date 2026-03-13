@@ -607,8 +607,7 @@ export const RemixStep2 = ({
                 tier: p.tier,
                 label: p.label,
                 description: p.description,
-                prompt: p.prompt,
-                structured: p.structured,
+                naturalPrompt: p.naturalPrompt,
                 enabled: true,
                 imageCount: 2,
               }));
