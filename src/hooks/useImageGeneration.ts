@@ -532,11 +532,11 @@ export function useImageGeneration() {
                   const rouletteBody = {
                     ...buildRequestBody(null, 1),
                     skipPromptAgent: true,
-                    structuredPrompt: roulettePrompt.structured,
+                    structuredPrompt: { naturalPrompt: roulettePrompt.naturalPrompt },
                     editMode: true,
                     sourceImageUrl: sourceImages[srcIdx],
                     conceptTitle: `Roulette — ${roulettePrompt.label}`,
-                    prompt: JSON.stringify(roulettePrompt.structured, null, 2),
+                    prompt: roulettePrompt.naturalPrompt,
                     remixRemoveText: state.productShoot.remixRemoveText ?? false,
                   };
                   batchPromises.push(
