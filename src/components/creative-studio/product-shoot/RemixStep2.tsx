@@ -80,6 +80,13 @@ export const RemixStep2 = ({
   const [showAdGallery, setShowAdGallery] = useState(false);
   const [autoSaveToGallery, setAutoSaveToGallery] = useState(true);
   const { saveCreative } = useAdCreatives();
+  const { toast } = useToast();
+  const [brief, setBrief] = useState('');
+
+  // Remix variation mode
+  const remixVariationMode = state.remixVariationMode ?? 'swap';
+  const roulettePrompts = state.roulettePrompts ?? null;
+  const isAnalyzingScene = state.isAnalyzingScene ?? false;
 
   // Shoe component analysis hooks
   const {
