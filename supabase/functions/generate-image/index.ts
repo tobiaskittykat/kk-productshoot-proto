@@ -1556,9 +1556,13 @@ async function runBackgroundGeneration(params: {
     console.log("[BG] Starting background generation for", pendingIds.length, "images");
     console.log("[BG] Model:", selectedModel, "| Moodboard:", moodboardUrl || "NONE");
 
-    // === REMIX MODE: bypass prompt agent, use direct editing prompt ===
+    // === PROMPT SELECTION: skipPromptAgent > remixMode > normal ===
     let refinedPrompt: string;
-    if (body.remixMode) {
+    if (body.skipPromptAgent && body.structuredPrompt) {
+      // Reference Roulette mode: use the structured JSON prompt directly
+      refinedPrompt = JSON.stringify(body.structuredPrompt, null, 2);
+      console.log("[BG] skipPromptAgent mode — using structured JSON prompt directly");
+    } else if (body.remixMode) {
       refinedPrompt = await craftRemixPromptWithAgent(body, apiKey);
       console.log("[BG] Remix mode — used dedicated remix prompt agent");
     } else {
