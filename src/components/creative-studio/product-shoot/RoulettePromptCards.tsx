@@ -24,24 +24,27 @@ interface RoulettePromptCardsProps {
   onPromptEdit: (tier: string, newPrompt: string) => void;
 }
 
-const tierColors: Record<string, { bg: string; border: string; badge: string; icon: string }> = {
+const tierColors: Record<string, { bg: string; border: string; badge: string; icon: string; label: string }> = {
   faithful: {
     bg: 'bg-blue-500/5',
     border: 'border-blue-500/20',
     badge: 'bg-blue-500/10 text-blue-400',
-    icon: '🎯',
+    icon: '🎞️',
+    label: 'Close Recreation',
   },
   moderate: {
     bg: 'bg-amber-500/5',
     border: 'border-amber-500/20',
     badge: 'bg-amber-500/10 text-amber-400',
     icon: '🔄',
+    label: 'Different Moment',
   },
   creative: {
     bg: 'bg-purple-500/5',
     border: 'border-purple-500/20',
     badge: 'bg-purple-500/10 text-purple-400',
-    icon: '✨',
+    icon: '🎬',
+    label: 'Same Set, Fresh Take',
   },
 };
 

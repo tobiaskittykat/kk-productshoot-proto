@@ -1,59 +1,52 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Rewrite Roulette Variation Tiers — Correct Definitions + Source Image Attachment Fix
+### What was done
 
-## Problem
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-1. **Tier definitions are wrong**: The current descriptions and prompt instructions don't match what you actually want:
-   - Close Recreation says "only footwear changes" — but you want slight angle variation too
-   - Subtle Variation says "subtle pose shift" — but you want very different pose, similar background
-   - Creative Reimagining says "bolder pose, dramatic angle" — but you want new model, new pose, same set/location showing different things
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-2. **Source image not properly attached**: In `generate-image/index.ts` (line 1590-1595), the roulette path attaches the source image but has NO framing instruction before it — unlike the remix path which says "Replace the shoes/footwear..." The model sees a bare image + prompt with no context on how to use it. This is why results look disconnected from the original.
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-## Solution
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-### 1. `supabase/functions/reference-roulette-prompts/index.ts` — Rewrite all tier prompts
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-**New tier definitions:**
+### What was done (v3 — tier rewrite)
 
-- **Close Recreation (faithful)**: Same shoot, same everything — maybe a slightly different camera angle or the model shifted weight between frames. The grain, light, color grade, wardrobe, background are IDENTICAL. Like the next frame on the same roll of film.
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-- **Different Moment (moderate)**: Same session, same set, same lighting rig, same film stock — but a clearly different pose. Model has moved, weight shifted dramatically, hands repositioned. Background and atmosphere are identical. Like a shot from 5 minutes later in the same session.
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-- **Same Set, Fresh Take (creative)**: Same physical location/set, same lighting setup, same film stock and color grade — but a completely new composition. Could be a different model, a bold new pose, camera repositioned to show a different part of the set. Still unmistakably the same shoot day, same photographer, same campaign — but the hero editorial pick vs a test frame.
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
-**Update `tierDescriptions` array** to match the new definitions.
-
-**Update labels**: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
-
-### 2. `supabase/functions/generate-image/index.ts` (~lines 1588-1595) — Fix source image framing for roulette
-
-Currently the roulette path just pushes the image with no instruction. Add a framing instruction identical in spirit to the remix path:
-
-```typescript
-if (body.skipPromptAgent && body.structuredPrompt && body.sourceImageUrl?.startsWith('http')) {
-  messageContent.unshift(
-    { type: "image_url", image_url: { url: body.sourceImageUrl } },
-  );
-  messageContent.unshift({
-    type: "text",
-    text: "This is the reference image from the photo session. Your edit must preserve its exact visual DNA — grain, color grade, film stock, lighting quality, and atmosphere. The prompt below describes what to change:"
-  });
-}
-```
-
-This tells the model HOW to use the attached image (as a style/session anchor), rather than leaving it ambiguous.
-
-### 3. `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — Update labels/descriptions
-
-Update the `tierColors` icon mapping and ensure the card displays the new labels and descriptions from the response.
-
-### 4. `src/components/creative-studio/product-shoot/types.ts` — No structural changes needed
-
-The `RoulettePrompt` type already has `naturalPrompt`, `label`, `description` — the new labels/descriptions come from the edge function response.
-
-### Files to change
-1. **`supabase/functions/reference-roulette-prompts/index.ts`** — Rewrite all 4 prompt builders (faithful, moderate, creative, phase B) + update labels/descriptions
-2. **`supabase/functions/generate-image/index.ts`** (~line 1588-1595) — Add framing instruction before source image in roulette path
-
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
