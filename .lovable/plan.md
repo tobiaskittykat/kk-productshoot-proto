@@ -1,59 +1,32 @@
-Objective
-Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
-## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-### What was done
+## Fix: Generate button count doesn't reflect roulette prompt totals
 
-**Frontend (single-field serialization):**
-- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
-- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
-- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
-- `useQuickCustomization` — AI override responses baked into canonical format before applying
-- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
-- `SetupProductStep2` — removed `colorHex` from merged component creation
-- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
+### Problem
+The "Generate (N images)" button in `CreativeStudioWizard.tsx` always shows `state.imageCount` (the global per-source count from output settings). When in **Shoot Variations** mode, the actual image count is the sum of each enabled roulette tier's `imageCount` — but that total is never surfaced to the button.
 
-**Backend (already had bake logic):**
-- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
-- Build fingerprint: `hex-inline-v1-2026-03-02`
+In the screenshot: 3 tiers × 2x each = **6 images**, but the button shows "Generate (4 images)" because `state.imageCount` is set to 4 from the output settings panel.
 
-### Verification criteria
-- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
-- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
-- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
-- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
+### Fix
+In `CreativeStudioWizard.tsx` line ~1057, when the product shoot is in `remixVariationMode === 'variations'` and has roulette prompts, compute the button count from the roulette prompts instead:
 
-## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
+```typescript
+// Replace the simple state.imageCount with:
+const rouletteTotal = state.roulettePrompts
+  ?.filter(p => p.enabled)
+  .reduce((sum, p) => sum + p.imageCount, 0) ?? 0;
 
-## STATUS: ✅ IMPLEMENTED (2026-03-13)
+const displayCount = (state.remixVariationMode === 'variations' && rouletteTotal > 0)
+  ? rouletteTotal
+  : state.imageCount;
+```
 
-### What was done
+Then use `displayCount` in the button label: `` `Generate (${displayCount} images)` ``
 
-**New Edge Function (`reference-roulette-prompts`):**
-- Two-phase pipeline: Phase A (3 parallel scene analysis) + Phase B (3 parallel asset integration)
-- NB2 structured JSON schema for forensic scene descriptions
-- Support for brand-level custom prompts via `brand_context.aiPrompts.roulette*`
-- Uses `google/gemini-3-flash-preview` for all 6 AI calls
-- Builds product blocks from identity, overrides, branding, and component data
+### Also fix the "Total" line in RemixStep2
+Line 812 shows `sources × imageCount` which is only correct for Shoe Swap mode. In Variations mode, hide or replace that line with the roulette total.
 
-**Updated `generate-image` Edge Function:**
-- Added `skipPromptAgent` + `structuredPrompt` code path
-- When both are present, uses `JSON.stringify(structuredPrompt)` as the prompt text directly, bypassing the normal prompt agent
-- Source image still sent as edit reference, product images still attached for fidelity
+### Files to change
+1. **`CreativeStudioWizard.tsx`** (~line 1057) — compute display count from roulette prompts when in variations mode
+2. **`RemixStep2.tsx`** (~line 810-813) — conditionally show roulette total instead of `sources × imageCount` in variations mode
 
-**Frontend:**
-- `ProductShootState` extended with `remixVariationMode`, `roulettePrompts`, `isAnalyzingScene`
-- New `RoulettePrompt` type with tier, label, description, structured JSON, enabled toggle, image count
-- `RoulettePromptCards` component: 3 tier cards with toggle, expandable JSON editor, per-tier image count
-- `RemixStep2`: Added Swap vs Variations mode toggle, brief input, Analyze Scene button, roulette cards integration
-- `useImageGeneration`: New branch for roulette mode — iterates enabled tiers × source images, sends `skipPromptAgent: true` + `structuredPrompt`
-
-### Files changed
-- `supabase/functions/reference-roulette-prompts/index.ts` (NEW)
-- `supabase/config.toml` — added verify_jwt config for new function
-- `supabase/functions/generate-image/index.ts` — skipPromptAgent path
-- `src/components/creative-studio/product-shoot/types.ts` — RoulettePrompt type, state fields
-- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` (NEW)
-- `src/components/creative-studio/product-shoot/RemixStep2.tsx` — mode toggle + roulette UI
-- `src/hooks/useImageGeneration.ts` — roulette generation flow
