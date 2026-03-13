@@ -428,6 +428,208 @@ export const RemixStep2 = ({
         </div>
       </Collapsible>
 
+      {/* Remix Mode Toggle */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Shuffle className="w-4 h-4 text-accent" />
+          <span className="font-medium text-sm text-foreground">Remix Mode</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => {
+              onStateChange({ remixVariationMode: 'swap', roulettePrompts: null });
+            }}
+            className={cn(
+              "rounded-xl border-2 p-3 text-left transition-all",
+              remixVariationMode === 'swap'
+                ? "border-accent bg-accent/5"
+                : "border-transparent bg-muted/50 hover:bg-muted"
+            )}
+          >
+            <span className="text-sm font-medium text-foreground">Shoe Swap</span>
+            <p className="text-[10px] text-muted-foreground mt-0.5">1:1 footwear replacement</p>
+          </button>
+          <button
+            onClick={() => {
+              onStateChange({ remixVariationMode: 'variations', roulettePrompts: null });
+            }}
+            className={cn(
+              "rounded-xl border-2 p-3 text-left transition-all",
+              remixVariationMode === 'variations'
+                ? "border-accent bg-accent/5"
+                : "border-transparent bg-muted/50 hover:bg-muted"
+            )}
+          >
+            <span className="text-sm font-medium text-foreground">Shoot Variations</span>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Same shoot, different angles</p>
+          </button>
+        </div>
+
+        {/* Brief input for variations mode */}
+        {remixVariationMode === 'variations' && (
+          <div className="space-y-1.5 pt-1">
+            <label className="text-xs text-muted-foreground">Creative direction (optional)</label>
+            <Input
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              placeholder="e.g. More dramatic lighting, editorial feel..."
+              className="text-sm bg-muted/50 border-0"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Roulette Prompt Cards (shown in variations mode after analysis) */}
+      {remixVariationMode === 'variations' && (roulettePrompts || isAnalyzingScene) && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden p-4">
+          <RoulettePromptCards
+            prompts={roulettePrompts || []}
+            isAnalyzing={isAnalyzingScene}
+            onToggle={(tier, enabled) => {
+              if (!roulettePrompts) return;
+              onStateChange({
+                roulettePrompts: roulettePrompts.map(p =>
+                  p.tier === tier ? { ...p, enabled } : p
+                ),
+              });
+            }}
+            onImageCountChange={(tier, count) => {
+              if (!roulettePrompts) return;
+              onStateChange({
+                roulettePrompts: roulettePrompts.map(p =>
+                  p.tier === tier ? { ...p, imageCount: count } : p
+                ),
+              });
+            }}
+            onPromptEdit={(tier, newPrompt) => {
+              if (!roulettePrompts) return;
+              try {
+                const parsed = JSON.parse(newPrompt);
+                onStateChange({
+                  roulettePrompts: roulettePrompts.map(p =>
+                    p.tier === tier ? { ...p, prompt: newPrompt, structured: parsed } : p
+                  ),
+                });
+              } catch {
+                // Invalid JSON — just update the string for now
+                onStateChange({
+                  roulettePrompts: roulettePrompts.map(p =>
+                    p.tier === tier ? { ...p, prompt: newPrompt } : p
+                  ),
+                });
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* Analyze Scene button (variations mode, no prompts yet) */}
+      {remixVariationMode === 'variations' && !roulettePrompts && !isAnalyzingScene && remixSourceImages.length > 0 && state.selectedProductId && (
+        <Button
+          className="w-full gap-2"
+          onClick={async () => {
+            onStateChange({ isAnalyzingScene: true });
+            try {
+              // Fetch product info for references
+              const { data: sku } = await supabase
+                .from('product_skus')
+                .select('name, composite_image_url, description, components')
+                .eq('id', state.selectedProductId!)
+                .maybeSingle();
+              
+              const { data: angles } = await supabase
+                .from('scraped_products')
+                .select('full_url, thumbnail_url, name')
+                .eq('sku_id', state.selectedProductId!)
+                .limit(4);
+
+              const productRefs = [];
+              if (sku?.composite_image_url) {
+                productRefs.push({ name: sku.name, imageUrl: sku.composite_image_url, description: sku.description as any });
+              }
+              for (const a of (angles || [])) {
+                productRefs.push({ name: a.name, imageUrl: a.full_url || a.thumbnail_url });
+              }
+
+              // Fetch brand context
+              let brandName: string | undefined;
+              let brandPersonality: string | undefined;
+              let brandContext: any;
+              let brandBrain: any;
+              let customPrompts: any;
+              if (currentBrand?.id) {
+                const { data: brand } = await supabase
+                  .from('brands')
+                  .select('name, personality, brand_context')
+                  .eq('id', currentBrand.id)
+                  .maybeSingle();
+                if (brand) {
+                  brandName = brand.name;
+                  brandPersonality = brand.personality || undefined;
+                  brandContext = brand.brand_context;
+                  brandBrain = (brandContext as any)?.brandBrain;
+                  const aiPrompts = (brandContext as any)?.aiPrompts;
+                  if (aiPrompts) {
+                    customPrompts = {
+                      rouletteFaithful: aiPrompts.rouletteFaithful,
+                      rouletteModerate: aiPrompts.rouletteModerate,
+                      rouletteCreative: aiPrompts.rouletteCreative,
+                      roulettePhaseB: aiPrompts.roulettePhaseB,
+                    };
+                  }
+                }
+              }
+
+              // Parse product identity
+              const productIdentity = sku?.name ? parseSkuDisplayInfo(sku.name, sku.description as any) : undefined;
+
+              const { data, error } = await supabase.functions.invoke('reference-roulette-prompts', {
+                body: {
+                  sceneReferenceUrl: remixSourceImages[0], // Use first source image for analysis
+                  productReferences: productRefs,
+                  componentOverrides: state.componentOverrides,
+                  originalComponents: sku?.components,
+                  productIdentity,
+                  brandName,
+                  brandPersonality,
+                  brandContext,
+                  brandBrain,
+                  brief: brief || undefined,
+                  remixRemoveText: state.remixRemoveText ?? false,
+                  customPrompts,
+                },
+              });
+
+              if (error) throw error;
+              if (!data?.prompts) throw new Error('No prompts returned');
+
+              const prompts: RoulettePrompt[] = data.prompts.map((p: any) => ({
+                tier: p.tier,
+                label: p.label,
+                description: p.description,
+                prompt: p.prompt,
+                structured: p.structured,
+                enabled: true,
+                imageCount: 2,
+              }));
+
+              onStateChange({ roulettePrompts: prompts, isAnalyzingScene: false });
+            } catch (err) {
+              console.error('Scene analysis failed:', err);
+              toast({
+                title: 'Scene analysis failed',
+                description: err instanceof Error ? err.message : 'Please try again',
+                variant: 'destructive',
+              });
+              onStateChange({ isAnalyzingScene: false });
+            }
+          }}
+        >
+          <Sparkles className="w-4 h-4" />
+          Analyze Scene &amp; Generate Variations
+        </Button>
+      )}
+
       {/* Section 2: Product Selection (reuses same pattern as ProductShootStep2) */}
       <Collapsible open={openSections.product}>
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
