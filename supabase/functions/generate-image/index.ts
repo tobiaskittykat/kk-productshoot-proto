@@ -314,7 +314,7 @@ function bakeHexIntoColors(body: GenerateImageRequest): void {
   if (body.componentOverrides) {
     for (const key of Object.keys(body.componentOverrides) as (keyof typeof body.componentOverrides)[]) {
       const comp = body.componentOverrides[key];
-      if (comp) _bakeHexIntoComponent(comp);
+      if (comp && typeof comp === 'object') _bakeHexIntoComponent(comp);
     }
   }
   // Also bake into originalComponents so contrast lines carry hex too
