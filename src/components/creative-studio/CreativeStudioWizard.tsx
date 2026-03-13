@@ -1054,7 +1054,15 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                 {isGeneratingImages 
                   ? 'Generating...' 
                   : state.useCase === 'product'
-                    ? `Generate (${state.imageCount} images)`
+                    ? (() => {
+                        const rouletteTotal = state.productShoot.roulettePrompts
+                          ?.filter(p => p.enabled)
+                          .reduce((sum, p) => sum + p.imageCount, 0) ?? 0;
+                        const count = (state.productShoot.remixVariationMode === 'variations' && rouletteTotal > 0)
+                          ? rouletteTotal
+                          : state.imageCount;
+                        return `Generate (${count} images)`;
+                      })()
                     : isGeneratingConcepts || state.isLoadingConcepts 
                       ? 'Creating concepts...' 
                       : isAgentMatching 
