@@ -86,6 +86,17 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
+// Reference Roulette prompt tier
+export interface RoulettePrompt {
+  tier: 'faithful' | 'moderate' | 'creative';
+  label: string;
+  description: string;
+  prompt: string;           // JSON string
+  structured: Record<string, any>;
+  enabled: boolean;
+  imageCount: number;
+}
+
 // Product Shoot State - extends creative studio state
 export interface ProductShootState {
   // Mode
@@ -130,6 +141,13 @@ export interface ProductShootState {
   
   // Reference image toggle (default: true)
   attachReferenceImages: boolean;
+  
+  // Remix variation mode (swap = 1:1 shoe swap, variations = reference roulette)
+  remixVariationMode: 'swap' | 'variations';
+  
+  // Reference Roulette cached prompts
+  roulettePrompts: RoulettePrompt[] | null;
+  isAnalyzingScene: boolean;
 }
 
 // Background preset for selection
@@ -201,6 +219,11 @@ export const initialProductShootState: ProductShootState = {
   // Component customization defaults
   componentOverrides: undefined,
   attachReferenceImages: true, // Default: attach reference images
+  
+  // Remix variation mode defaults
+  remixVariationMode: 'swap',
+  roulettePrompts: null,
+  isAnalyzingScene: false,
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)

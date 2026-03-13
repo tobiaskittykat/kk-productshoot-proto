@@ -510,37 +510,83 @@ export function useImageGeneration() {
       // === ASYNC IMAGE GENERATION: Edge function returns pendingIds, we poll for results ===
       let allPendingIds: string[] = [];
 
-      // === REMIX MODE: one request per source image ===
+      // === REMIX MODE ===
       if (state.useCase === 'product' && state.productShoot?.shootMode === 'remix' && state.productShoot.remixSourceImages.length > 0) {
-        const sourceImages = state.productShoot.remixSourceImages;
-        console.log(`Remix mode: sending ${sourceImages.length} source images × ${state.imageCount} each`);
         
-        const BATCH_SIZE = 2;
-        for (let batchStart = 0; batchStart < sourceImages.length; batchStart += BATCH_SIZE) {
-          const batchEnd = Math.min(batchStart + BATCH_SIZE, sourceImages.length);
-          const batchPromises: Promise<any>[] = [];
+        // === ROULETTE VARIATIONS MODE: one request per enabled tier ===
+        if (state.productShoot.remixVariationMode === 'variations' && state.productShoot.roulettePrompts?.length) {
+          const enabledPrompts = state.productShoot.roulettePrompts.filter(p => p.enabled);
+          console.log(`Roulette mode: ${enabledPrompts.length} tiers enabled`);
           
-          for (let i = batchStart; i < batchEnd; i++) {
-            const remixBody = {
-              ...buildRequestBody(null, state.imageCount),
-              remixMode: true,
-              remixRemoveText: state.productShoot.remixRemoveText ?? false,
-              editMode: true,
-              sourceImageUrl: sourceImages[i],
-              // Override prompt — the edge function will build the remix prompt
-              prompt: 'Remix: swap footwear with selected product',
-            };
-            batchPromises.push(
-              supabase.functions.invoke('generate-image', { body: remixBody })
-            );
+          for (const roulettePrompt of enabledPrompts) {
+            // For each source image × this tier's image count
+            const sourceImages = state.productShoot.remixSourceImages;
+            const BATCH_SIZE = 2;
+            
+            for (let srcIdx = 0; srcIdx < sourceImages.length; srcIdx++) {
+              for (let batchStart = 0; batchStart < roulettePrompt.imageCount; batchStart += BATCH_SIZE) {
+                const batchEnd = Math.min(batchStart + BATCH_SIZE, roulettePrompt.imageCount);
+                const batchPromises: Promise<any>[] = [];
+                
+                for (let i = batchStart; i < batchEnd; i++) {
+                  const rouletteBody = {
+                    ...buildRequestBody(null, 1),
+                    skipPromptAgent: true,
+                    structuredPrompt: roulettePrompt.structured,
+                    editMode: true,
+                    sourceImageUrl: sourceImages[srcIdx],
+                    conceptTitle: `Roulette — ${roulettePrompt.label}`,
+                    prompt: JSON.stringify(roulettePrompt.structured, null, 2),
+                    remixRemoveText: state.productShoot.remixRemoveText ?? false,
+                  };
+                  batchPromises.push(
+                    supabase.functions.invoke('generate-image', { body: rouletteBody })
+                  );
+                }
+                
+                const batchResults = await Promise.all(batchPromises);
+                for (const result of batchResults) {
+                  if (result.data?.pendingIds) {
+                    allPendingIds.push(...result.data.pendingIds);
+                  } else if (result.error) {
+                    console.error('Roulette request failed:', result.error);
+                  }
+                }
+              }
+            }
           }
+        }
+        // === STANDARD SHOE SWAP MODE: one request per source image ===
+        else {
+          const sourceImages = state.productShoot.remixSourceImages;
+          console.log(`Remix mode: sending ${sourceImages.length} source images × ${state.imageCount} each`);
           
-          const batchResults = await Promise.all(batchPromises);
-          for (const result of batchResults) {
-            if (result.data?.pendingIds) {
-              allPendingIds.push(...result.data.pendingIds);
-            } else if (result.error) {
-              console.error('Remix request failed:', result.error);
+          const BATCH_SIZE = 2;
+          for (let batchStart = 0; batchStart < sourceImages.length; batchStart += BATCH_SIZE) {
+            const batchEnd = Math.min(batchStart + BATCH_SIZE, sourceImages.length);
+            const batchPromises: Promise<any>[] = [];
+            
+            for (let i = batchStart; i < batchEnd; i++) {
+              const remixBody = {
+                ...buildRequestBody(null, state.imageCount),
+                remixMode: true,
+                remixRemoveText: state.productShoot.remixRemoveText ?? false,
+                editMode: true,
+                sourceImageUrl: sourceImages[i],
+                prompt: 'Remix: swap footwear with selected product',
+              };
+              batchPromises.push(
+                supabase.functions.invoke('generate-image', { body: remixBody })
+              );
+            }
+            
+            const batchResults = await Promise.all(batchPromises);
+            for (const result of batchResults) {
+              if (result.data?.pendingIds) {
+                allPendingIds.push(...result.data.pendingIds);
+              } else if (result.error) {
+                console.error('Remix request failed:', result.error);
+              }
             }
           }
         }
