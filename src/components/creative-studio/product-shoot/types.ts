@@ -141,6 +141,13 @@ export interface ProductShootState {
   
   // Reference image toggle (default: true)
   attachReferenceImages: boolean;
+  
+  // Remix variation mode (swap = 1:1 shoe swap, variations = reference roulette)
+  remixVariationMode: 'swap' | 'variations';
+  
+  // Reference Roulette cached prompts
+  roulettePrompts: RoulettePrompt[] | null;
+  isAnalyzingScene: boolean;
 }
 
 // Background preset for selection
