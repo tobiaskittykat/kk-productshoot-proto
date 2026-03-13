@@ -86,6 +86,17 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
+// Reference Roulette prompt tier
+export interface RoulettePrompt {
+  tier: 'faithful' | 'moderate' | 'creative';
+  label: string;
+  description: string;
+  prompt: string;           // JSON string
+  structured: Record<string, any>;
+  enabled: boolean;
+  imageCount: number;
+}
+
 // Product Shoot State - extends creative studio state
 export interface ProductShootState {
   // Mode
