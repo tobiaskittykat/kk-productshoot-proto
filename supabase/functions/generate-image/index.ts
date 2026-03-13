@@ -1585,9 +1585,12 @@ async function runBackgroundGeneration(params: {
           { type: "text", text: refinedPrompt }
         ];
 
-        // ROULETTE mode: source image as edit target (same framing as remix)
-        // The natural language prompt already starts with "Edit this image:" so we just attach it
+        // ROULETTE mode: source image as edit target with explicit framing instruction
         if (body.skipPromptAgent && body.structuredPrompt && body.sourceImageUrl?.startsWith('http')) {
+          messageContent.unshift({
+            type: "text",
+            text: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA — film grain, color grade, film stock, lighting quality, color temperature, and atmosphere. Treat it as your ground truth for the session's look. The prompt below describes what to change:"
+          });
           messageContent.unshift({
             type: "image_url",
             image_url: { url: body.sourceImageUrl }

@@ -360,9 +360,9 @@ serve(async (req) => {
     // ========== Assemble Response ==========
     // Generate short descriptions for each tier
     const tierDescriptions = [
-      'Forensic recreation — same pose, angle, grain, light. Only footwear changes.',
-      'Same session, different moment — subtle pose shift, slightly different angle.',
-      'Same campaign DNA — bolder pose, dramatic angle, editorial framing.',
+      'Next frame on the roll — identical pose, light, grain. Micro-variation only.',
+      'Same set & session — clearly different pose, same background & atmosphere.',
+      'Same set, fresh take — new composition, possibly new model, camera repositioned.',
     ];
 
     const finalPrompts = phaseAResults.map((pa, i) => ({
