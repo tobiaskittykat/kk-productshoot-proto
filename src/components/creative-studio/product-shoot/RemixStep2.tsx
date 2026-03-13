@@ -85,8 +85,6 @@ export const RemixStep2 = ({
 
   // Remix variation mode
   const remixVariationMode = state.remixVariationMode ?? 'swap';
-  const roulettePrompts = state.roulettePrompts ?? null;
-  const isAnalyzingScene = state.isAnalyzingScene ?? false;
 
   // Shoe component analysis hooks
   const {
