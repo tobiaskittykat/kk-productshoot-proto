@@ -11,8 +11,7 @@ export interface RoulettePrompt {
   tier: 'faithful' | 'moderate' | 'creative';
   label: string;
   description: string;
-  prompt: string;           // JSON string
-  structured: Record<string, any>;
+  naturalPrompt: string;
   enabled: boolean;
   imageCount: number;
 }
@@ -62,7 +61,7 @@ function PromptCard({
   const colors = tierColors[prompt.tier] || tierColors.faithful;
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(prompt.prompt);
+    await navigator.clipboard.writeText(prompt.naturalPrompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -110,7 +109,7 @@ function PromptCard({
         </div>
       </div>
 
-      {/* Expandable JSON editor */}
+      {/* Expandable prompt editor */}
       {prompt.enabled && (
         <div className="px-4 pb-3">
           <button
@@ -118,15 +117,15 @@ function PromptCard({
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-            Advanced: Edit JSON prompt
+            Edit prompt
           </button>
           {expanded && (
             <div className="mt-2 space-y-2">
               <div className="relative">
                 <Textarea
-                  value={prompt.prompt}
+                  value={prompt.naturalPrompt}
                   onChange={(e) => onPromptEdit(e.target.value)}
-                  className="font-mono text-[11px] leading-relaxed min-h-[200px] max-h-[400px] bg-background/50"
+                  className="text-xs leading-relaxed min-h-[200px] max-h-[400px] bg-background/50"
                 />
                 <Button
                   variant="ghost"

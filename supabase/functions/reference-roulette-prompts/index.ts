@@ -1,5 +1,6 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 // Reference Roulette — Two-phase scene analysis + asset integration pipeline
+// Outputs natural language "Edit this image:" prompts (not JSON)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,161 +35,86 @@ interface RouletteRequest {
   };
 }
 
-// ========== NB2 JSON Schema definition ==========
-const NB2_SCHEMA = `{
-  "tier": "faithful | moderate | creative",
-  "label": "Close Recreation | Subtle Variation | Creative Reimagining",
-  "description": "Brief 1-line summary of what this variation does differently",
-  "structured": {
-    "meta": {
-      "aspect_ratio": "1:1",
-      "quality_mode": "photorealistic",
-      "negative_prompt": ["blurry", "distorted", "watermark", "text artifacts", "oversaturated", "low resolution", "cartoon", "illustration"]
-    },
-    "subject": [
-      {
-        "type": "person | object | product",
-        "description": "40% of detail budget — skin tone, build, hair, features",
-        "physical_traits": { "hair": "", "skin": "", "build": "", "age": "" },
-        "clothing": { "top": "", "bottom": "", "footwear": "LOCKED — described separately via product_fidelity", "material": "" },
-        "accessories": ["Each with placement, material, color"],
-        "expression": "Facial expression and emotional quality",
-        "pose": "Exact stance, weight, hand placement, gaze direction"
-      }
-    ],
-    "scene": {
-      "location": "Specific environment",
-      "time_of_day": "Time and light conditions",
-      "weather": "Weather if outdoor",
-      "lighting": { "type": "", "direction": "", "color_temperature": "", "intensity": "" },
-      "background_elements": []
-    },
-    "camera": {
-      "model": "Sony A7III",
-      "lens": "85mm prime",
-      "aperture": "f/1.4",
-      "film_stock": "digital clean"
-    },
-    "composition": {
-      "framing": "medium-close-up",
-      "angle": "eye-level",
-      "focus_point": "What is sharpest",
-      "depth_of_field": "shallow"
-    },
-    "product_fidelity": "Ensure product dimensions are realistic. No distortion. Accurate material, color, hardware. Ultra-high resolution, photorealistic."
-  }
-}`;
-
-// ========== System Prompts ==========
+// ========== System Prompts — Natural Language Output ==========
 
 function buildFaithfulPrompt(customPrompt?: string): string {
   return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
 
-You will receive ONLY a single scene reference image. Analyze it with forensic precision.
-Describe what you SEE, not what you imagine. Be SPECIFIC with every field.
+You will receive a single scene reference image. Analyze it with forensic precision.
 
-YOUR TASK: FAITHFUL (Close Recreation) — forensic recreation of the scene.
+YOUR TASK: Write a rich, detailed "Edit this image:" prompt that RECREATES THIS EXACT SHOT.
 
-FIELD STRATEGY:
-- subject: Describe EXACTLY what you see — same pose, same clothing, same expression, same physical traits (40% detail)
-- scene: Identical location, background, props, weather, time of day
-- scene.lighting: Same type, direction, color temperature, intensity
-- camera: Match the apparent lens, aperture, angle — infer if unsure
-- composition: Same framing, angle, focus point, depth of field
-- camera.film_stock: Match the color rendering style
-- meta: Set quality_mode and aspect_ratio to match what you see
-- clothing.footwear: Set to "LOCKED — will be integrated in Phase B"
+RULES:
+- Start your output with "Edit this image:"
+- Describe EXACTLY what you see in rich, sensory prose — the model's pose, expression, clothing, the environment, the light, the mood, the grain/texture of the image
+- Include camera/lens/film stock details naturally woven into the prose (e.g. "shot on 85mm at f/1.4, with the warm grain of Kodak Portra 400")
+- Describe the color grade, any film grain, vintage processing, lens characteristics — these are the VISUAL DNA that must be preserved
+- For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
+- The result should be INDISTINGUISHABLE from the original — same pose, same angle, same framing, same light, same grain, same color grade
+- This is a FAITHFUL recreation — the only thing that changes is the footwear
 
-Return valid JSON matching this schema:
-${NB2_SCHEMA}
-
-Set tier to "faithful" and label to "Close Recreation".
-Return ONLY valid JSON, no markdown, no explanation.`;
+OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 function buildModeratePrompt(customPrompt?: string): string {
   return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
 
-You will receive ONLY a single scene reference image. Analyze it with forensic precision.
-Describe what you SEE, then create a SUBTLE VARIATION — same DNA, different execution.
+You will receive a single scene reference image. Analyze it with forensic precision.
 
-FIELD STRATEGY:
-- subject[].pose: CHANGE — shift weight, alter hand placement, redirect gaze
-- subject[].expression: Can shift subtly
-- subject[].clothing + subject[].physical_traits: KEEP identical to what you see
-- scene.location + scene.background_elements: KEEP identical
-- scene.lighting: Allow slight shifts in direction or intensity, keep same type and color_temperature
-- camera.lens: Can vary focal length slightly
-- composition.angle: CHANGE — different height or perspective
-- composition.framing: CHANGE — tighter or wider crop
-- camera.film_stock: KEEP identical
-- meta: KEEP identical
-- clothing.footwear: Set to "LOCKED — will be integrated in Phase B"
+YOUR TASK: Write a rich "Edit this image:" prompt for a DIFFERENT MOMENT from the SAME photo session.
 
-Return valid JSON matching this schema:
-${NB2_SCHEMA}
+RULES:
+- Start your output with "Edit this image:"
+- Describe the scene in rich, sensory prose
+- KEEP IDENTICAL: the model's appearance, clothing, location, lighting setup, film stock/grain, color grade, mood, atmosphere — the visual DNA
+- CHANGE SUBTLY: pose (shift weight, alter hand placement, redirect gaze), camera angle (slightly different height or perspective), framing (tighter or wider crop)
+- Include camera/lens/film stock details naturally (e.g. "maintaining the shallow depth of field from the 85mm prime")
+- Describe the color grade, grain texture, and processing style — these MUST match the original
+- For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
+- The result should look like a different frame from the SAME roll of film, the SAME session — unmistakably part of the same shoot
 
-Set tier to "moderate" and label to "Subtle Variation".
-Return ONLY valid JSON, no markdown, no explanation.`;
+OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 function buildCreativePrompt(customPrompt?: string): string {
   return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
 
-You will receive ONLY a single scene reference image. Analyze it with forensic precision.
-Then create a BOLD CAMPAIGN REIMAGINING using the scene's visual DNA.
+You will receive a single scene reference image. Analyze it with forensic precision.
 
-FIELD STRATEGY:
-- subject[].pose: REIMAGINE — more dramatic, editorial, campaign-worthy
-- subject[].expression: REIMAGINE — bolder, more evocative
-- subject[].clothing + subject[].physical_traits: KEEP the same person/subject identity
-- scene: REIMAGINE — use the scene's aesthetic DNA but create a more dramatic environment
-- scene.lighting: REIMAGINE — more dramatic, cinematic, fashion-forward
-- camera: REIMAGINE — bolder camera choice, artistic lens, dramatic aperture
-- composition: REIMAGINE — bolder angle, more artistic framing
-- camera.film_stock: EVOLVE — consider CineStill 800T for night, Kodak Portra for warmth
-- meta: Can adjust aspect_ratio for more cinematic framing
-- clothing.footwear: Set to "LOCKED — will be integrated in Phase B"
+YOUR TASK: Write a rich "Edit this image:" prompt for a BOLD EDITORIAL SHOT from the SAME campaign session.
 
-Return valid JSON matching this schema:
-${NB2_SCHEMA}
+RULES:
+- Start your output with "Edit this image:"
+- Describe the scene in rich, evocative prose
+- KEEP: the model's identity, the location's DNA, the lighting rig, the film stock, the grain texture, the color rendering — the campaign's visual signature
+- CHANGE BOLDLY: dramatically different pose (more editorial, more campaign-worthy), bolder camera angle, more artistic framing or composition
+- The grain, color grade, film stock, and atmospheric quality MUST still feel like the same shoot — same roll of film, same photographer, same session
+- Include camera/lens details naturally but you may suggest a bolder lens choice (e.g. switching from 85mm to 35mm for a wider environmental shot)
+- For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
+- The result should feel like the most daring shot from the same session — the one the art director chose for the campaign hero
 
-Set tier to "creative" and label to "Creative Reimagining".
-Return ONLY valid JSON, no markdown, no explanation.`;
+OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 function buildPhaseBPrompt(customPrompt?: string): string {
-  return customPrompt || `You are a prompt editor for footwear campaign image generation. You receive a structured JSON prompt and product/asset details. Perform SURGICAL JSON field edits to integrate the assets.
+  return customPrompt || `You are a prompt editor specializing in luxury footwear campaign imagery.
 
-WHAT TO EDIT:
+You receive:
+1. A natural language "Edit this image:" prompt with a [PRODUCT_PLACEHOLDER] for the footwear
+2. Product details (brand, model, material, color, components)
+3. Brand identity guidelines
 
-a) PRODUCT (required):
-   - Update "subject[].clothing.footwear" — describe the product visually: brand, model, material, color, hardware finish, silhouette
-   - Update "product_fidelity" — include specific material, color, hardware details
-   - If the product has component overrides, reflect those changes
+YOUR TASK: Rewrite the prompt with the product seamlessly integrated.
 
-b) BRIEF (only if provided):
-   - Adjust scene, lighting, or subject fields as needed — minimal changes only
+RULES:
+- Replace [PRODUCT_PLACEHOLDER] with a rich, visual description of the actual product — weave in the brand name, model name, material, color, and any hardware/details
+- If there are component overrides, describe the customized version (not the original)
+- Keep EVERYTHING else in the prompt IDENTICAL — same prose, same mood, same camera details, same grain/color grade descriptions
+- Respect brand guidelines: never include elements from "AVOID" lists
+- Do NOT add any new elements, instructions, or changes beyond integrating the product
+- If a brief is provided, you may make minimal adjustments to reflect it, but preserve the core prompt
 
-WHAT TO PRESERVE (do NOT modify unless directly affected):
-- "scene.lighting" — all fields
-- "camera" — all fields
-- "composition" — all fields
-- "meta" — all fields
-- "subject[].pose" and "subject[].expression" — keep as-is
-- "subject[].physical_traits" — keep as-is
-
-BRAND CONTEXT: Respect any brand guidelines. Never include elements from "AVOID" lists.
-
-OUTPUT — strict JSON matching the same schema as input:
-{
-  "tier": "the tier value",
-  "label": "the label",
-  "description": "Brief 1-line summary",
-  "structured": { ...the edited structured prompt object... }
-}
-
-Return ONLY valid JSON, no markdown, no explanation.`;
+OUTPUT: The complete, final "Edit this image:" prompt with the product integrated. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 // ========== Helper Functions ==========
@@ -289,35 +215,39 @@ async function callAI(
   apiKey: string,
   systemPrompt: string,
   userContent: Array<{ type: string; image_url?: { url: string }; text?: string }>,
-  maxTokens = 8192,
-  maxRetries = 3
-): Promise<any> {
+  maxTokens = 4096,
+  maxRetries = 3,
+  forceJsonResponse = false
+): Promise<string> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const requestBody: any = {
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      max_tokens: maxTokens,
+    };
+    // Only use json_object response format when we need structured output
+    if (forceJsonResponse) {
+      requestBody.response_format = { type: "json_object" };
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: maxTokens,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (response.ok) {
       const aiResponse = await response.json();
       const content = aiResponse.choices?.[0]?.message?.content?.trim();
       if (!content) throw new Error("No content from AI");
-      // Strip markdown code fences if present
-      const cleaned = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-      return JSON.parse(cleaned);
+      return content;
     }
 
     if (response.status === 429 && attempt < maxRetries - 1) {
@@ -366,42 +296,49 @@ serve(async (req) => {
       });
     }
 
-    // ========== PHASE A: Scene Analysis (3 parallel calls) ==========
-    console.log("[ROULETTE] Phase A — 3 parallel scene analysis calls...");
+    // ========== PHASE A: Scene Analysis → 3 Natural Language Prompts ==========
+    console.log("[ROULETTE] Phase A — 3 parallel scene analysis calls (natural language)...");
     
     const sceneContent: Array<{ type: string; image_url?: { url: string }; text?: string }> = [
       { type: "image_url", image_url: { url: body.sceneReferenceUrl } },
-      { type: "text", text: "Analyze this scene reference image and generate 1 complete structured JSON prompt for the specified tier. Return valid JSON only." },
+      { type: "text", text: "Analyze this scene reference image. Write a detailed natural language editing prompt for the specified tier. Start with 'Edit this image:'" },
     ];
 
     const customPrompts = body.customPrompts || {};
 
-    const [faithful, moderate, creative] = await Promise.all([
-      callAI(apiKey, buildFaithfulPrompt(customPrompts.rouletteFaithful), sceneContent, 4096),
-      callAI(apiKey, buildModeratePrompt(customPrompts.rouletteModerate), sceneContent, 4096),
-      callAI(apiKey, buildCreativePrompt(customPrompts.rouletteCreative), sceneContent, 4096),
+    const [faithfulNL, moderateNL, creativeNL] = await Promise.all([
+      callAI(apiKey, buildFaithfulPrompt(customPrompts.rouletteFaithful), sceneContent),
+      callAI(apiKey, buildModeratePrompt(customPrompts.rouletteModerate), sceneContent),
+      callAI(apiKey, buildCreativePrompt(customPrompts.rouletteCreative), sceneContent),
     ]);
 
-    console.log("[ROULETTE] Phase A complete — got 3 tier analyses");
+    console.log("[ROULETTE] Phase A complete — got 3 natural language prompts");
+    console.log("[ROULETTE] Faithful preview:", faithfulNL.substring(0, 120));
+    console.log("[ROULETTE] Moderate preview:", moderateNL.substring(0, 120));
+    console.log("[ROULETTE] Creative preview:", creativeNL.substring(0, 120));
 
-    // ========== PHASE B: Asset Integration (3 parallel calls) ==========
-    console.log("[ROULETTE] Phase B — 3 parallel asset integration calls...");
+    // ========== PHASE B: Product Integration → 3 Final Prompts ==========
+    console.log("[ROULETTE] Phase B — 3 parallel product integration calls...");
     
     const brandBlock = buildBrandBlock(body);
     const productBlock = buildProductBlock(body);
     const briefBlock = body.brief ? `\n\nCAMPAIGN BRIEF:\n${body.brief}` : '';
-    const removeTextBlock = body.remixRemoveText ? '\n\nTEXT REMOVAL: Remove any text/logos/watermarks from the scene. Inpaint seamlessly.' : '';
+    const removeTextBlock = body.remixRemoveText ? '\n\nADDITIONAL INSTRUCTION TO APPEND: "Remove any text, logos, watermarks, or ad copy overlaid on the image. Inpaint seamlessly."' : '';
 
-    const basePrompts = [faithful, moderate, creative];
+    const phaseAResults = [
+      { tier: 'faithful', label: 'Close Recreation', prompt: faithfulNL },
+      { tier: 'moderate', label: 'Subtle Variation', prompt: moderateNL },
+      { tier: 'creative', label: 'Creative Reimagining', prompt: creativeNL },
+    ];
+
     const phaseBSystemPrompt = buildPhaseBPrompt(customPrompts.roulettePhaseB);
 
     const phaseBResults = await Promise.all(
-      basePrompts.map((bp) => {
-        const structuredJson = JSON.stringify(bp.structured || bp, null, 2);
+      phaseAResults.map((pa) => {
         const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
           {
             type: "text",
-            text: `BASE STRUCTURED PROMPT (tier: ${bp.tier}, label: ${bp.label}):\n${structuredJson}\n\nPRODUCT DETAILS TO INTEGRATE (required):\n${productBlock}\n\nBRAND IDENTITY:\n${brandBlock}${briefBlock}${removeTextBlock}\n\nEdit the structured JSON prompt to integrate the product. Return valid JSON only.`,
+            text: `EDITING PROMPT TO INTEGRATE PRODUCT INTO (tier: ${pa.tier}):\n\n${pa.prompt}\n\nPRODUCT DETAILS TO INTEGRATE:\n${productBlock}\n\nBRAND IDENTITY:\n${brandBlock}${briefBlock}${removeTextBlock}\n\nRewrite the prompt with the product integrated in place of [PRODUCT_PLACEHOLDER]. Output only the final prompt.`,
           },
         ];
 
@@ -413,27 +350,32 @@ serve(async (req) => {
           content.push({ type: "image_url", image_url: { url } });
         }
         if (productUrls.length > 0) {
-          content.push({ type: "text", text: `These ${Math.min(productUrls.length, 4)} images show the product. Describe its visual details accurately in the footwear and product_fidelity fields.` });
+          content.push({ type: "text", text: `These ${Math.min(productUrls.length, 4)} images show the product. Describe its visual details accurately when integrating it into the prompt.` });
         }
 
-        return callAI(apiKey, phaseBSystemPrompt, content, 4096);
+        return callAI(apiKey, phaseBSystemPrompt, content);
       })
     );
 
-    console.log("[ROULETTE] Phase B complete — got 3 final prompts");
+    console.log("[ROULETTE] Phase B complete — got 3 final prompts with product integrated");
 
     // ========== Assemble Response ==========
-    const finalPrompts = phaseBResults.map((result) => ({
-      tier: result.tier,
-      label: result.label,
-      description: result.description || '',
-      prompt: JSON.stringify(result.structured || result, null, 2),
-      structured: result.structured || result,
+    // Generate short descriptions for each tier
+    const tierDescriptions = [
+      'Forensic recreation — same pose, angle, grain, light. Only footwear changes.',
+      'Same session, different moment — subtle pose shift, slightly different angle.',
+      'Same campaign DNA — bolder pose, dramatic angle, editorial framing.',
+    ];
+
+    const finalPrompts = phaseAResults.map((pa, i) => ({
+      tier: pa.tier,
+      label: pa.label,
+      description: tierDescriptions[i],
+      naturalPrompt: phaseBResults[i],
     }));
 
     return new Response(JSON.stringify({
       success: true,
-      sceneDescription: JSON.stringify(faithful.structured || faithful, null, 2),
       prompts: finalPrompts,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

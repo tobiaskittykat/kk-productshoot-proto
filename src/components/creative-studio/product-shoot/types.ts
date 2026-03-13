@@ -91,8 +91,7 @@ export interface RoulettePrompt {
   tier: 'faithful' | 'moderate' | 'creative';
   label: string;
   description: string;
-  prompt: string;           // JSON string
-  structured: Record<string, any>;
+  naturalPrompt: string;    // Natural language "Edit this image:" prompt
   enabled: boolean;
   imageCount: number;
 }
