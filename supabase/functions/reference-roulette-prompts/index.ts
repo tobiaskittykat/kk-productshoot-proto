@@ -38,60 +38,58 @@ interface RouletteRequest {
 // ========== System Prompts — Natural Language Output ==========
 
 function buildFaithfulPrompt(customPrompt?: string): string {
-  return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
+  return customPrompt || `You are a world-class fashion photographer analyzing a reference image from a professional footwear campaign shoot.
 
 You will receive a single scene reference image. Analyze it with forensic precision.
 
-YOUR TASK: Write a rich, detailed "Edit this image:" prompt that RECREATES THIS EXACT SHOT.
+YOUR TASK: Write a rich "Edit this image:" prompt that recreates this EXACT shot — as if it were the very next frame on the same roll of film.
 
 RULES:
 - Start your output with "Edit this image:"
-- Describe EXACTLY what you see in rich, sensory prose — the model's pose, expression, clothing, the environment, the light, the mood, the grain/texture of the image
-- Include camera/lens/film stock details naturally woven into the prose (e.g. "shot on 85mm at f/1.4, with the warm grain of Kodak Portra 400")
-- Describe the color grade, any film grain, vintage processing, lens characteristics — these are the VISUAL DNA that must be preserved
+- Describe EXACTLY what you see in meticulous, sensory prose: the model's exact pose down to finger placement, weight distribution, gaze direction, expression. The clothing — every garment, its fit, its color, its texture.
+- Describe the environment with equal precision: surfaces, objects, depth of field, spatial relationships.
+- Describe the light: direction, quality (hard/soft), color temperature, any fill, reflections, shadows.
+- Describe the image's VISUAL DNA: film stock/grain pattern, color grade (warm/cool shift, lifted blacks, crushed shadows, etc.), lens characteristics (bokeh shape, barrel distortion, vignetting), any vintage processing or color cast.
+- The ONLY variation allowed: the model may have shifted weight very slightly between frames, or the camera moved a centimeter — the kind of micro-variation between consecutive frames on a motor drive.
 - For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
-- The result should be INDISTINGUISHABLE from the original — same pose, same angle, same framing, same light, same grain, same color grade
-- This is a FAITHFUL recreation — the only thing that changes is the footwear
+- The result must be INDISTINGUISHABLE from the original to a casual viewer.
 
 OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 function buildModeratePrompt(customPrompt?: string): string {
-  return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
+  return customPrompt || `You are a world-class fashion photographer analyzing a reference image from a professional footwear campaign shoot.
 
 You will receive a single scene reference image. Analyze it with forensic precision.
 
-YOUR TASK: Write a rich "Edit this image:" prompt for a DIFFERENT MOMENT from the SAME photo session.
+YOUR TASK: Write a rich "Edit this image:" prompt for a CLEARLY DIFFERENT POSE captured during the SAME session, on the SAME set.
 
 RULES:
 - Start your output with "Edit this image:"
-- Describe the scene in rich, sensory prose
-- KEEP IDENTICAL: the model's appearance, clothing, location, lighting setup, film stock/grain, color grade, mood, atmosphere — the visual DNA
-- CHANGE SUBTLY: pose (shift weight, alter hand placement, redirect gaze), camera angle (slightly different height or perspective), framing (tighter or wider crop)
-- Include camera/lens/film stock details naturally (e.g. "maintaining the shallow depth of field from the 85mm prime")
-- Describe the color grade, grain texture, and processing style — these MUST match the original
+- First describe the visual DNA that MUST be preserved: the film stock/grain, color grade, lighting setup, color temperature, lens characteristics, any processing/vintage treatment. These are NON-NEGOTIABLE — the image must look like it came from the same camera, same film, same session.
+- KEEP IDENTICAL: the location/set, all background elements, the lighting rig and its quality, the model's identity and wardrobe (same clothes, same accessories), the atmosphere and mood.
+- CHANGE SIGNIFICANTLY: the pose. The model has moved — shifted weight to the other leg, turned their body, repositioned hands dramatically, changed gaze direction. This is NOT a subtle shift — it's a clearly different pose that a photographer would direct ("now turn toward me", "lean against the wall", "look over your shoulder").
 - For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
-- The result should look like a different frame from the SAME roll of film, the SAME session — unmistakably part of the same shoot
+- The result should look like a shot taken 5 minutes later in the same session — unmistakably the same shoot, but a distinctly different moment.
 
 OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
 
 function buildCreativePrompt(customPrompt?: string): string {
-  return customPrompt || `You are a world-class creative director and fashion photographer with 20 years of luxury footwear campaign experience.
+  return customPrompt || `You are a world-class fashion photographer and creative director analyzing a reference image from a professional footwear campaign shoot.
 
 You will receive a single scene reference image. Analyze it with forensic precision.
 
-YOUR TASK: Write a rich "Edit this image:" prompt for a BOLD EDITORIAL SHOT from the SAME campaign session.
+YOUR TASK: Write a rich "Edit this image:" prompt for a COMPLETELY NEW COMPOSITION shot on the SAME set, during the SAME session.
 
 RULES:
 - Start your output with "Edit this image:"
-- Describe the scene in rich, evocative prose
-- KEEP: the model's identity, the location's DNA, the lighting rig, the film stock, the grain texture, the color rendering — the campaign's visual signature
-- CHANGE BOLDLY: dramatically different pose (more editorial, more campaign-worthy), bolder camera angle, more artistic framing or composition
-- The grain, color grade, film stock, and atmospheric quality MUST still feel like the same shoot — same roll of film, same photographer, same session
-- Include camera/lens details naturally but you may suggest a bolder lens choice (e.g. switching from 85mm to 35mm for a wider environmental shot)
+- First describe the visual DNA that MUST be preserved: the film stock/grain, color grade, lighting rig and quality, color temperature, lens family, any processing/vintage treatment. The campaign's photographic signature is NON-NEGOTIABLE.
+- KEEP: the physical location/set — same walls, floors, furniture, props, outdoor environment. The lighting setup and its quality. The film stock and color grade.
+- CHANGE BOLDLY: everything about the human element and composition. A different model (different gender, different ethnicity, different build) OR the same model in a completely different outfit. A dramatically different pose — editorial, unexpected, dynamic. The camera has been repositioned to show a different angle of the set, revealing parts of the environment not visible in the original. Different framing — perhaps much wider to show the full space, or an unexpected crop.
+- This is the ART DIRECTOR'S HERO PICK from the session — the shot that makes the campaign. Same set, same lighting, same film — but a fresh creative vision.
 - For footwear, write: [PRODUCT_PLACEHOLDER — will be replaced in Phase B]
-- The result should feel like the most daring shot from the same session — the one the art director chose for the campaign hero
+- The result must be unmistakably from the same shoot day, same photographer, same campaign — but a completely different creative choice.
 
 OUTPUT: A single cohesive natural language "Edit this image:" prompt. No JSON, no headers, no explanation. Just the prompt.`;
 }
