@@ -82,7 +82,6 @@ Return ONLY the JSON object, no markdown.`,
                       type: "string",
                       description: "Short descriptive name, 3-5 words",
                     },
-                  },
                     region: {
                       type: "string",
                       enum: ["usa", "europe", "apac", "mea", "all"],

@@ -74,7 +74,7 @@ export function useIntegrityResults(imageIds: string[]) {
     });
 
     // Set up polling interval
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     
     if (imageIds.length > 0) {
       interval = setInterval(async () => {
