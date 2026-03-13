@@ -26,34 +26,33 @@ Make component colors truly single-field across the full pipeline so the payload
 
 ## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-## STATUS: ✅ IMPLEMENTED (2026-03-13)
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v2: Natural Language Prompts
 
-### What was done
+### What was done (v2 rewrite)
 
-**New Edge Function (`reference-roulette-prompts`):**
-- Two-phase pipeline: Phase A (3 parallel scene analysis) + Phase B (3 parallel asset integration)
-- NB2 structured JSON schema for forensic scene descriptions
-- Support for brand-level custom prompts via `brand_context.aiPrompts.roulette*`
-- Uses `google/gemini-3-flash-preview` for all 6 AI calls
-- Builds product blocks from identity, overrides, branding, and component data
+**Edge Function (`reference-roulette-prompts`) — full rewrite:**
+- Phase A now outputs 3 natural language "Edit this image:" prompts (not JSON)
+- Each tier (faithful/moderate/creative) describes the scene in rich sensory prose with camera/lens/grain details
+- Footwear uses `[PRODUCT_PLACEHOLDER]` for Phase B integration
+- Phase B rewrites each prompt to integrate product details, replacing the placeholder
+- Response format: `{ tier, label, description, naturalPrompt }` per tier
+- Removed NB2 JSON schema entirely — all output is natural language
 
 **Updated `generate-image` Edge Function:**
-- Added `skipPromptAgent` + `structuredPrompt` code path
-- When both are present, uses `JSON.stringify(structuredPrompt)` as the prompt text directly, bypassing the normal prompt agent
-- Source image still sent as edit reference, product images still attached for fidelity
+- `skipPromptAgent` path now uses `body.structuredPrompt.naturalPrompt` as the prompt
+- Source image framed as **edit target** (same as remix mode) — no more "generate NEW" instruction
+- This preserves the campaign's visual DNA: grain, color grade, lighting, film stock
 
 **Frontend:**
-- `ProductShootState` extended with `remixVariationMode`, `roulettePrompts`, `isAnalyzingScene`
-- New `RoulettePrompt` type with tier, label, description, structured JSON, enabled toggle, image count
-- `RoulettePromptCards` component: 3 tier cards with toggle, expandable JSON editor, per-tier image count
-- `RemixStep2`: Added Swap vs Variations mode toggle, brief input, Analyze Scene button, roulette cards integration
-- `useImageGeneration`: New branch for roulette mode — iterates enabled tiers × source images, sends `skipPromptAgent: true` + `structuredPrompt`
+- `RoulettePrompt` type: replaced `prompt`/`structured` fields with `naturalPrompt`
+- `RoulettePromptCards`: displays/edits natural language prompt (not JSON), removed `font-mono`
+- `RemixStep2`: maps response `naturalPrompt` field, simplified prompt edit handler
+- `useImageGeneration`: passes `{ naturalPrompt }` as `structuredPrompt`, uses `naturalPrompt` as `prompt`
 
 ### Files changed
-- `supabase/functions/reference-roulette-prompts/index.ts` (NEW)
-- `supabase/config.toml` — added verify_jwt config for new function
-- `supabase/functions/generate-image/index.ts` — skipPromptAgent path
-- `src/components/creative-studio/product-shoot/types.ts` — RoulettePrompt type, state fields
-- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` (NEW)
-- `src/components/creative-studio/product-shoot/RemixStep2.tsx` — mode toggle + roulette UI
-- `src/hooks/useImageGeneration.ts` — roulette generation flow
+- `supabase/functions/reference-roulette-prompts/index.ts` (REWRITTEN)
+- `supabase/functions/generate-image/index.ts` — naturalPrompt path + edit-target framing
+- `src/components/creative-studio/product-shoot/types.ts` — RoulettePrompt type updated
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` (REWRITTEN)
+- `src/components/creative-studio/product-shoot/RemixStep2.tsx` — naturalPrompt mapping
+- `src/hooks/useImageGeneration.ts` — naturalPrompt flow
