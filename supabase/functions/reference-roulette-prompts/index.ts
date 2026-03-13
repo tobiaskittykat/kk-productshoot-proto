@@ -325,8 +325,8 @@ serve(async (req) => {
 
     const phaseAResults = [
       { tier: 'faithful', label: 'Close Recreation', prompt: faithfulNL },
-      { tier: 'moderate', label: 'Subtle Variation', prompt: moderateNL },
-      { tier: 'creative', label: 'Creative Reimagining', prompt: creativeNL },
+      { tier: 'moderate', label: 'Different Moment', prompt: moderateNL },
+      { tier: 'creative', label: 'Same Set, Fresh Take', prompt: creativeNL },
     ];
 
     const phaseBSystemPrompt = buildPhaseBPrompt(customPrompts.roulettePhaseB);
