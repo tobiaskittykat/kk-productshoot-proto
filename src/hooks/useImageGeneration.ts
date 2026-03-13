@@ -514,42 +514,109 @@ export function useImageGeneration() {
       if (state.useCase === 'product' && state.productShoot?.shootMode === 'remix' && state.productShoot.remixSourceImages.length > 0) {
         
         // === ROULETTE VARIATIONS MODE: one request per enabled tier ===
-        if (state.productShoot.remixVariationMode === 'variations' && state.productShoot.roulettePrompts?.length) {
-          const enabledPrompts = state.productShoot.roulettePrompts.filter(p => p.enabled);
-          console.log(`Roulette mode: ${enabledPrompts.length} tiers enabled`);
+        if (state.productShoot.remixVariationMode === 'variations') {
+          const enabledTiers = state.productShoot.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
+          const enabledTierNames = Object.entries(enabledTiers).filter(([_, v]) => v).map(([k]) => k);
           
-          for (const roulettePrompt of enabledPrompts) {
-            // For each source image × this tier's image count
+          if (enabledTierNames.length > 0) {
             const sourceImages = state.productShoot.remixSourceImages;
-            const BATCH_SIZE = 2;
+            console.log(`Roulette on-the-fly: ${sourceImages.length} sources × ${enabledTierNames.length} tiers × ${state.imageCount} each`);
             
+            // Fetch product info once for all sources
+            const skuId = state.productShoot.selectedProductId;
+            let productRefs: any[] = [];
+            let skuComponents: any = undefined;
+            let skuProductIdentity: any = undefined;
+            let rouletteBrandName: string | undefined;
+            let rouletteBrandPersonality: string | undefined;
+            let rouletteBrandContext: any;
+            let rouletteBrandBrain: any;
+            let rouletteCustomPrompts: any;
+            
+            if (skuId) {
+              const { data: sku } = await supabase.from('product_skus').select('name, composite_image_url, description, components').eq('id', skuId).maybeSingle();
+              const { data: angles } = await supabase.from('scraped_products').select('full_url, thumbnail_url, name').eq('sku_id', skuId).limit(4);
+              if (sku?.composite_image_url) productRefs.push({ name: sku.name, imageUrl: sku.composite_image_url, description: sku.description });
+              for (const a of (angles || [])) productRefs.push({ name: a.name, imageUrl: a.full_url || a.thumbnail_url });
+              skuComponents = sku?.components;
+              if (sku?.name) skuProductIdentity = parseSkuDisplayInfo(sku.name, sku.description as any);
+            }
+            
+            if (brandId || user?.id) {
+              const bid = brandId || undefined;
+              const q = bid 
+                ? supabase.from('brands').select('name, personality, brand_context').eq('id', bid).maybeSingle()
+                : supabase.from('brands').select('name, personality, brand_context').eq('user_id', user!.id).maybeSingle();
+              const { data: brand } = await q;
+              if (brand) {
+                rouletteBrandName = brand.name;
+                rouletteBrandPersonality = brand.personality || undefined;
+                rouletteBrandContext = brand.brand_context;
+                rouletteBrandBrain = (rouletteBrandContext as any)?.brandBrain;
+                const aiPrompts = (rouletteBrandContext as any)?.aiPrompts;
+                if (aiPrompts) {
+                  rouletteCustomPrompts = {
+                    rouletteFaithful: aiPrompts.rouletteFaithful,
+                    rouletteModerate: aiPrompts.rouletteModerate,
+                    rouletteCreative: aiPrompts.rouletteCreative,
+                    roulettePhaseB: aiPrompts.roulettePhaseB,
+                  };
+                }
+              }
+            }
+            
+            // Sequential: for each source, call reference-roulette-prompts, then generate per tier
             for (let srcIdx = 0; srcIdx < sourceImages.length; srcIdx++) {
-              for (let batchStart = 0; batchStart < roulettePrompt.imageCount; batchStart += BATCH_SIZE) {
-                const batchEnd = Math.min(batchStart + BATCH_SIZE, roulettePrompt.imageCount);
-                const batchPromises: Promise<any>[] = [];
+              const sourceUrl = sourceImages[srcIdx];
+              console.log(`[Roulette] Analyzing source ${srcIdx + 1}/${sourceImages.length}...`);
+              
+              // Generate prompts on-the-fly for this source
+              const { data: promptData, error: promptError } = await supabase.functions.invoke('reference-roulette-prompts', {
+                body: {
+                  sceneReferenceUrl: sourceUrl,
+                  productReferences: productRefs,
+                  componentOverrides: state.productShoot.componentOverrides,
+                  originalComponents: skuComponents,
+                  productIdentity: skuProductIdentity,
+                  brandName: rouletteBrandName,
+                  brandPersonality: rouletteBrandPersonality,
+                  brandContext: rouletteBrandContext,
+                  brandBrain: rouletteBrandBrain,
+                  brief: undefined, // brief is in RemixStep2 local state, passed via productShoot if needed
+                  remixRemoveText: state.productShoot.remixRemoveText ?? false,
+                  customPrompts: rouletteCustomPrompts,
+                },
+              });
+              
+              if (promptError || !promptData?.prompts) {
+                console.error(`[Roulette] Prompt generation failed for source ${srcIdx}:`, promptError);
+                continue;
+              }
+              
+              const generatedPrompts = promptData.prompts as Array<{ tier: string; label: string; naturalPrompt: string }>;
+              
+              // For each enabled tier, generate imageCount images
+              for (const tierName of enabledTierNames) {
+                const tierPrompt = generatedPrompts.find((p: any) => p.tier === tierName);
+                if (!tierPrompt) continue;
                 
-                for (let i = batchStart; i < batchEnd; i++) {
+                for (let i = 0; i < state.imageCount; i++) {
                   const rouletteBody = {
                     ...buildRequestBody(null, 1),
                     skipPromptAgent: true,
-                    structuredPrompt: { naturalPrompt: roulettePrompt.naturalPrompt },
+                    structuredPrompt: { naturalPrompt: tierPrompt.naturalPrompt },
                     editMode: true,
-                    sourceImageUrl: sourceImages[srcIdx],
-                    conceptTitle: `Roulette — ${roulettePrompt.label}`,
-                    prompt: roulettePrompt.naturalPrompt,
+                    sourceImageUrl: sourceUrl,
+                    conceptTitle: `Roulette — ${tierPrompt.label}`,
+                    prompt: tierPrompt.naturalPrompt,
                     remixRemoveText: state.productShoot.remixRemoveText ?? false,
                   };
-                  batchPromises.push(
-                    supabase.functions.invoke('generate-image', { body: rouletteBody })
-                  );
-                }
-                
-                const batchResults = await Promise.all(batchPromises);
-                for (const result of batchResults) {
-                  if (result.data?.pendingIds) {
-                    allPendingIds.push(...result.data.pendingIds);
-                  } else if (result.error) {
-                    console.error('Roulette request failed:', result.error);
+                  
+                  const { data: genData, error: genError } = await supabase.functions.invoke('generate-image', { body: rouletteBody });
+                  if (genData?.pendingIds) {
+                    allPendingIds.push(...genData.pendingIds);
+                  } else if (genError) {
+                    console.error(`[Roulette] Generation failed for ${tierName}:`, genError);
                   }
                 }
               }

@@ -144,9 +144,12 @@ export interface ProductShootState {
   // Remix variation mode (swap = 1:1 shoe swap, variations = reference roulette)
   remixVariationMode: 'swap' | 'variations';
   
-  // Reference Roulette cached prompts
+  // Reference Roulette cached prompts (populated at generate time)
   roulettePrompts: RoulettePrompt[] | null;
   isAnalyzingScene: boolean;
+  
+  // Variation tier toggles (UI-facing, persisted in state)
+  remixEnabledTiers: Record<string, boolean>;
 }
 
 // Background preset for selection
@@ -223,6 +226,7 @@ export const initialProductShootState: ProductShootState = {
   remixVariationMode: 'swap',
   roulettePrompts: null,
   isAnalyzingScene: false,
+  remixEnabledTiers: { faithful: true, moderate: true, creative: false },
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)

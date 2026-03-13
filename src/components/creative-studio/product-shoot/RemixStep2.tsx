@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronDown, ChevronRight, Upload, Package, Settings2, Clock, Check, X, ImageIcon, Trash2, Expand, FolderOpen, Sparkles, Shuffle } from "lucide-react";
+import { ChevronDown, ChevronRight, Upload, Package, Settings2, Clock, Check, X, ImageIcon, Expand, FolderOpen, Shuffle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { SmartUploadModal } from "./SmartUploadModal";
 import { CreateSKUModal } from "./CreateSKUModal";
 import { EditSKUModal } from "./EditSKUModal";
 import { ShoeComponentsPanel } from "./ShoeComponentsPanel";
-import { RoulettePromptCards, RoulettePrompt } from "./RoulettePromptCards";
+import { VariationTierToggles } from "./RoulettePromptCards";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
@@ -85,8 +85,6 @@ export const RemixStep2 = ({
 
   // Remix variation mode
   const remixVariationMode = state.remixVariationMode ?? 'swap';
-  const roulettePrompts = state.roulettePrompts ?? null;
-  const isAnalyzingScene = state.isAnalyzingScene ?? false;
 
   // Shoe component analysis hooks
   const {
@@ -479,144 +477,23 @@ export const RemixStep2 = ({
         )}
       </div>
 
-      {/* Roulette Prompt Cards (shown in variations mode after analysis) */}
-      {remixVariationMode === 'variations' && (roulettePrompts || isAnalyzingScene) && (
+      {/* Variation Tier Toggles (shown in variations mode) */}
+      {remixVariationMode === 'variations' && (
         <div className="rounded-2xl border border-border bg-card overflow-hidden p-4">
-          <RoulettePromptCards
-            prompts={roulettePrompts || []}
-            isAnalyzing={isAnalyzingScene}
+          <VariationTierToggles
+            enabledTiers={state.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false }}
             onToggle={(tier, enabled) => {
-              if (!roulettePrompts) return;
               onStateChange({
-                roulettePrompts: roulettePrompts.map(p =>
-                  p.tier === tier ? { ...p, enabled } : p
-                ),
-              });
-            }}
-            onImageCountChange={(tier, count) => {
-              if (!roulettePrompts) return;
-              onStateChange({
-                roulettePrompts: roulettePrompts.map(p =>
-                  p.tier === tier ? { ...p, imageCount: count } : p
-                ),
-              });
-            }}
-            onPromptEdit={(tier, newPrompt) => {
-              if (!roulettePrompts) return;
-              onStateChange({
-                roulettePrompts: roulettePrompts.map(p =>
-                  p.tier === tier ? { ...p, naturalPrompt: newPrompt } : p
-                ),
-              });
-            }}
-          />
-        </div>
-      )}
-
-      {/* Analyze Scene button (variations mode, no prompts yet) */}
-      {remixVariationMode === 'variations' && !roulettePrompts && !isAnalyzingScene && remixSourceImages.length > 0 && state.selectedProductId && (
-        <Button
-          className="w-full gap-2"
-          onClick={async () => {
-            onStateChange({ isAnalyzingScene: true });
-            try {
-              // Fetch product info for references
-              const { data: sku } = await supabase
-                .from('product_skus')
-                .select('name, composite_image_url, description, components')
-                .eq('id', state.selectedProductId!)
-                .maybeSingle();
-              
-              const { data: angles } = await supabase
-                .from('scraped_products')
-                .select('full_url, thumbnail_url, name')
-                .eq('sku_id', state.selectedProductId!)
-                .limit(4);
-
-              const productRefs = [];
-              if (sku?.composite_image_url) {
-                productRefs.push({ name: sku.name, imageUrl: sku.composite_image_url, description: sku.description as any });
-              }
-              for (const a of (angles || [])) {
-                productRefs.push({ name: a.name, imageUrl: a.full_url || a.thumbnail_url });
-              }
-
-              // Fetch brand context
-              let brandName: string | undefined;
-              let brandPersonality: string | undefined;
-              let brandContext: any;
-              let brandBrain: any;
-              let customPrompts: any;
-              if (currentBrand?.id) {
-                const { data: brand } = await supabase
-                  .from('brands')
-                  .select('name, personality, brand_context')
-                  .eq('id', currentBrand.id)
-                  .maybeSingle();
-                if (brand) {
-                  brandName = brand.name;
-                  brandPersonality = brand.personality || undefined;
-                  brandContext = brand.brand_context;
-                  brandBrain = (brandContext as any)?.brandBrain;
-                  const aiPrompts = (brandContext as any)?.aiPrompts;
-                  if (aiPrompts) {
-                    customPrompts = {
-                      rouletteFaithful: aiPrompts.rouletteFaithful,
-                      rouletteModerate: aiPrompts.rouletteModerate,
-                      rouletteCreative: aiPrompts.rouletteCreative,
-                      roulettePhaseB: aiPrompts.roulettePhaseB,
-                    };
-                  }
-                }
-              }
-
-              // Parse product identity
-              const productIdentity = sku?.name ? parseSkuDisplayInfo(sku.name, sku.description as any) : undefined;
-
-              const { data, error } = await supabase.functions.invoke('reference-roulette-prompts', {
-                body: {
-                  sceneReferenceUrl: remixSourceImages[0], // Use first source image for analysis
-                  productReferences: productRefs,
-                  componentOverrides: state.componentOverrides,
-                  originalComponents: sku?.components,
-                  productIdentity,
-                  brandName,
-                  brandPersonality,
-                  brandContext,
-                  brandBrain,
-                  brief: brief || undefined,
-                  remixRemoveText: state.remixRemoveText ?? false,
-                  customPrompts,
+                remixEnabledTiers: {
+                  ...(state.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false }),
+                  [tier]: enabled,
                 },
               });
-
-              if (error) throw error;
-              if (!data?.prompts) throw new Error('No prompts returned');
-
-              const prompts: RoulettePrompt[] = data.prompts.map((p: any) => ({
-                tier: p.tier,
-                label: p.label,
-                description: p.description,
-                naturalPrompt: p.naturalPrompt,
-                enabled: true,
-                imageCount: 2,
-              }));
-
-              onStateChange({ roulettePrompts: prompts, isAnalyzingScene: false });
-            } catch (err) {
-              console.error('Scene analysis failed:', err);
-              toast({
-                title: 'Scene analysis failed',
-                description: err instanceof Error ? err.message : 'Please try again',
-                variant: 'destructive',
-              });
-              onStateChange({ isAnalyzingScene: false });
-            }
-          }}
-        >
-          <Sparkles className="w-4 h-4" />
-          Analyze Scene &amp; Generate Variations
-        </Button>
+            }}
+            sourceCount={remixSourceImages.length}
+            imageCount={imageCount}
+          />
+        </div>
       )}
 
       {/* Section 2: Product Selection (reuses same pattern as ProductShootStep2) */}
@@ -797,14 +674,13 @@ export const RemixStep2 = ({
               
               {/* Total images info */}
               {remixSourceImages.length > 0 && (() => {
-                const rouletteTotal = state.roulettePrompts
-                  ?.filter(p => p.enabled)
-                  .reduce((sum, p) => sum + p.imageCount, 0) ?? 0;
-                const isVariations = state.remixVariationMode === 'variations' && rouletteTotal > 0;
+                const enabledTiers = state.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
+                const enabledCount = Object.values(enabledTiers).filter(Boolean).length;
+                const isVariations = state.remixVariationMode === 'variations' && enabledCount > 0;
                 return (
                   <p className="text-xs text-muted-foreground border-t border-border pt-3">
                     {isVariations
-                      ? <>Total: <strong>{rouletteTotal} images</strong> across {state.roulettePrompts?.filter(p => p.enabled).length} tiers</>
+                      ? <>Total: {remixSourceImages.length} source{remixSourceImages.length > 1 ? 's' : ''} × {enabledCount} tier{enabledCount !== 1 ? 's' : ''} × {imageCount} = <strong>{remixSourceImages.length * enabledCount * imageCount} images</strong></>
                       : <>Total: {remixSourceImages.length} source{remixSourceImages.length > 1 ? 's' : ''} × {imageCount} = <strong>{remixSourceImages.length * imageCount} images</strong></>
                     }
                   </p>

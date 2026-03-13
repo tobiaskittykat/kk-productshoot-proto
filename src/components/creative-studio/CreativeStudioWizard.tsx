@@ -1055,11 +1055,12 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                   ? 'Generating...' 
                   : state.useCase === 'product'
                     ? (() => {
-                        const rouletteTotal = state.productShoot.roulettePrompts
-                          ?.filter(p => p.enabled)
-                          .reduce((sum, p) => sum + p.imageCount, 0) ?? 0;
-                        const count = (state.productShoot.remixVariationMode === 'variations' && rouletteTotal > 0)
-                          ? rouletteTotal
+                        const enabledTiers = state.productShoot.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
+                        const enabledTierCount = Object.values(enabledTiers).filter(Boolean).length;
+                        const sources = state.productShoot.remixSourceImages?.length || 0;
+                        const isVariations = state.productShoot.remixVariationMode === 'variations' && enabledTierCount > 0 && sources > 0;
+                        const count = isVariations
+                          ? sources * enabledTierCount * state.imageCount
                           : state.imageCount;
                         return `Generate (${count} images)`;
                       })()
