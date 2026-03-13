@@ -15,7 +15,7 @@ import { SmartUploadModal } from "./SmartUploadModal";
 import { CreateSKUModal } from "./CreateSKUModal";
 import { EditSKUModal } from "./EditSKUModal";
 import { ShoeComponentsPanel } from "./ShoeComponentsPanel";
-import { RoulettePromptCards, RoulettePrompt } from "./RoulettePromptCards";
+import { VariationTierToggles } from "./RoulettePromptCards";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
