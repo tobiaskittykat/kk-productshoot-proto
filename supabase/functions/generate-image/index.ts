@@ -288,7 +288,7 @@ function _nearestColorName(hex: string): string {
 // After this, .color = "Dark Slate Gray (#005477)" and .colorHex is deleted.
 // Every downstream code path that reads .color automatically carries the hex.
 function _bakeHexIntoComponent(comp: { material: string; color: string; colorHex?: string }): void {
-  if (!comp) return;
+  if (!comp || typeof comp !== 'object') return;
   comp.material = (comp.material || '').trim();
   comp.color = (comp.color || '').trim();
   if (comp.colorHex) {
@@ -314,14 +314,14 @@ function bakeHexIntoColors(body: GenerateImageRequest): void {
   if (body.componentOverrides) {
     for (const key of Object.keys(body.componentOverrides) as (keyof typeof body.componentOverrides)[]) {
       const comp = body.componentOverrides[key];
-      if (comp) _bakeHexIntoComponent(comp);
+      if (comp && typeof comp === 'object') _bakeHexIntoComponent(comp);
     }
   }
   // Also bake into originalComponents so contrast lines carry hex too
   if (body.originalComponents) {
     for (const key of Object.keys(body.originalComponents) as (keyof typeof body.originalComponents)[]) {
       const comp = body.originalComponents[key];
-      if (comp) _bakeHexIntoComponent(comp as any);
+      if (comp && typeof comp === 'object') _bakeHexIntoComponent(comp as any);
     }
   }
 }
