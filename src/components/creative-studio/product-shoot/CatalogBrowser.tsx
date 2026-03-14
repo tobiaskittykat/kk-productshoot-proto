@@ -298,8 +298,22 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
             </Button>
           )}
           <span className="text-sm text-muted-foreground">
-            {products.length} products in catalog
+            {filtered.length === visibleProducts.length
+              ? `${visibleProducts.length} products`
+              : `${filtered.length} of ${visibleProducts.length} products`}
+            {hiddenProducts.size > 0 && ` · ${hiddenProducts.size} hidden`}
           </span>
+          {hiddenProducts.size > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHidden(prev => !prev)}
+              className="text-xs h-7 px-2"
+            >
+              {showHidden ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+              {showHidden ? 'Hide removed' : 'Show removed'}
+            </Button>
+          )}
         </div>
         {selected.size > 0 && (
           <Button onClick={importSelected} className="gap-2">
