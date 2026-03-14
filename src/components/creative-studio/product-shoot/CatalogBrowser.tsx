@@ -44,12 +44,47 @@ function makeSkuCode(productName: string, color: string): string {
   return `BIRK-${model}-${col}`.slice(0, 40);
 }
 
+// Color family synonym map for semantic search
+const COLOR_FAMILIES: Record<string, string[]> = {
+  red: ['red', 'crimson', 'burgundy', 'cherry', 'scarlet', 'ruby', 'wine', 'garnet', 'brick', 'maroon'],
+  pink: ['pink', 'rose', 'blush', 'fuchsia', 'magenta', 'coral', 'salmon', 'fondant'],
+  blue: ['blue', 'navy', 'cobalt', 'azure', 'indigo', 'sky', 'denim', 'teal', 'sapphire'],
+  green: ['green', 'olive', 'sage', 'forest', 'emerald', 'mint', 'thyme', 'khaki', 'moss'],
+  brown: ['brown', 'tan', 'cognac', 'tobacco', 'mocha', 'chocolate', 'espresso', 'habana', 'sienna', 'cork', 'camel'],
+  black: ['black', 'onyx', 'anthracite', 'charcoal', 'iron', 'jet', 'ebony'],
+  white: ['white', 'cream', 'ivory', 'pearl', 'bone', 'snow', 'alabaster'],
+  gray: ['gray', 'grey', 'silver', 'stone', 'slate', 'ash', 'pewter', 'mink'],
+  yellow: ['yellow', 'gold', 'mustard', 'honey', 'amber', 'lemon', 'saffron'],
+  orange: ['orange', 'tangerine', 'apricot', 'copper', 'peach', 'rust'],
+  purple: ['purple', 'violet', 'plum', 'lavender', 'lilac', 'mauve', 'port', 'eggplant'],
+  beige: ['beige', 'sand', 'taupe', 'nude', 'oat', 'latte', 'biscuit', 'desert'],
+};
+
+/** Check if a token matches in haystack, expanding color synonyms */
+function tokenMatchesHaystack(token: string, haystack: string): boolean {
+  // Direct match
+  if (haystack.includes(token)) return true;
+  // Check if token is a color family key — expand to synonyms
+  const synonyms = COLOR_FAMILIES[token];
+  if (synonyms) {
+    return synonyms.some(syn => haystack.includes(syn));
+  }
+  // Check if token is a synonym in any family — also match siblings
+  for (const [, family] of Object.entries(COLOR_FAMILIES)) {
+    if (family.includes(token)) {
+      return family.some(syn => haystack.includes(syn));
+    }
+  }
+  return false;
+}
+
 interface CatalogBrowserProps {
   onBack: () => void;
   onDone: () => void;
+  hideBack?: boolean;
 }
 
-export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
+export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps) {
   const { user } = useAuth();
   const { currentBrand } = useBrands();
   const queryClient = useQueryClient();
@@ -90,12 +125,11 @@ export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
       result = result.filter(p => p.model === selectedModel);
     }
     if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(p =>
-        p.productName.toLowerCase().includes(q) ||
-        p.color.toLowerCase().includes(q) ||
-        p.model.toLowerCase().includes(q)
-      );
+      const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
+      result = result.filter(p => {
+        const haystack = `${p.productName} ${p.color} ${p.model}`.toLowerCase();
+        return tokens.every(t => tokenMatchesHaystack(t, haystack));
+      });
     }
     return result.map((p, originalIndex) => {
       // Find original index in the full products array
@@ -230,10 +264,12 @@ export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
+          {!hideBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+          )}
           <span className="text-sm text-muted-foreground">
             {products.length} products in catalog
           </span>
