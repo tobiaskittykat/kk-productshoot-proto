@@ -56,7 +56,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
         <IndicatorChip
           label={sourceLabel}
           selected={sourceCount > 0}
-          onClick={() => scrollToSection('section-ps-product')}
+          onClick={() => scrollToSection('section-ps-remix-source')}
         />
 
         <span className="text-muted-foreground/30">·</span>
@@ -64,7 +64,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
         <IndicatorChip
           label={modeLabel}
           selected={true}
-          onClick={() => scrollToSection('section-ps-product')}
+          onClick={() => scrollToSection('section-ps-remix-options')}
         />
 
         <span className="text-muted-foreground/30">·</span>
@@ -72,7 +72,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
         <IndicatorChip
           label="Product"
           selected={hasProduct}
-          onClick={() => scrollToSection('section-ps-product')}
+          onClick={() => scrollToSection('section-ps-remix-product')}
         />
       </div>
     );
