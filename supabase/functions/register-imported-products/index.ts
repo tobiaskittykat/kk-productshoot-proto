@@ -7,7 +7,7 @@ const corsHeaders = {
 
 function makeSkuCode(productName: string, color: string): string {
   const model = productName.split(' ').slice(0, 2).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
-  const col = color.split(' ').slice(0, 2).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const col = color.split(' ').join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
   return `BIRK-${model}-${col}`.slice(0, 40);
 }
 
