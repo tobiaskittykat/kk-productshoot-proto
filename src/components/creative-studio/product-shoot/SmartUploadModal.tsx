@@ -462,7 +462,7 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
   };
 
   const goBack = () => {
-    if (step === 'upload' || step === 'batches') setStep('source');
+    if (step === 'upload' || step === 'batches' || step === 'catalog') setStep('source');
     else if (step === 'review' && crawledSource) setStep('batches');
     else if (step === 'review') setStep('upload');
   };
