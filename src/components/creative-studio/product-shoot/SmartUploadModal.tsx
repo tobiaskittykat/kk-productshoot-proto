@@ -69,7 +69,7 @@ interface ImportBatch {
   newProducts: number;
 }
 
-type Step = 'source' | 'upload' | 'batches' | 'analyzing' | 'review';
+type Step = 'source' | 'upload' | 'batches' | 'catalog' | 'analyzing' | 'review';
 
 export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) {
   const { user } = useAuth();
