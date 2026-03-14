@@ -316,7 +316,7 @@ serve(async (req) => {
     console.log("[SceneRemix] Creative preview:", creativeNL.substring(0, 120));
 
     // ========== PHASE B: Product Integration → 3 Final Prompts ==========
-    console.log("[ROULETTE] Phase B — 3 parallel product integration calls...");
+    console.log("[SceneRemix] Phase B — 3 parallel product integration calls...");
     
     const brandBlock = buildBrandBlock(body);
     const productBlock = buildProductBlock(body);
