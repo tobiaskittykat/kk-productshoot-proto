@@ -612,7 +612,7 @@ export function useImageGeneration() {
                     remixRemoveText: state.productShoot.remixRemoveText ?? false,
                   };
                   
-                  const { data: genData, error: genError } = await supabase.functions.invoke('generate-image', { body: rouletteBody });
+                  const { data: genData, error: genError } = await supabase.functions.invoke('generate-image', { body: sceneRemixBody });
                   if (genData?.pendingIds) {
                     allPendingIds.push(...genData.pendingIds);
                   } else if (genError) {
