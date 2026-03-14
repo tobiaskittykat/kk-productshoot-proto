@@ -46,6 +46,7 @@ export function GroupReviewCard({
   allGroups,
   onUpdate,
   onMoveImage,
+  onDeleteImage,
 }: GroupReviewCardProps) {
   const [editingName, setEditingName] = useState(false);
   const [editingSku, setEditingSku] = useState(false);
