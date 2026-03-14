@@ -149,7 +149,7 @@ function buildBrandBlock(body: SceneRemixRequest): string {
   return sections.length > 0 ? sections.join('\n') : 'No brand context provided';
 }
 
-function buildProductBlock(body: RouletteRequest): string {
+function buildProductBlock(body: SceneRemixRequest): string {
   const sections: string[] = [];
 
   // Product identity
