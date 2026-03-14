@@ -71,3 +71,29 @@ Make component colors truly single-field across the full pipeline so the payload
 ### Files changed
 - `supabase/functions/register-imported-products/index.ts` — new edge function
 - `supabase/config.toml` — added function with `verify_jwt = false`
+
+## Birkenstock Catalog Browser & On-Demand Import
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Static catalog data:**
+- `src/data/birkenstock-catalog.json` — 285 products with model, productName, color, imageUrls
+
+**CatalogBrowser component:**
+- Searchable/filterable grid of all catalog products
+- Model filter chips (Arizona, Boston, Gizeh, etc.)
+- Hero thumbnails loaded directly from Birkenstock CDN
+- Checkbox multi-select with "already imported" detection via SKU codes
+- Lifestyle images auto-filtered from import payload
+- Batch import via `bulk-import-products` edge function with progress UI
+
+**SmartUploadModal integration:**
+- New "Browse Catalog" source option (3-column layout)
+- `catalog` step renders CatalogBrowser inline
+
+### Files changed
+- `src/data/birkenstock-catalog.json` — new static catalog
+- `src/components/creative-studio/product-shoot/CatalogBrowser.tsx` — new component
+- `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — added catalog source + step
