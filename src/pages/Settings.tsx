@@ -593,6 +593,32 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Crawler Config */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Crawler Config</CardTitle>
+            <CardDescription>
+              Download a JSON file with all the credentials your external product crawler needs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={handleDownloadCrawlerConfig}
+              disabled={isDownloadingConfig || !currentBrand}
+            >
+              {isDownloadingConfig ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Download />
+              )}
+              {isDownloadingConfig ? "Fetching…" : "Download crawler-config.json"}
+            </Button>
+            {!currentBrand && (
+              <p className="text-sm text-muted-foreground mt-2">Select a brand first.</p>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
