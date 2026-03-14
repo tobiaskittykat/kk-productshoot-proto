@@ -140,9 +140,15 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
     return Array.from(m).sort();
   }, [products]);
 
+  // Available products (excluding hidden unless showHidden)
+  const visibleProducts = useMemo(() => {
+    if (showHidden) return products;
+    return products.filter(p => !hiddenProducts.has(makeProductKey(p)));
+  }, [products, hiddenProducts, showHidden]);
+
   // Filter products
   const filtered = useMemo(() => {
-    let result = products;
+    let result = visibleProducts;
     if (selectedModel) {
       result = result.filter(p => p.model === selectedModel);
     }
@@ -153,12 +159,11 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
         return tokens.every(t => tokenMatchesHaystack(t, haystack));
       });
     }
-    return result.map((p, originalIndex) => {
-      // Find original index in the full products array
+    return result.map((p) => {
       const idx = products.indexOf(p);
       return { ...p, _idx: idx };
     });
-  }, [products, search, selectedModel]);
+  }, [visibleProducts, products, search, selectedModel]);
 
   const toggleSelect = (idx: number) => {
     setSelected(prev => {
