@@ -435,7 +435,7 @@ export const RemixStep2 = ({
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => {
-              onStateChange({ remixVariationMode: 'swap', roulettePrompts: null });
+              onStateChange({ remixVariationMode: 'swap', sceneRemixPrompts: null });
             }}
             className={cn(
               "rounded-xl border-2 p-3 text-left transition-all",
