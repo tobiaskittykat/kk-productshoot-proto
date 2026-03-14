@@ -86,8 +86,8 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
-// Reference Roulette prompt tier
-export interface RoulettePrompt {
+// Scene Remix prompt tier
+export interface SceneRemixPrompt {
   tier: 'faithful' | 'moderate' | 'creative';
   label: string;
   description: string;
