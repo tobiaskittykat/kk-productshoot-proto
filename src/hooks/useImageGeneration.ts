@@ -549,13 +549,13 @@ export function useImageGeneration() {
                 : supabase.from('brands').select('name, personality, brand_context').eq('user_id', user!.id).maybeSingle();
               const { data: brand } = await q;
               if (brand) {
-                rouletteBrandName = brand.name;
-                rouletteBrandPersonality = brand.personality || undefined;
-                rouletteBrandContext = brand.brand_context;
-                rouletteBrandBrain = (rouletteBrandContext as any)?.brandBrain;
-                const aiPrompts = (rouletteBrandContext as any)?.aiPrompts;
+                remixBrandName = brand.name;
+                remixBrandPersonality = brand.personality || undefined;
+                remixBrandContext = brand.brand_context;
+                remixBrandBrain = (remixBrandContext as any)?.brandBrain;
+                const aiPrompts = (remixBrandContext as any)?.aiPrompts;
                 if (aiPrompts) {
-                  rouletteCustomPrompts = {
+                  remixCustomPrompts = {
                     rouletteFaithful: aiPrompts.rouletteFaithful,
                     rouletteModerate: aiPrompts.rouletteModerate,
                     rouletteCreative: aiPrompts.rouletteCreative,
