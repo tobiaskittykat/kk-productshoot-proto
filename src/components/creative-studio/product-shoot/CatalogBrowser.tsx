@@ -94,6 +94,29 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; currentName: string }>({ current: 0, total: 0, currentName: '' });
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Hidden products stored in localStorage
+  const HIDDEN_KEY = 'catalog-hidden-products';
+  const [hiddenProducts, setHiddenProducts] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(HIDDEN_KEY);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const toggleHidden = (productKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHiddenProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(productKey)) next.delete(productKey);
+      else next.add(productKey);
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const makeProductKey = (p: CatalogProduct) => `${p.productName}::${p.color}`;
 
   // Get existing SKU codes to mark already-registered
   const { data: existingSkus } = useQuery({
