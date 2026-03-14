@@ -58,6 +58,15 @@ export function parseSkuDisplayInfo(
     fullName: name,
   };
   
+  // Detect catalog-import description format early
+  if (description?.productName) {
+    result.modelName = description.productName;
+    if (description.color) result.color = description.color;
+    result.brandName = 'Birkenstock';
+    result.fullName = name;
+    return result;
+  }
+
   if (words.length < 2) {
     return result;
   }

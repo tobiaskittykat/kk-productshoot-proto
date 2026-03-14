@@ -30,10 +30,19 @@ const SIGNATURE_MODELS = new Set([
 
 /** Extract model name from SKU for grouping */
 function getModelGroup(sku: ProductSKU & { description?: any }): string {
-  const info = parseSkuDisplayInfo(sku.name, sku.description);
+  // Check catalog-import model field first
+  const desc = sku.description;
+  if (desc?.model) {
+    const baseModel = (desc.model as string).split(' ')[0].toLowerCase().trim();
+    if (SIGNATURE_MODELS.has(baseModel)) {
+      return (desc.model as string).split(' ')[0];
+    }
+  }
+  // Fallback to parsed info
+  const info = parseSkuDisplayInfo(sku.name, desc);
   const model = info.modelName?.toLowerCase().trim();
   if (model && SIGNATURE_MODELS.has(model)) {
-    return info.modelName; // Return original casing
+    return info.modelName;
   }
   return '__other__';
 }
