@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, X, ArrowLeft } from 'lucide-react';
+import { Sparkles, Upload, X, ArrowLeft, FolderOpen, Package, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrands } from '@/hooks/useBrands';
@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { UploadProgressView } from './UploadProgressView';
 import { GroupReviewCard } from './GroupReviewCard';
 import { UngroupedSection } from './UngroupedSection';
+import { Badge } from '@/components/ui/badge';
 
 interface SmartUploadModalProps {
   open: boolean;
@@ -50,20 +51,43 @@ interface UngroupedImage {
   reason: string;
 }
 
-type Step = 'upload' | 'analyzing' | 'review';
+interface BatchProduct {
+  productName: string;
+  color: string;
+  model: string;
+  imageCount: number;
+  heroUrl: string | null;
+  alreadyRegistered: boolean;
+}
+
+interface ImportBatch {
+  batchId: string;
+  brandId: string;
+  products: BatchProduct[];
+  totalImages: number;
+  newProducts: number;
+}
+
+type Step = 'source' | 'upload' | 'batches' | 'analyzing' | 'review';
 
 export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) {
   const { user } = useAuth();
   const { currentBrand } = useBrands();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>('upload');
+  const [step, setStep] = useState<Step>('source');
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [ungrouped, setUngrouped] = useState<UngroupedImage[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Crawled batches state
+  const [batches, setBatches] = useState<ImportBatch[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [crawledSource, setCrawledSource] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -129,7 +153,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
     setAnalysisProgress(0);
 
     try {
-      // Step 1: Upload all images
       const uploadedImages = await uploadImages();
       
       if (uploadedImages.length === 0) {
@@ -138,7 +161,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
 
       setAnalysisProgress(20);
 
-      // Step 2: Call AI analysis
       const { data, error } = await supabase.functions.invoke('analyze-bulk-products', {
         body: { images: uploadedImages }
       });
@@ -147,7 +169,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
 
       setAnalysisProgress(100);
 
-      // Add unique IDs to groups
       const groupsWithIds = (data.groups || []).map((g: any) => ({
         ...g,
         id: crypto.randomUUID(),
@@ -168,6 +189,107 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
     }
   };
 
+  // ── Crawled batches flow ──
+
+  const loadBatches = async () => {
+    setLoadingBatches(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('list-import-batches');
+      if (error) throw error;
+      setBatches(data.batches || []);
+    } catch (error) {
+      console.error('Failed to load batches:', error);
+      toast({
+        title: 'Could not load imports',
+        description: error instanceof Error ? error.message : 'Failed to list import batches',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingBatches(false);
+    }
+  };
+
+  const selectBatch = async (batch: ImportBatch) => {
+    setSelectedBatchId(batch.batchId);
+    setCrawledSource(true);
+
+    // Convert manifest products to ProductGroup[] format
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const storageBaseUrl = `${supabaseUrl}/storage/v1/object/public/product-images`;
+
+    // We need to download the full manifest to get image paths
+    try {
+      const { data, error } = await supabase.functions.invoke('list-import-batches');
+      if (error) throw error;
+
+      // Download the manifest directly from storage
+      const manifestPath = `imports/${batch.batchId}/manifest.json`;
+      const { data: manifestFile, error: dlErr } = await supabase.storage
+        .from('product-images')
+        .download(manifestPath);
+
+      if (dlErr || !manifestFile) throw new Error('Could not download manifest');
+
+      const manifest = JSON.parse(await manifestFile.text());
+
+      const convertedGroups: ProductGroup[] = (manifest.products || [])
+        .filter((p: any) => {
+          // Skip already-registered products
+          const batchProduct = batch.products.find(
+            bp => bp.productName === p.productName && bp.color === p.color
+          );
+          return batchProduct && !batchProduct.alreadyRegistered;
+        })
+        .map((p: any) => ({
+          id: crypto.randomUUID(),
+          suggestedName: `${p.productName} — ${p.color}`,
+          suggestedSku: makeSkuCode(p.productName, p.color),
+          confidence: 95,
+          images: (p.images || []).map((img: any) => ({
+            id: crypto.randomUUID(),
+            url: `${storageBaseUrl}/imports/${batch.batchId}/${img.path}`,
+            detectedAngle: img.angle || 'unknown',
+            angleConfidence: 90,
+            storagePath: `imports/${batch.batchId}/${img.path}`,
+          })),
+          productAnalysis: {
+            summary: p.title || `${p.productName} in ${p.color}`,
+            product_type: 'sandal',
+            colors: [p.color],
+            materials: [],
+            style_keywords: [p.model],
+          },
+        }));
+
+      setGroups(convertedGroups);
+      setUngrouped([]);
+      setStep('review');
+    } catch (error) {
+      console.error('Batch select error:', error);
+      toast({
+        title: 'Failed to load batch',
+        description: error instanceof Error ? error.message : 'Could not parse manifest',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  function makeSkuCode(productName: string, color: string): string {
+    const model = productName.split(' ').slice(0, 2).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const col = color.split(' ').slice(0, 2).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    return `BIRK-${model}-${col}`.slice(0, 40);
+  }
+
+  const handleChooseSource = (source: 'upload' | 'crawled') => {
+    if (source === 'upload') {
+      setCrawledSource(false);
+      setStep('upload');
+    } else {
+      setStep('batches');
+      loadBatches();
+    }
+  };
+
   const updateGroup = (groupId: string, updates: Partial<ProductGroup>) => {
     setGroups(prev => prev.map(g => 
       g.id === groupId ? { ...g, ...updates } : g
@@ -175,7 +297,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
   };
 
   const moveToGroup = (imageId: string, fromGroupId: string | null, toGroupId: string) => {
-    // Find the image
     let imageData: ProductGroup['images'][0] | undefined;
     
     if (fromGroupId) {
@@ -246,7 +367,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
       for (const group of groups) {
         if (group.images.length === 0) continue;
 
-        // Create SKU
         const { data: sku, error: skuError } = await supabase
           .from('product_skus')
           .insert({
@@ -261,8 +381,8 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
 
         if (skuError) throw skuError;
 
-        // Create product entries for each angle
         for (const img of group.images) {
+          const imgAny = img as any;
           await supabase.from('scraped_products').insert({
             user_id: user.id,
             brand_id: currentBrand?.id || null,
@@ -273,12 +393,12 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
             full_url: img.url,
             angle: img.detectedAngle,
             description: group.productAnalysis,
+            storage_path: imgAny.storagePath || null,
           });
         }
 
-        // Generate composite image and trigger component analysis in background
+        // Background tasks
         try {
-          // Composite image generation
           supabase.functions.invoke('composite-product-images', {
             body: {
               skuId: sku.id,
@@ -287,7 +407,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
             }
           });
           
-          // Background component analysis (for shoe material/color detection)
           supabase.functions.invoke('analyze-shoe-components', {
             body: { skuId: sku.id }
           });
@@ -322,7 +441,10 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
     setImages([]);
     setGroups([]);
     setUngrouped([]);
-    setStep('upload');
+    setBatches([]);
+    setSelectedBatchId(null);
+    setCrawledSource(false);
+    setStep('source');
     setUploadProgress(0);
     setAnalysisProgress(0);
   };
@@ -330,6 +452,12 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
   const handleClose = () => {
     resetState();
     onOpenChange(false);
+  };
+
+  const goBack = () => {
+    if (step === 'upload' || step === 'batches') setStep('source');
+    else if (step === 'review' && crawledSource) setStep('batches');
+    else if (step === 'review') setStep('upload');
   };
 
   return (
@@ -343,9 +471,43 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
+          {/* ── Step: Choose Source ── */}
+          {step === 'source' && (
+            <div className="grid grid-cols-2 gap-4 py-8 px-4">
+              <button
+                onClick={() => handleChooseSource('upload')}
+                className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
+              >
+                <Upload className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
+                <span className="text-lg font-medium">Upload New</span>
+                <span className="text-sm text-muted-foreground text-center">
+                  Drag & drop or browse for product photos
+                </span>
+              </button>
+
+              <button
+                onClick={() => handleChooseSource('crawled')}
+                className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
+              >
+                <FolderOpen className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
+                <span className="text-lg font-medium">From Crawled Images</span>
+                <span className="text-sm text-muted-foreground text-center">
+                  Import products from your crawler batches
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* ── Step: Upload (existing flow) ── */}
           {step === 'upload' && (
             <div className="space-y-4">
-              {/* Drop zone */}
+              <div className="flex items-center gap-2 mb-2">
+                <Button variant="ghost" size="sm" onClick={goBack}>
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+              </div>
+
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -367,7 +529,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                 />
               </div>
 
-              {/* Image grid */}
               {images.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -398,7 +559,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                 </div>
               )}
 
-              {/* Start button */}
               <div className="flex justify-end pt-4">
                 <Button
                   onClick={startAnalysis}
@@ -412,6 +572,92 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
             </div>
           )}
 
+          {/* ── Step: Browse Crawled Batches ── */}
+          {step === 'batches' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Button variant="ghost" size="sm" onClick={goBack}>
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Select a crawler batch to import
+                </span>
+              </div>
+
+              {loadingBatches && (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading import batches…</span>
+                </div>
+              )}
+
+              {!loadingBatches && batches.length === 0 && (
+                <div className="text-center py-16">
+                  <FolderOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-lg font-medium">No import batches found</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Run your crawler first to upload product images
+                  </p>
+                </div>
+              )}
+
+              {!loadingBatches && batches.map(batch => (
+                <button
+                  key={batch.batchId}
+                  onClick={() => selectBatch(batch)}
+                  disabled={batch.newProducts === 0}
+                  className="w-full text-left rounded-xl border border-border p-4 hover:border-accent/50 hover:bg-accent/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{batch.batchId}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {batch.totalImages} images · {batch.products.length} product{batch.products.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div>
+                      {batch.newProducts > 0 ? (
+                        <Badge variant="secondary">
+                          {batch.newProducts} new
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          All registered
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Product thumbnails */}
+                  <div className="flex gap-2 mt-3 overflow-x-auto">
+                    {batch.products.slice(0, 6).map((product, idx) => (
+                      <div key={idx} className="flex-shrink-0 w-16">
+                        {product.heroUrl ? (
+                          <img
+                            src={product.heroUrl}
+                            alt={product.productName}
+                            className={`w-16 h-16 rounded-lg object-cover border border-border ${product.alreadyRegistered ? 'opacity-40' : ''}`}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
+                            <Package className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1 truncate">{product.color}</p>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── Step: Analyzing ── */}
           {step === 'analyzing' && (
             <UploadProgressView
               uploadProgress={uploadProgress}
@@ -420,19 +666,19 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
             />
           )}
 
+          {/* ── Step: Review ── */}
           {step === 'review' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setStep('upload')}>
+                <Button variant="ghost" size="sm" onClick={goBack}>
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  AI found {groups.length} product{groups.length !== 1 ? 's' : ''}
+                  {crawledSource ? 'Imported' : 'AI found'} {groups.length} product{groups.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
-              {/* Product groups */}
               <div className="space-y-4">
                 {groups.map(group => (
                   <GroupReviewCard
@@ -445,7 +691,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                 ))}
               </div>
 
-              {/* Ungrouped images */}
               {ungrouped.length > 0 && (
                 <UngroupedSection
                   images={ungrouped}
@@ -455,7 +700,6 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                 />
               )}
 
-              {/* Save button */}
               <div className="flex justify-end pt-4 border-t">
                 <Button
                   onClick={saveAllSKUs}

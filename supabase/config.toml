@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.register-imported-products]
 verify_jwt = false
+
+[functions.list-import-batches]
+verify_jwt = false

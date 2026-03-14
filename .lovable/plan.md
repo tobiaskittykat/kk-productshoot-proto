@@ -1,57 +1,73 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Smart Upload: Add "From Crawled Images" Source
+### What was done
 
-## Problem
-The crawler uploads images to `product-images/imports/{batch}/` in storage, but Smart Upload only accepts local file uploads. There's no way to pick already-crawled images and turn them into products.
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-## Solution
-Add a second source option to Smart Upload: alongside "Upload files", add "From Gallery" that lists crawled image batches from storage. The manifest.json already contains product groupings, so we can skip AI analysis entirely for crawled imports.
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-## Flow
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-```text
-Smart Upload Modal
-├── Step 1: Choose Source
-│   ├── [Upload Files]  → existing drag-drop flow
-│   └── [From Crawled]  → new: list import batches
-│
-├── Step 2 (if crawled): Pick Batch
-│   ├── Show batches from imports/ folder
-│   ├── Read manifest.json for each batch
-│   └── Show product previews with image counts
-│
-├── Step 3: Review (same as current)
-│   ├── Pre-populated from manifest (no AI needed)
-│   ├── Edit names, angles, groupings
-│   └── Save → creates product_skus + scraped_products
-│
-└── Done → visible on /products page
-```
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-## Implementation
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-### 1. New edge function: `list-import-batches`
-- Lists folders under `imports/` in product-images bucket
-- For each batch, downloads and parses `manifest.json`
-- Returns batch list with product summaries and image counts
-- Filters out products that are already registered (checks `scraped_products.storage_path`)
+### What was done (v3 — tier rewrite)
 
-### 2. Update SmartUploadModal
-- Add a source selection step at the beginning: "Upload New" vs "From Crawled Images"
-- "From Crawled Images" path:
-  - Fetches batches via `list-import-batches`
-  - Shows batch cards with product thumbnails
-  - User selects a batch → manifest products are converted into the existing `ProductGroup[]` format
-  - Skips the upload + AI analysis steps entirely
-  - Goes directly to the review step (same `GroupReviewCard` UI)
-- On save: uses the storage URLs from the manifest as `thumbnail_url`/`full_url` and sets `storage_path`
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-### 3. Update Products page query
-- Already queries `product_skus` + `scraped_products` — no changes needed
-- Once SKUs are saved via Smart Upload, they'll appear automatically
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-### Files to create/modify
-- **Create**: `supabase/functions/list-import-batches/index.ts`
-- **Modify**: `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — add source selection + batch browsing steps
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
+
+## Direct-to-Storage Crawler API
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Edge Function (`register-imported-products`):**
+- Reads `manifest.json` from `product-images` storage bucket
+- Idempotent upserts into `product_skus` and `scraped_products`
+- Auto-sets hero image as SKU composite thumbnail
+- Auth via `apiKey` field (user JWT validated server-side)
+
+**Crawler workflow:**
+1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
+2. Upload `manifest.json` to same folder
+3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
+
+### Files changed
+- `supabase/functions/register-imported-products/index.ts` — new edge function
+- `supabase/config.toml` — added function with `verify_jwt = false`
