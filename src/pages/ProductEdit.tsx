@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save, Expand } from 'lucide-react';
+import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save, Expand, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
