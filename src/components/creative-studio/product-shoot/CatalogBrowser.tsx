@@ -364,17 +364,22 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
           const alreadyRegistered = existingSet.has(skuCode);
           const isSelected = selected.has(product._idx);
 
+          const productKey = makeProductKey(product);
+          const isHidden = hiddenProducts.has(productKey);
+
           return (
             <button
               key={product._idx}
-              onClick={() => !alreadyRegistered && toggleSelect(product._idx)}
-              disabled={alreadyRegistered}
+              onClick={() => !alreadyRegistered && !isHidden && toggleSelect(product._idx)}
+              disabled={alreadyRegistered || isHidden}
               className={`relative text-left rounded-xl border overflow-hidden transition-all group ${
-                alreadyRegistered
-                  ? 'opacity-50 cursor-not-allowed border-border'
-                  : isSelected
-                    ? 'border-accent ring-2 ring-accent/30 bg-accent/5'
-                    : 'border-border hover:border-accent/40 hover:bg-accent/5'
+                isHidden
+                  ? 'opacity-40 border-border'
+                  : alreadyRegistered
+                    ? 'opacity-50 cursor-not-allowed border-border'
+                    : isSelected
+                      ? 'border-accent ring-2 ring-accent/30 bg-accent/5'
+                      : 'border-border hover:border-accent/40 hover:bg-accent/5'
               }`}
             >
               {/* Thumbnail */}
@@ -394,7 +399,7 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
               </div>
 
               {/* Checkbox */}
-              {!alreadyRegistered && (
+              {!alreadyRegistered && !isHidden && (
                 <div className="absolute top-2 left-2">
                   <Checkbox
                     checked={isSelected}
@@ -404,9 +409,19 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
                 </div>
               )}
 
+              {/* Hide / Unhide button */}
+              <div
+                className={`absolute top-2 right-2 ${isHidden ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                onClick={(e) => toggleHidden(productKey, e)}
+              >
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground cursor-pointer transition-colors">
+                  {isHidden ? <Eye className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                </span>
+              </div>
+
               {/* Already registered badge */}
-              {alreadyRegistered && (
-                <div className="absolute top-2 right-2">
+              {alreadyRegistered && !isHidden && (
+                <div className="absolute top-2 right-8">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     Imported
                   </Badge>
@@ -415,7 +430,7 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
 
               {/* Info */}
               <div className="p-2 space-y-0.5">
-                <p className="text-xs font-medium leading-tight truncate">{product.productName}</p>
+                <p className={`text-xs font-medium leading-tight truncate ${isHidden ? 'line-through' : ''}`}>{product.productName}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{product.color}</p>
                 <p className="text-[10px] text-muted-foreground">{imgCount} images</p>
               </div>
