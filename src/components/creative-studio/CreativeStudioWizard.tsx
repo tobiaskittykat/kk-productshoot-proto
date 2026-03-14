@@ -316,8 +316,18 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   const handleGenerate = useCallback(async () => {
     handleUpdate({ isGenerating: true, generatedImages: [] });
     
+    // Compute correct placeholder count for remix (sources × tiers × imageCount)
+    const isRemix = state.useCase === 'product' && state.productShoot?.shootMode === 'remix';
+    const remixSources = state.productShoot?.remixSourceImages?.length || 0;
+    const enabledTiers = state.productShoot?.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
+    const enabledTierCount = Object.values(enabledTiers).filter(Boolean).length;
+    const isVariations = isRemix && state.productShoot?.remixVariationMode === 'variations' && enabledTierCount > 0;
+    const placeholderCount = isRemix && remixSources > 0
+      ? (isVariations ? remixSources * enabledTierCount * state.imageCount : remixSources * state.imageCount)
+      : state.imageCount;
+
     // Generate placeholder images for loading state (show remaining slots)
-    const placeholders: GeneratedImage[] = Array.from({ length: state.imageCount }).map((_, i) => ({
+    const placeholders: GeneratedImage[] = Array.from({ length: placeholderCount }).map((_, i) => ({
       id: `pending-${i}`,
       imageUrl: '',
       status: 'pending' as const,
