@@ -424,6 +424,7 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
       });
 
       queryClient.invalidateQueries({ queryKey: ['product-skus'] });
+      queryClient.invalidateQueries({ queryKey: ['products-page-skus'] });
       onOpenChange(false);
       resetState();
 
