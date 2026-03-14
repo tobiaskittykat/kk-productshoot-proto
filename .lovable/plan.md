@@ -50,3 +50,24 @@ Make component colors truly single-field across the full pipeline so the payload
 - `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
 - `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
 - `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
+
+## Direct-to-Storage Crawler API
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Edge Function (`register-imported-products`):**
+- Reads `manifest.json` from `product-images` storage bucket
+- Idempotent upserts into `product_skus` and `scraped_products`
+- Auto-sets hero image as SKU composite thumbnail
+- Auth via `apiKey` field (user JWT validated server-side)
+
+**Crawler workflow:**
+1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
+2. Upload `manifest.json` to same folder
+3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
+
+### Files changed
+- `supabase/functions/register-imported-products/index.ts` — new edge function
+- `supabase/config.toml` — added function with `verify_jwt = false`
