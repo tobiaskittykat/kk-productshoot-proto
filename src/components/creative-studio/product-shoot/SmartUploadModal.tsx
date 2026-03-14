@@ -245,7 +245,10 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
           suggestedName: `${p.productName} — ${p.color}`,
           suggestedSku: makeSkuCode(p.productName, p.color),
           confidence: 95,
-          images: (p.images || []).map((img: any) => ({
+          images: (p.images || []).filter((img: any) => {
+            const angle = (img.angle || '').toLowerCase();
+            return !['lifestyle', 'on-foot', 'on-model', 'on_foot', 'on_model'].includes(angle);
+          }).map((img: any) => ({
             id: crypto.randomUUID(),
             url: `${storageBaseUrl}/imports/${batch.batchId}/${img.path}`,
             detectedAngle: img.angle || 'unknown',
@@ -687,6 +690,15 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                     allGroups={groups}
                     onUpdate={(updates) => updateGroup(group.id, updates)}
                     onMoveImage={(imageId, toGroupId) => moveToGroup(imageId, group.id, toGroupId)}
+                    onDeleteImage={(imageId) => {
+                      setGroups(prev => prev
+                        .map(g => g.id === group.id
+                          ? { ...g, images: g.images.filter(img => img.id !== imageId) }
+                          : g
+                        )
+                        .filter(g => g.images.length > 0)
+                      );
+                    }}
                   />
                 ))}
               </div>
