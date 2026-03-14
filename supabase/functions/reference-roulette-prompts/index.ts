@@ -355,7 +355,7 @@ serve(async (req) => {
       })
     );
 
-    console.log("[ROULETTE] Phase B complete — got 3 final prompts with product integrated");
+    console.log("[SceneRemix] Phase B complete — got 3 final prompts with product integrated");
 
     // ========== Assemble Response ==========
     // Generate short descriptions for each tier
