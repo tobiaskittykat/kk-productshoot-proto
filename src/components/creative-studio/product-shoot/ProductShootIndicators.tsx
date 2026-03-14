@@ -44,7 +44,40 @@ const scrollToSection = (sectionId: string) => {
 
 export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) => {
   const hasProduct = !!state.selectedProductId;
-  
+  const isRemix = state.shootMode === 'remix';
+
+  if (isRemix) {
+    const sourceCount = state.remixSourceImages?.length || 0;
+    const sourceLabel = sourceCount > 0 ? `Source: ${sourceCount} image${sourceCount > 1 ? 's' : ''}` : 'Source';
+    const modeLabel = state.remixVariationMode === 'variations' ? 'Mode: Variations' : 'Mode: Shoe Swap';
+
+    return (
+      <div className="flex items-center gap-0.5">
+        <IndicatorChip
+          label={sourceLabel}
+          selected={sourceCount > 0}
+          onClick={() => scrollToSection('section-ps-product')}
+        />
+
+        <span className="text-muted-foreground/30">·</span>
+
+        <IndicatorChip
+          label={modeLabel}
+          selected={true}
+          onClick={() => scrollToSection('section-ps-product')}
+        />
+
+        <span className="text-muted-foreground/30">·</span>
+
+        <IndicatorChip
+          label="Product"
+          selected={hasProduct}
+          onClick={() => scrollToSection('section-ps-product')}
+        />
+      </div>
+    );
+  }
+
   const shotTypeLabels: Record<string, string> = {
     'product-focus': 'Product Focus',
     'on-foot': 'On Foot',
@@ -53,14 +86,10 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
   const shotLabel = `Shot Type: ${shotTypeLabels[state.productShotType] || 'Select'}`;
   
   const getBackgroundLabel = () => {
-    // Check backgroundId prefix first (most reliable indicator of actual selection)
     if (state.backgroundId?.startsWith('studio-')) return 'Background: Studio';
     if (state.backgroundId?.startsWith('outdoor-')) return 'Background: Outdoor';
-    
-    // Fall back to settingType
     if (state.settingType === 'studio') return 'Background: Studio';
     if (state.settingType === 'outdoor') return 'Background: Outdoor';
-    
     return 'Background: Auto';
   };
   
