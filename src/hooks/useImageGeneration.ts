@@ -513,7 +513,7 @@ export function useImageGeneration() {
       // === REMIX MODE ===
       if (state.useCase === 'product' && state.productShoot?.shootMode === 'remix' && state.productShoot.remixSourceImages.length > 0) {
         
-        // === ROULETTE VARIATIONS MODE: one request per enabled tier ===
+        // === SCENE REMIX MODE: one request per enabled tier ===
         if (state.productShoot.remixVariationMode === 'variations') {
           const enabledTiers = state.productShoot.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
           const enabledTierNames = Object.entries(enabledTiers).filter(([_, v]) => v).map(([k]) => k);
