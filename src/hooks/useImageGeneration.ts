@@ -565,10 +565,10 @@ export function useImageGeneration() {
               }
             }
             
-            // Sequential: for each source, call reference-roulette-prompts, then generate per tier
+            // Sequential: for each source, call scene-remix prompts, then generate per tier
             for (let srcIdx = 0; srcIdx < sourceImages.length; srcIdx++) {
               const sourceUrl = sourceImages[srcIdx];
-              console.log(`[Roulette] Analyzing source ${srcIdx + 1}/${sourceImages.length}...`);
+              console.log(`[SceneRemix] Analyzing source ${srcIdx + 1}/${sourceImages.length}...`);
               
               // Generate prompts on-the-fly for this source
               const { data: promptData, error: promptError } = await supabase.functions.invoke('reference-roulette-prompts', {
