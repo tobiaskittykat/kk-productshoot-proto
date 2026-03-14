@@ -60,19 +60,18 @@ const COLOR_FAMILIES: Record<string, string[]> = {
   beige: ['beige', 'sand', 'taupe', 'nude', 'oat', 'latte', 'biscuit', 'desert', 'linen', 'chai', 'wheat', 'parchment'],
 };
 
-/** Check if a token matches in haystack, expanding color synonyms */
+/** Check if a token matches in haystack, expanding color synonyms (prefix-aware) */
 function tokenMatchesHaystack(token: string, haystack: string): boolean {
-  // Direct match
-  if (haystack.includes(token)) return true;
-  // Check if token is a color family key — expand to synonyms
-  const synonyms = COLOR_FAMILIES[token];
-  if (synonyms) {
-    return synonyms.some(syn => haystack.includes(syn));
-  }
-  // Check if token is a synonym in any family — also match siblings
-  for (const [, family] of Object.entries(COLOR_FAMILIES)) {
-    if (family.includes(token)) {
-      return family.some(syn => haystack.includes(syn));
+  const words = haystack.split(/\s+/);
+  // Direct prefix match on any word
+  if (words.some(w => w.startsWith(token))) return true;
+  // Check if token is a prefix of any color family key or synonym
+  for (const [key, family] of Object.entries(COLOR_FAMILIES)) {
+    const allTerms = [key, ...family];
+    // Does the token prefix-match any term in this family?
+    if (allTerms.some(term => term.startsWith(token))) {
+      // Yes — check if any synonym from this family appears as a word-prefix in haystack
+      return allTerms.some(syn => words.some(w => w.startsWith(syn)));
     }
   }
   return false;
