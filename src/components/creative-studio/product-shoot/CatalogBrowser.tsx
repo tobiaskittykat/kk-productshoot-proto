@@ -84,7 +84,7 @@ interface CatalogBrowserProps {
   hideBack?: boolean;
 }
 
-export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
+export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps) {
   const { user } = useAuth();
   const { currentBrand } = useBrands();
   const queryClient = useQueryClient();
