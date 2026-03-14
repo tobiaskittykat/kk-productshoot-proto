@@ -117,7 +117,7 @@ OUTPUT: The complete, final "Edit this image:" prompt with the product integrate
 
 // ========== Helper Functions ==========
 
-function buildBrandBlock(body: RouletteRequest): string {
+function buildBrandBlock(body: SceneRemixRequest): string {
   const sections: string[] = [];
   if (body.brandName) sections.push(`Brand: ${body.brandName}`);
   if (body.brandPersonality) sections.push(`Personality: ${body.brandPersonality}`);
