@@ -264,6 +264,16 @@ export default function ProductEdit() {
             <h1 className="text-lg font-semibold truncate max-w-[300px]">{name || 'Untitled'}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || angles.length === 0}
+              className="gap-2"
+            >
+              {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAnalyzing ? 'Analyzing…' : 'Run AI Analysis'}
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
