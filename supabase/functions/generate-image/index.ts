@@ -1559,7 +1559,7 @@ async function runBackgroundGeneration(params: {
     // === PROMPT SELECTION: skipPromptAgent > remixMode > normal ===
     let refinedPrompt: string;
     if (body.skipPromptAgent && body.structuredPrompt) {
-      // Reference Roulette mode: use the natural language prompt directly
+      // Scene Remix mode: use the natural language prompt directly
       refinedPrompt = body.structuredPrompt.naturalPrompt || JSON.stringify(body.structuredPrompt, null, 2);
       console.log("[BG] skipPromptAgent mode — using natural language prompt");
     } else if (body.remixMode) {
