@@ -224,7 +224,7 @@ export const initialProductShootState: ProductShootState = {
   
   // Remix variation mode defaults
   remixVariationMode: 'swap',
-  roulettePrompts: null,
+  sceneRemixPrompts: null,
   isAnalyzingScene: false,
   remixEnabledTiers: { faithful: true, moderate: true, creative: false },
 };

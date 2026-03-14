@@ -616,7 +616,7 @@ export function useImageGeneration() {
                   if (genData?.pendingIds) {
                     allPendingIds.push(...genData.pendingIds);
                   } else if (genError) {
-                    console.error(`[Roulette] Generation failed for ${tierName}:`, genError);
+                    console.error(`[SceneRemix] Generation failed for ${tierName}:`, genError);
                   }
                 }
               }

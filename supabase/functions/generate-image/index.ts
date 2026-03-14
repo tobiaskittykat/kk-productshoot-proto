@@ -1585,7 +1585,7 @@ async function runBackgroundGeneration(params: {
           { type: "text", text: refinedPrompt }
         ];
 
-        // ROULETTE mode: source image as edit target with explicit framing instruction
+        // Scene Remix mode: source image as edit target with explicit framing instruction
         if (body.skipPromptAgent && body.structuredPrompt && body.sourceImageUrl?.startsWith('http')) {
           messageContent.unshift({
             type: "text",

@@ -458,7 +458,7 @@ export const RemixStep2 = ({
                 : "border-transparent bg-muted/50 hover:bg-muted"
             )}
           >
-            <span className="text-sm font-medium text-foreground">Shoot Variations</span>
+            <span className="text-sm font-medium text-foreground">Scene Remix</span>
             <p className="text-[10px] text-muted-foreground mt-0.5">Same shoot, different angles</p>
           </button>
         </div>

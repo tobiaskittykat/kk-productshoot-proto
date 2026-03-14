@@ -380,7 +380,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("[ROULETTE] Error:", error);
+    console.error("[SceneRemix] Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     const status = message.includes("Payment required") ? 402 : message.includes("Rate limit") ? 429 : 500;
     return new Response(JSON.stringify({ error: message }), {
