@@ -284,10 +284,12 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
     return `BIRK-${model}-${col}`.slice(0, 40);
   }
 
-  const handleChooseSource = (source: 'upload' | 'crawled') => {
+  const handleChooseSource = (source: 'upload' | 'crawled' | 'catalog') => {
     if (source === 'upload') {
       setCrawledSource(false);
       setStep('upload');
+    } else if (source === 'catalog') {
+      setStep('catalog');
     } else {
       setStep('batches');
       loadBatches();
