@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Search, Download, Package, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, Download, Package, Loader2, X, Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import catalogData from '@/data/birkenstock-catalog.json';
 import { supabase } from '@/integrations/supabase/client';
