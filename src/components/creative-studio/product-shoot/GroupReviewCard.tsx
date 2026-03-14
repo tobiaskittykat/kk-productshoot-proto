@@ -36,6 +36,7 @@ interface GroupReviewCardProps {
   allGroups: ProductGroup[];
   onUpdate: (updates: Partial<ProductGroup>) => void;
   onMoveImage: (imageId: string, toGroupId: string) => void;
+  onDeleteImage?: (imageId: string) => void;
 }
 
 const angleOptions = ['front', 'side', 'back', '3/4', 'top', 'sole', 'detail', 'unknown'];
