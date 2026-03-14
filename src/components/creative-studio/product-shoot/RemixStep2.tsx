@@ -334,7 +334,7 @@ export const RemixStep2 = ({
     <div className="space-y-4 mt-8">
       {/* Section 1: Source Images */}
       <Collapsible open={openSections.source}>
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div id="section-ps-remix-source" className="rounded-2xl border border-border bg-card overflow-hidden">
           <SectionHeader
             icon={Upload}
             title="Source Images"
