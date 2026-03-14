@@ -310,10 +310,10 @@ serve(async (req) => {
       callAI(apiKey, buildCreativePrompt(customPrompts.rouletteCreative), sceneContent),
     ]);
 
-    console.log("[ROULETTE] Phase A complete — got 3 natural language prompts");
-    console.log("[ROULETTE] Faithful preview:", faithfulNL.substring(0, 120));
-    console.log("[ROULETTE] Moderate preview:", moderateNL.substring(0, 120));
-    console.log("[ROULETTE] Creative preview:", creativeNL.substring(0, 120));
+    console.log("[SceneRemix] Phase A complete — got 3 natural language prompts");
+    console.log("[SceneRemix] Faithful preview:", faithfulNL.substring(0, 120));
+    console.log("[SceneRemix] Moderate preview:", moderateNL.substring(0, 120));
+    console.log("[SceneRemix] Creative preview:", creativeNL.substring(0, 120));
 
     // ========== PHASE B: Product Integration → 3 Final Prompts ==========
     console.log("[ROULETTE] Phase B — 3 parallel product integration calls...");
