@@ -449,7 +449,7 @@ export const RemixStep2 = ({
           </button>
           <button
             onClick={() => {
-              onStateChange({ remixVariationMode: 'variations', roulettePrompts: null });
+              onStateChange({ remixVariationMode: 'variations', sceneRemixPrompts: null });
             }}
             className={cn(
               "rounded-xl border-2 p-3 text-left transition-all",
