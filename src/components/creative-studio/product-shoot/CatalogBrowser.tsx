@@ -264,10 +264,12 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
+          {!hideBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+          )}
           <span className="text-sm text-muted-foreground">
             {products.length} products in catalog
           </span>
