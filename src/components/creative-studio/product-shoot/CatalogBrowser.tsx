@@ -44,9 +44,44 @@ function makeSkuCode(productName: string, color: string): string {
   return `BIRK-${model}-${col}`.slice(0, 40);
 }
 
+// Color family synonym map for semantic search
+const COLOR_FAMILIES: Record<string, string[]> = {
+  red: ['red', 'crimson', 'burgundy', 'cherry', 'scarlet', 'ruby', 'wine', 'garnet', 'brick', 'maroon'],
+  pink: ['pink', 'rose', 'blush', 'fuchsia', 'magenta', 'coral', 'salmon', 'fondant'],
+  blue: ['blue', 'navy', 'cobalt', 'azure', 'indigo', 'sky', 'denim', 'teal', 'sapphire'],
+  green: ['green', 'olive', 'sage', 'forest', 'emerald', 'mint', 'thyme', 'khaki', 'moss'],
+  brown: ['brown', 'tan', 'cognac', 'tobacco', 'mocha', 'chocolate', 'espresso', 'habana', 'sienna', 'cork', 'camel'],
+  black: ['black', 'onyx', 'anthracite', 'charcoal', 'iron', 'jet', 'ebony'],
+  white: ['white', 'cream', 'ivory', 'pearl', 'bone', 'snow', 'alabaster'],
+  gray: ['gray', 'grey', 'silver', 'stone', 'slate', 'ash', 'pewter', 'mink'],
+  yellow: ['yellow', 'gold', 'mustard', 'honey', 'amber', 'lemon', 'saffron'],
+  orange: ['orange', 'tangerine', 'apricot', 'copper', 'peach', 'rust'],
+  purple: ['purple', 'violet', 'plum', 'lavender', 'lilac', 'mauve', 'port', 'eggplant'],
+  beige: ['beige', 'sand', 'taupe', 'nude', 'oat', 'latte', 'biscuit', 'desert'],
+};
+
+/** Check if a token matches in haystack, expanding color synonyms */
+function tokenMatchesHaystack(token: string, haystack: string): boolean {
+  // Direct match
+  if (haystack.includes(token)) return true;
+  // Check if token is a color family key — expand to synonyms
+  const synonyms = COLOR_FAMILIES[token];
+  if (synonyms) {
+    return synonyms.some(syn => haystack.includes(syn));
+  }
+  // Check if token is a synonym in any family — also match siblings
+  for (const [, family] of Object.entries(COLOR_FAMILIES)) {
+    if (family.includes(token)) {
+      return family.some(syn => haystack.includes(syn));
+    }
+  }
+  return false;
+}
+
 interface CatalogBrowserProps {
   onBack: () => void;
   onDone: () => void;
+  hideBack?: boolean;
 }
 
 export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
