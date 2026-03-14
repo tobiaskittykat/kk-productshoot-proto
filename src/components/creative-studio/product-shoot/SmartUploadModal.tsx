@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, X, ArrowLeft, FolderOpen, Package, CheckCircle2, Loader2 } from 'lucide-react';
+import { Sparkles, Upload, X, ArrowLeft, FolderOpen, Package, CheckCircle2, Loader2, ShoppingBag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrands } from '@/hooks/useBrands';
@@ -11,6 +11,7 @@ import { UploadProgressView } from './UploadProgressView';
 import { GroupReviewCard } from './GroupReviewCard';
 import { UngroupedSection } from './UngroupedSection';
 import { Badge } from '@/components/ui/badge';
+import { CatalogBrowser } from './CatalogBrowser';
 
 interface SmartUploadModalProps {
   open: boolean;
@@ -68,7 +69,7 @@ interface ImportBatch {
   newProducts: number;
 }
 
-type Step = 'source' | 'upload' | 'batches' | 'analyzing' | 'review';
+type Step = 'source' | 'upload' | 'batches' | 'catalog' | 'analyzing' | 'review';
 
 export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) {
   const { user } = useAuth();
@@ -283,10 +284,12 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
     return `BIRK-${model}-${col}`.slice(0, 40);
   }
 
-  const handleChooseSource = (source: 'upload' | 'crawled') => {
+  const handleChooseSource = (source: 'upload' | 'crawled' | 'catalog') => {
     if (source === 'upload') {
       setCrawledSource(false);
       setStep('upload');
+    } else if (source === 'catalog') {
+      setStep('catalog');
     } else {
       setStep('batches');
       loadBatches();
@@ -459,7 +462,7 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
   };
 
   const goBack = () => {
-    if (step === 'upload' || step === 'batches') setStep('source');
+    if (step === 'upload' || step === 'batches' || step === 'catalog') setStep('source');
     else if (step === 'review' && crawledSource) setStep('batches');
     else if (step === 'review') setStep('upload');
   };
@@ -477,7 +480,7 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
         <div className="flex-1 overflow-y-auto">
           {/* ── Step: Choose Source ── */}
           {step === 'source' && (
-            <div className="grid grid-cols-2 gap-4 py-8 px-4">
+            <div className="grid grid-cols-3 gap-4 py-8 px-4">
               <button
                 onClick={() => handleChooseSource('upload')}
                 className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
@@ -490,13 +493,24 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
               </button>
 
               <button
+                onClick={() => handleChooseSource('catalog')}
+                className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
+              >
+                <ShoppingBag className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
+                <span className="text-lg font-medium">Browse Catalog</span>
+                <span className="text-sm text-muted-foreground text-center">
+                  Search & import from full product catalog
+                </span>
+              </button>
+
+              <button
                 onClick={() => handleChooseSource('crawled')}
                 className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
               >
                 <FolderOpen className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
-                <span className="text-lg font-medium">From Crawled Images</span>
+                <span className="text-lg font-medium">From Crawled</span>
                 <span className="text-sm text-muted-foreground text-center">
-                  Import products from your crawler batches
+                  Import from your crawler batches
                 </span>
               </button>
             </div>
@@ -659,6 +673,14 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                 </button>
               ))}
             </div>
+          )}
+
+          {/* ── Step: Browse Catalog ── */}
+          {step === 'catalog' && (
+            <CatalogBrowser
+              onBack={goBack}
+              onDone={handleClose}
+            />
           )}
 
           {/* ── Step: Analyzing ── */}

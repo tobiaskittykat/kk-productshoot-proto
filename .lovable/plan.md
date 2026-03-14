@@ -1,65 +1,99 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Birkenstock Catalog Browser & On-Demand Import
+### What was done
 
-## Concept
-Store the full 285-product Birkenstock catalog as a static JSON index in the app. Add a new "Browse Catalog" source option in Smart Upload (alongside "Upload Files" and "From Crawled"). Users search/filter by model, material, color -- then select products they want. The app calls `bulk-import-products` to download images from Birkenstock's CDN and register them as products, all in one flow.
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-## Flow
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-```text
-Smart Upload Modal
-├── Step 1: Choose Source
-│   ├── [Upload Files]     → existing drag-drop
-│   ├── [From Crawled]     → existing batch browser
-│   └── [Browse Catalog]   → NEW: searchable catalog
-│
-├── Step 2 (catalog): Search & Select
-│   ├── Search bar (model, color, material)
-│   ├── Filter chips by model (Arizona, Boston, ...)
-│   ├── Grid of product cards with hero thumbnail (direct Birkenstock CDN URL)
-│   ├── Each card shows: name, color, image count, checkbox
-│   ├── Already-registered products shown as dimmed/checked
-│   └── "Import Selected (N)" button
-│
-├── Step 3: Import Progress
-│   ├── Calls bulk-import-products edge function
-│   ├── Shows per-product progress (downloading, mirroring, done)
-│   └── On complete → products appear on /products page
-```
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-## Implementation
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-### 1. Static catalog data file
-- **Create** `src/data/birkenstock-catalog.json` — copy from the uploaded `products-2.json`
-- Contains 285 entries with `model`, `productName`, `color`, `imageUrls`, `sourceUrl`
-- Imported as a static JSON module (Vite handles this natively)
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-### 2. Update SmartUploadModal
-- Add third source option: "Browse Catalog" with a search/shop icon
-- New step `'catalog'` between source and review
-- **CatalogBrowser** sub-component:
-  - Text search across `productName + color + model`
-  - Model filter chips (Arizona, Boston, Gizeh, etc.)
-  - Thumbnail grid using first `imageUrl` as hero (loaded directly from CDN -- no download yet)
-  - Checkbox multi-select with count badge
-  - Cross-reference `product_skus` table to mark already-registered items
-  - "Import Selected" triggers the existing `bulk-import-products` edge function with the selected products' data
+### What was done (v3 — tier rewrite)
 
-### 3. New component: CatalogBrowser
-- **Create** `src/components/creative-studio/product-shoot/CatalogBrowser.tsx`
-- Props: `onImport(products)`, `onBack()`
-- Filters lifestyle images (`_f_look_f`, `_f_closeup_f`, `_m_look_m`, etc.) from the imageUrls before sending to import
-- Groups by model for visual hierarchy
-- Shows image count per product (non-lifestyle only)
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-### 4. Import flow
-- Selected products are sent to `bulk-import-products` edge function (already handles Birkenstock CDN URLs, angle detection, storage upload, and product_skus + scraped_products registration)
-- Progress shown via polling or sequential processing with status updates
-- On completion, invalidate `['products-page-skus']` query cache
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-### Files to create/modify
-- **Create**: `src/data/birkenstock-catalog.json` (from uploaded file)
-- **Create**: `src/components/creative-studio/product-shoot/CatalogBrowser.tsx`
-- **Modify**: `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — add catalog source + step
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
+
+## Direct-to-Storage Crawler API
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Edge Function (`register-imported-products`):**
+- Reads `manifest.json` from `product-images` storage bucket
+- Idempotent upserts into `product_skus` and `scraped_products`
+- Auto-sets hero image as SKU composite thumbnail
+- Auth via `apiKey` field (user JWT validated server-side)
+
+**Crawler workflow:**
+1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
+2. Upload `manifest.json` to same folder
+3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
+
+### Files changed
+- `supabase/functions/register-imported-products/index.ts` — new edge function
+- `supabase/config.toml` — added function with `verify_jwt = false`
+
+## Birkenstock Catalog Browser & On-Demand Import
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Static catalog data:**
+- `src/data/birkenstock-catalog.json` — 285 products with model, productName, color, imageUrls
+
+**CatalogBrowser component:**
+- Searchable/filterable grid of all catalog products
+- Model filter chips (Arizona, Boston, Gizeh, etc.)
+- Hero thumbnails loaded directly from Birkenstock CDN
+- Checkbox multi-select with "already imported" detection via SKU codes
+- Lifestyle images auto-filtered from import payload
+- Batch import via `bulk-import-products` edge function with progress UI
+
+**SmartUploadModal integration:**
+- New "Browse Catalog" source option (3-column layout)
+- `catalog` step renders CatalogBrowser inline
+
+### Files changed
+- `src/data/birkenstock-catalog.json` — new static catalog
+- `src/components/creative-studio/product-shoot/CatalogBrowser.tsx` — new component
+- `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — added catalog source + step
