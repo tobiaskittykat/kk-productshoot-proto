@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Search, Download, Package, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, Download, Package, Loader2, X, Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import catalogData from '@/data/birkenstock-catalog.json';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,6 +94,29 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; currentName: string }>({ current: 0, total: 0, currentName: '' });
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Hidden products stored in localStorage
+  const HIDDEN_KEY = 'catalog-hidden-products';
+  const [hiddenProducts, setHiddenProducts] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(HIDDEN_KEY);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const toggleHidden = (productKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHiddenProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(productKey)) next.delete(productKey);
+      else next.add(productKey);
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const makeProductKey = (p: CatalogProduct) => `${p.productName}::${p.color}`;
 
   // Get existing SKU codes to mark already-registered
   const { data: existingSkus } = useQuery({
@@ -117,9 +140,15 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
     return Array.from(m).sort();
   }, [products]);
 
+  // Available products (excluding hidden unless showHidden)
+  const visibleProducts = useMemo(() => {
+    if (showHidden) return products;
+    return products.filter(p => !hiddenProducts.has(makeProductKey(p)));
+  }, [products, hiddenProducts, showHidden]);
+
   // Filter products
   const filtered = useMemo(() => {
-    let result = products;
+    let result = visibleProducts;
     if (selectedModel) {
       result = result.filter(p => p.model === selectedModel);
     }
@@ -130,12 +159,11 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
         return tokens.every(t => tokenMatchesHaystack(t, haystack));
       });
     }
-    return result.map((p, originalIndex) => {
-      // Find original index in the full products array
+    return result.map((p) => {
       const idx = products.indexOf(p);
       return { ...p, _idx: idx };
     });
-  }, [products, search, selectedModel]);
+  }, [visibleProducts, products, search, selectedModel]);
 
   const toggleSelect = (idx: number) => {
     setSelected(prev => {
@@ -270,8 +298,22 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
             </Button>
           )}
           <span className="text-sm text-muted-foreground">
-            {products.length} products in catalog
+            {filtered.length === visibleProducts.length
+              ? `${visibleProducts.length} products`
+              : `${filtered.length} of ${visibleProducts.length} products`}
+            {hiddenProducts.size > 0 && ` · ${hiddenProducts.size} hidden`}
           </span>
+          {hiddenProducts.size > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHidden(prev => !prev)}
+              className="text-xs h-7 px-2"
+            >
+              {showHidden ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+              {showHidden ? 'Hide removed' : 'Show removed'}
+            </Button>
+          )}
         </div>
         {selected.size > 0 && (
           <Button onClick={importSelected} className="gap-2">
@@ -322,17 +364,22 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
           const alreadyRegistered = existingSet.has(skuCode);
           const isSelected = selected.has(product._idx);
 
+          const productKey = makeProductKey(product);
+          const isHidden = hiddenProducts.has(productKey);
+
           return (
             <button
               key={product._idx}
-              onClick={() => !alreadyRegistered && toggleSelect(product._idx)}
-              disabled={alreadyRegistered}
+              onClick={() => !alreadyRegistered && !isHidden && toggleSelect(product._idx)}
+              disabled={alreadyRegistered || isHidden}
               className={`relative text-left rounded-xl border overflow-hidden transition-all group ${
-                alreadyRegistered
-                  ? 'opacity-50 cursor-not-allowed border-border'
-                  : isSelected
-                    ? 'border-accent ring-2 ring-accent/30 bg-accent/5'
-                    : 'border-border hover:border-accent/40 hover:bg-accent/5'
+                isHidden
+                  ? 'opacity-40 border-border'
+                  : alreadyRegistered
+                    ? 'opacity-50 cursor-not-allowed border-border'
+                    : isSelected
+                      ? 'border-accent ring-2 ring-accent/30 bg-accent/5'
+                      : 'border-border hover:border-accent/40 hover:bg-accent/5'
               }`}
             >
               {/* Thumbnail */}
@@ -352,7 +399,7 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
               </div>
 
               {/* Checkbox */}
-              {!alreadyRegistered && (
+              {!alreadyRegistered && !isHidden && (
                 <div className="absolute top-2 left-2">
                   <Checkbox
                     checked={isSelected}
@@ -362,9 +409,19 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
                 </div>
               )}
 
+              {/* Hide / Unhide button */}
+              <div
+                className={`absolute top-2 right-2 ${isHidden ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                onClick={(e) => toggleHidden(productKey, e)}
+              >
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground cursor-pointer transition-colors">
+                  {isHidden ? <Eye className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                </span>
+              </div>
+
               {/* Already registered badge */}
-              {alreadyRegistered && (
-                <div className="absolute top-2 right-2">
+              {alreadyRegistered && !isHidden && (
+                <div className="absolute top-2 right-8">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     Imported
                   </Badge>
@@ -373,7 +430,7 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
 
               {/* Info */}
               <div className="p-2 space-y-0.5">
-                <p className="text-xs font-medium leading-tight truncate">{product.productName}</p>
+                <p className={`text-xs font-medium leading-tight truncate ${isHidden ? 'line-through' : ''}`}>{product.productName}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{product.color}</p>
                 <p className="text-[10px] text-muted-foreground">{imgCount} images</p>
               </div>
