@@ -584,7 +584,7 @@ export function useImageGeneration() {
                   brandBrain: remixBrandBrain,
                   brief: undefined, // brief is in RemixStep2 local state, passed via productShoot if needed
                   remixRemoveText: state.productShoot.remixRemoveText ?? false,
-                  customPrompts: rouletteCustomPrompts,
+                  customPrompts: remixCustomPrompts,
                 },
               });
               
