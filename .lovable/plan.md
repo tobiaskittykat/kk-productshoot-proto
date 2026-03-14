@@ -1,243 +1,73 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Complete Crawler Upload Instructions
+### What was done
 
-Everything your crawler needs to upload images directly to storage and register them in the database.
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-## Credentials You Need
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-1. **Service Role Key** — for uploading files to storage (I need to share this with you securely)
-2. **Your User JWT** — for the register endpoint (get this from your browser session or login API)
-3. **Your Brand ID** — the UUID of your Birkenstock brand in the system
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-## Storage Upload URL
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-```
-https://hqjfjrwoyvtlhqcupceu.supabase.co/storage/v1/object/product-images/
-```
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-## Folder Structure Convention
+### What was done (v3 — tier rewrite)
 
-```
-product-images/
-  imports/
-    {batch_id}/
-      manifest.json
-      {model-slug}/{color-slug}/hero.jpg
-      {model-slug}/{color-slug}/top-down.jpg
-      {model-slug}/{color-slug}/side.jpg
-      {model-slug}/{color-slug}/sole.jpg
-      {model-slug}/{color-slug}/pair.jpg
-      {model-slug}/{color-slug}/detail.jpg
-      {model-slug}/{color-slug}/lifestyle.jpg
-```
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-## Angle Mapping (for Birkenstock URLs)
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-| URL pattern | Angle label |
-|---|---|
-| `1031752.jpg` (no suffix) | `hero` |
-| `_top.jpg` | `top-down` |
-| `_side.jpg` | `side` |
-| `_sole.jpg` | `sole` |
-| `_pair.jpg` | `pair` |
-| `_detail.jpg` | `detail` |
-| `_f_look_f.jpg` | `lifestyle` |
-| `_f_closeup_f.jpg` | `closeup` |
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
-## manifest.json Format
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
 
-```json
-{
-  "brandId": "YOUR_BRAND_UUID",
-  "products": [
-    {
-      "model": "Arizona",
-      "productName": "Arizona Big Buckle Leather",
-      "color": "New Dressy Black",
-      "sourceUrl": "https://www.birkenstock.com/...",
-      "images": [
-        { "path": "arizona/new-dressy-black/hero.jpg", "angle": "hero" },
-        { "path": "arizona/new-dressy-black/top-down.jpg", "angle": "top-down" },
-        { "path": "arizona/new-dressy-black/side.jpg", "angle": "side" }
-      ]
-    }
-  ]
-}
-```
+## Direct-to-Storage Crawler API
 
-## Register Endpoint
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
 
-After all images + manifest are uploaded:
+### What was done
 
-```
-POST https://hqjfjrwoyvtlhqcupceu.supabase.co/functions/v1/register-imported-products
-Content-Type: application/json
+**Edge Function (`register-imported-products`):**
+- Reads `manifest.json` from `product-images` storage bucket
+- Idempotent upserts into `product_skus` and `scraped_products`
+- Auto-sets hero image as SKU composite thumbnail
+- Auth via `apiKey` field (user JWT validated server-side)
 
-{
-  "apiKey": "YOUR_USER_JWT",
-  "batchId": "batch-2026-03-14"
-}
-```
+**Crawler workflow:**
+1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
+2. Upload `manifest.json` to same folder
+3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
 
-## Complete Python Crawler Script
-
-```python
-import requests, json, os, re, time, sys
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-# ─── CONFIG ───
-SUPABASE_URL = "https://hqjfjrwoyvtlhqcupceu.supabase.co"
-STORAGE_URL  = f"{SUPABASE_URL}/storage/v1/object/product-images"
-REGISTER_URL = f"{SUPABASE_URL}/functions/v1/register-imported-products"
-SERVICE_KEY  = "YOUR_SERVICE_ROLE_KEY"   # for storage uploads
-USER_JWT     = "YOUR_USER_JWT"           # for register endpoint
-BRAND_ID     = "YOUR_BRAND_UUID"
-BATCH_ID     = "batch-2026-03-14"
-
-# ─── ANGLE DETECTION ───
-ANGLE_PATTERNS = [
-    (r'_f_look_f',    'lifestyle'),
-    (r'_f_closeup_f', 'closeup'),
-    (r'_top',         'top-down'),
-    (r'_side',        'side'),
-    (r'_sole',        'sole'),
-    (r'_pair',        'pair'),
-    (r'_detail',      'detail'),
-]
-
-def detect_angle(url: str) -> str:
-    filename = url.split('/')[-1].split('?')[0].lower()
-    for pattern, angle in ANGLE_PATTERNS:
-        if pattern in filename:
-            return angle
-    return 'hero'
-
-def slugify(text: str) -> str:
-    return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')
-
-# ─── UPLOAD ONE IMAGE ───
-def upload_image(image_url: str, storage_path: str) -> bool:
-    """Download image from source URL and upload to storage."""
-    try:
-        # Download from source
-        resp = requests.get(image_url, timeout=30)
-        resp.raise_for_status()
-
-        # Upload to storage
-        upload_resp = requests.post(
-            f"{STORAGE_URL}/imports/{BATCH_ID}/{storage_path}",
-            headers={
-                "Authorization": f"Bearer {SERVICE_KEY}",
-                "Content-Type": "image/jpeg",
-                "x-upsert": "true",  # overwrite if exists
-            },
-            data=resp.content,
-        )
-        upload_resp.raise_for_status()
-        return True
-    except Exception as e:
-        print(f"  ✗ Failed {storage_path}: {e}")
-        return False
-
-# ─── MAIN ───
-def main():
-    # Load your products.json (from your crawler)
-    with open("products.json", "r") as f:
-        raw_products = json.load(f)
-
-    manifest_products = []
-    total_uploaded = 0
-    total_failed = 0
-
-    for i, product in enumerate(raw_products):
-        model = product.get("model", "unknown")
-        name = product.get("productName", product.get("name", "unknown"))
-        color = product.get("color", "default")
-        source_url = product.get("sourceUrl", "")
-        image_urls = product.get("imageUrls", product.get("images", []))
-
-        model_slug = slugify(model)
-        color_slug = slugify(color)
-        folder = f"{model_slug}/{color_slug}"
-
-        print(f"[{i+1}/{len(raw_products)}] {name} — {color} ({len(image_urls)} images)")
-
-        images_manifest = []
-
-        # Upload images in parallel (5 at a time)
-        with ThreadPoolExecutor(max_workers=5) as pool:
-            futures = {}
-            for img_url in image_urls:
-                if isinstance(img_url, dict):
-                    img_url = img_url.get("url", img_url.get("src", ""))
-                angle = detect_angle(img_url)
-                ext = "jpg"
-                storage_path = f"{folder}/{angle}.{ext}"
-                futures[pool.submit(upload_image, img_url, storage_path)] = {
-                    "path": f"{folder}/{angle}.{ext}",
-                    "angle": angle,
-                }
-
-            for future in as_completed(futures):
-                info = futures[future]
-                if future.result():
-                    images_manifest.append(info)
-                    total_uploaded += 1
-                else:
-                    total_failed += 1
-
-        if images_manifest:
-            manifest_products.append({
-                "model": model,
-                "productName": name,
-                "color": color,
-                "sourceUrl": source_url,
-                "images": images_manifest,
-            })
-
-    # Upload manifest.json
-    manifest = {"brandId": BRAND_ID, "products": manifest_products}
-    manifest_json = json.dumps(manifest, indent=2)
-
-    print(f"\nUploading manifest.json ({len(manifest_products)} products)...")
-    resp = requests.post(
-        f"{STORAGE_URL}/imports/{BATCH_ID}/manifest.json",
-        headers={
-            "Authorization": f"Bearer {SERVICE_KEY}",
-            "Content-Type": "application/json",
-            "x-upsert": "true",
-        },
-        data=manifest_json.encode(),
-    )
-    resp.raise_for_status()
-
-    # Call register endpoint
-    print("Calling register endpoint...")
-    reg_resp = requests.post(
-        REGISTER_URL,
-        json={"apiKey": USER_JWT, "batchId": BATCH_ID},
-    )
-    print(f"Register response: {reg_resp.status_code}")
-    print(json.dumps(reg_resp.json(), indent=2))
-
-    print(f"\nDone! Uploaded: {total_uploaded}, Failed: {total_failed}")
-
-if __name__ == "__main__":
-    main()
-```
-
-## What To Do
-
-1. **Get the Service Role Key** — I need to share it with you securely (see next step)
-2. **Get your User JWT** — from your browser dev tools (Application → Local Storage → look for `sb-*-auth-token`, copy the `access_token`)
-3. **Get your Brand ID** — from the app's Settings or Brand page (it's a UUID)
-4. **Adapt `products.json`** — make sure your crawler outputs a JSON array where each product has `model`, `productName`, `color`, `imageUrls`
-5. **Run the script** — `python crawler_upload.py`
-6. **Check your Products page** — all SKUs should appear with images organized by angle
-
-## Next Step: Service Role Key
-
-I need to securely provide you the service role key for storage uploads. I can set it up as a secret you can retrieve.
-
+### Files changed
+- `supabase/functions/register-imported-products/index.ts` — new edge function
+- `supabase/config.toml` — added function with `verify_jwt = false`
