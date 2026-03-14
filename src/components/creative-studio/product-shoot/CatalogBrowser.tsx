@@ -125,12 +125,11 @@ export function CatalogBrowser({ onBack, onDone, hideBack }: CatalogBrowserProps
       result = result.filter(p => p.model === selectedModel);
     }
     if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(p =>
-        p.productName.toLowerCase().includes(q) ||
-        p.color.toLowerCase().includes(q) ||
-        p.model.toLowerCase().includes(q)
-      );
+      const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
+      result = result.filter(p => {
+        const haystack = `${p.productName} ${p.color} ${p.model}`.toLowerCase();
+        return tokens.every(t => tokenMatchesHaystack(t, haystack));
+      });
     }
     return result.map((p, originalIndex) => {
       // Find original index in the full products array
