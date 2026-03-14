@@ -601,13 +601,13 @@ export function useImageGeneration() {
                 if (!tierPrompt) continue;
                 
                 for (let i = 0; i < state.imageCount; i++) {
-                  const rouletteBody = {
+                  const sceneRemixBody = {
                     ...buildRequestBody(null, 1),
                     skipPromptAgent: true,
                     structuredPrompt: { naturalPrompt: tierPrompt.naturalPrompt },
                     editMode: true,
                     sourceImageUrl: sourceUrl,
-                    conceptTitle: `Roulette — ${tierPrompt.label}`,
+                    conceptTitle: `Scene Remix — ${tierPrompt.label}`,
                     prompt: tierPrompt.naturalPrompt,
                     remixRemoveText: state.productShoot.remixRemoveText ?? false,
                   };
