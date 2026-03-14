@@ -285,8 +285,8 @@ serve(async (req) => {
       });
     }
 
-    const body: RouletteRequest = await req.json();
-    console.log("[ROULETTE] Starting analysis for scene:", body.sceneReferenceUrl?.substring(0, 80));
+    const body: SceneRemixRequest = await req.json();
+    console.log("[SceneRemix] Starting analysis for scene:", body.sceneReferenceUrl?.substring(0, 80));
 
     if (!body.sceneReferenceUrl) {
       return new Response(JSON.stringify({ error: "sceneReferenceUrl is required" }), {
