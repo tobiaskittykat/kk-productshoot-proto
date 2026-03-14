@@ -589,7 +589,7 @@ export function useImageGeneration() {
               });
               
               if (promptError || !promptData?.prompts) {
-                console.error(`[Roulette] Prompt generation failed for source ${srcIdx}:`, promptError);
+                console.error(`[SceneRemix] Prompt generation failed for source ${srcIdx}:`, promptError);
                 continue;
               }
               
