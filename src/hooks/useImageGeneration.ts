@@ -527,11 +527,11 @@ export function useImageGeneration() {
             let productRefs: any[] = [];
             let skuComponents: any = undefined;
             let skuProductIdentity: any = undefined;
-            let rouletteBrandName: string | undefined;
-            let rouletteBrandPersonality: string | undefined;
-            let rouletteBrandContext: any;
-            let rouletteBrandBrain: any;
-            let rouletteCustomPrompts: any;
+            let remixBrandName: string | undefined;
+            let remixBrandPersonality: string | undefined;
+            let remixBrandContext: any;
+            let remixBrandBrain: any;
+            let remixCustomPrompts: any;
             
             if (skuId) {
               const { data: sku } = await supabase.from('product_skus').select('name, composite_image_url, description, components').eq('id', skuId).maybeSingle();
