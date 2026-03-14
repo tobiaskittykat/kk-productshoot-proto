@@ -46,18 +46,18 @@ function makeSkuCode(productName: string, color: string): string {
 
 // Color family synonym map for semantic search
 const COLOR_FAMILIES: Record<string, string[]> = {
-  red: ['red', 'crimson', 'burgundy', 'cherry', 'scarlet', 'ruby', 'wine', 'garnet', 'brick', 'maroon'],
+  red: ['red', 'crimson', 'burgundy', 'cherry', 'scarlet', 'ruby', 'wine', 'garnet', 'brick', 'maroon', 'claret', 'bordeaux'],
   pink: ['pink', 'rose', 'blush', 'fuchsia', 'magenta', 'coral', 'salmon', 'fondant'],
-  blue: ['blue', 'navy', 'cobalt', 'azure', 'indigo', 'sky', 'denim', 'teal', 'sapphire'],
-  green: ['green', 'olive', 'sage', 'forest', 'emerald', 'mint', 'thyme', 'khaki', 'moss'],
-  brown: ['brown', 'tan', 'cognac', 'tobacco', 'mocha', 'chocolate', 'espresso', 'habana', 'sienna', 'cork', 'camel'],
-  black: ['black', 'onyx', 'anthracite', 'charcoal', 'iron', 'jet', 'ebony'],
+  blue: ['blue', 'navy', 'cobalt', 'azure', 'indigo', 'sky', 'denim', 'teal', 'sapphire', 'midnight', 'dusty'],
+  green: ['green', 'olive', 'sage', 'forest', 'emerald', 'mint', 'thyme', 'khaki', 'moss', 'jade', 'lime', 'eucalyptus', 'matcha'],
+  brown: ['brown', 'tan', 'cognac', 'tobacco', 'mocha', 'chocolate', 'espresso', 'habana', 'sienna', 'cork', 'camel', 'mocca', 'nut', 'ginger', 'cinnamon'],
+  black: ['black', 'onyx', 'anthracite', 'charcoal', 'jet', 'ebony'],
   white: ['white', 'cream', 'ivory', 'pearl', 'bone', 'snow', 'alabaster'],
-  gray: ['gray', 'grey', 'silver', 'stone', 'slate', 'ash', 'pewter', 'mink'],
+  gray: ['gray', 'grey', 'silver', 'stone', 'slate', 'ash', 'pewter', 'mink', 'basalt', 'graphite', 'iron'],
   yellow: ['yellow', 'gold', 'mustard', 'honey', 'amber', 'lemon', 'saffron'],
   orange: ['orange', 'tangerine', 'apricot', 'copper', 'peach', 'rust'],
   purple: ['purple', 'violet', 'plum', 'lavender', 'lilac', 'mauve', 'port', 'eggplant'],
-  beige: ['beige', 'sand', 'taupe', 'nude', 'oat', 'latte', 'biscuit', 'desert'],
+  beige: ['beige', 'sand', 'taupe', 'nude', 'oat', 'latte', 'biscuit', 'desert', 'linen', 'chai', 'wheat', 'parchment'],
 };
 
 /** Check if a token matches in haystack, expanding color synonyms */
