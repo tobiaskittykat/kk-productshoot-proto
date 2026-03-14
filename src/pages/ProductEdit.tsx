@@ -201,6 +201,27 @@ export default function ProductEdit() {
     }
   };
 
+  const handleAnalyze = async () => {
+    if (!skuId) return;
+    setIsAnalyzing(true);
+    try {
+      const { error } = await supabase.functions.invoke('analyze-shoe-components', {
+        body: { skuId },
+      });
+      if (error) throw error;
+      toast.success('AI analysis started — refresh in a few seconds to see results');
+      // Refetch after a delay to pick up the analysis
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['edit-sku', skuId] });
+      }, 8000);
+    } catch (err) {
+      console.error('Analysis error:', err);
+      toast.error('Failed to trigger AI analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const totalAngles = angles.length + pendingUploads.length;
   const originalSummary = (skuData?.description as any)?.summary || '';
   const hasChanges = deletedAngleIds.length > 0 ||
