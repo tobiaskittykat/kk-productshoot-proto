@@ -480,7 +480,7 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
         <div className="flex-1 overflow-y-auto">
           {/* ── Step: Choose Source ── */}
           {step === 'source' && (
-            <div className="grid grid-cols-2 gap-4 py-8 px-4">
+            <div className="grid grid-cols-3 gap-4 py-8 px-4">
               <button
                 onClick={() => handleChooseSource('upload')}
                 className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
@@ -493,13 +493,24 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
               </button>
 
               <button
+                onClick={() => handleChooseSource('catalog')}
+                className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
+              >
+                <ShoppingBag className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
+                <span className="text-lg font-medium">Browse Catalog</span>
+                <span className="text-sm text-muted-foreground text-center">
+                  Search & import from full product catalog
+                </span>
+              </button>
+
+              <button
                 onClick={() => handleChooseSource('crawled')}
                 className="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-accent/50 hover:bg-accent/5 transition-all group"
               >
                 <FolderOpen className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
-                <span className="text-lg font-medium">From Crawled Images</span>
+                <span className="text-lg font-medium">From Crawled</span>
                 <span className="text-sm text-muted-foreground text-center">
-                  Import products from your crawler batches
+                  Import from your crawler batches
                 </span>
               </button>
             </div>
