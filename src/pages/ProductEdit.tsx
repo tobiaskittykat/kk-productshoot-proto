@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save, Expand } from 'lucide-react';
+import { ArrowLeft, Trash2, Upload, Loader2, AlertTriangle, X, Save, Expand, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ export default function ProductEdit() {
   const [deletedAngleIds, setDeletedAngleIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [editedComponents, setEditedComponents] = useState<ComponentsJson | null>(null);
   const [editedDescription, setEditedDescription] = useState<DescriptionJson | null>(null);
   const [originalComponents, setOriginalComponents] = useState<ComponentsJson | null>(null);
@@ -200,6 +201,27 @@ export default function ProductEdit() {
     }
   };
 
+  const handleAnalyze = async () => {
+    if (!skuId) return;
+    setIsAnalyzing(true);
+    try {
+      const { error } = await supabase.functions.invoke('analyze-shoe-components', {
+        body: { skuId },
+      });
+      if (error) throw error;
+      toast.success('AI analysis started — refresh in a few seconds to see results');
+      // Refetch after a delay to pick up the analysis
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['edit-sku', skuId] });
+      }, 8000);
+    } catch (err) {
+      console.error('Analysis error:', err);
+      toast.error('Failed to trigger AI analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const totalAngles = angles.length + pendingUploads.length;
   const originalSummary = (skuData?.description as any)?.summary || '';
   const hasChanges = deletedAngleIds.length > 0 ||
@@ -242,6 +264,16 @@ export default function ProductEdit() {
             <h1 className="text-lg font-semibold truncate max-w-[300px]">{name || 'Untitled'}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || angles.length === 0}
+              className="gap-2"
+            >
+              {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAnalyzing ? 'Analyzing…' : 'Run AI Analysis'}
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
