@@ -193,6 +193,15 @@ export function GroupReviewCard({
                       alt=""
                       className="w-full h-full object-cover"
                     />
+                    {/* Delete image */}
+                    {onDeleteImage && (
+                      <button
+                        onClick={() => onDeleteImage(img.id)}
+                        className="absolute top-1 left-1 w-5 h-5 rounded bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                     {/* Move to another group */}
                     {otherGroups.length > 0 && (
                       <DropdownMenu>

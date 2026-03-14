@@ -690,6 +690,15 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
                     allGroups={groups}
                     onUpdate={(updates) => updateGroup(group.id, updates)}
                     onMoveImage={(imageId, toGroupId) => moveToGroup(imageId, group.id, toGroupId)}
+                    onDeleteImage={(imageId) => {
+                      setGroups(prev => prev
+                        .map(g => g.id === group.id
+                          ? { ...g, images: g.images.filter(img => img.id !== imageId) }
+                          : g
+                        )
+                        .filter(g => g.images.length > 0)
+                      );
+                    }}
                   />
                 ))}
               </div>
