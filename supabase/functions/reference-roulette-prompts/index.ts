@@ -1,5 +1,5 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
-// Reference Roulette — Two-phase scene analysis + asset integration pipeline
+// Scene Remix — Two-phase scene analysis + asset integration pipeline
 // Outputs natural language "Edit this image:" prompts (not JSON)
 
 const corsHeaders = {
