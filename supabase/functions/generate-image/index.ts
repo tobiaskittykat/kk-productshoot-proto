@@ -217,7 +217,7 @@ interface GenerateImageRequest {
   remixMode?: boolean;
   remixRemoveText?: boolean;
   
-  // Reference Roulette: skip prompt agent, use structured JSON prompt directly
+  // Scene Remix: skip prompt agent, use structured JSON prompt directly
   skipPromptAgent?: boolean;
   structuredPrompt?: Record<string, any>;
 }
