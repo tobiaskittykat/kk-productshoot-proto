@@ -11,6 +11,7 @@ import { UploadProgressView } from './UploadProgressView';
 import { GroupReviewCard } from './GroupReviewCard';
 import { UngroupedSection } from './UngroupedSection';
 import { Badge } from '@/components/ui/badge';
+import { CatalogBrowser } from './CatalogBrowser';
 
 interface SmartUploadModalProps {
   open: boolean;
