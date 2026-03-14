@@ -520,7 +520,7 @@ export function useImageGeneration() {
           
           if (enabledTierNames.length > 0) {
             const sourceImages = state.productShoot.remixSourceImages;
-            console.log(`Roulette on-the-fly: ${sourceImages.length} sources × ${enabledTierNames.length} tiers × ${state.imageCount} each`);
+            console.log(`[SceneRemix] on-the-fly: ${sourceImages.length} sources × ${enabledTierNames.length} tiers × ${state.imageCount} each`);
             
             // Fetch product info once for all sources
             const skuId = state.productShoot.selectedProductId;
