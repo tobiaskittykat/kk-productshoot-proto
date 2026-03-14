@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Wand2, RotateCcw, Save, ChevronDown, ChevronUp, Info, Footprints, User, Camera } from "lucide-react";
+import { ArrowLeft, Sparkles, Wand2, RotateCcw, Save, ChevronDown, ChevronUp, Info, Footprints, User, Camera, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { useBrands } from "@/hooks/useBrands";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   DEFAULT_CONCEPT_AGENT_PROMPT, 
   DEFAULT_PROMPT_AGENT_PROMPT,
@@ -28,7 +30,45 @@ interface AIPrompts {
 export default function Settings() {
   const navigate = useNavigate();
   const { currentBrand, updateBrand, isLoading } = useBrands();
+  const { session } = useAuth();
   const { toast } = useToast();
+  const [isDownloadingConfig, setIsDownloadingConfig] = useState(false);
+
+  const handleDownloadCrawlerConfig = async () => {
+    if (!currentBrand || !session) {
+      toast({ title: "Missing info", description: "You need a brand selected and to be logged in.", variant: "destructive" });
+      return;
+    }
+    setIsDownloadingConfig(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-upload-config");
+      if (error) throw error;
+
+      const config = {
+        SUPABASE_URL: data.supabaseUrl,
+        STORAGE_URL: data.storageUrl,
+        REGISTER_URL: data.registerUrl,
+        SERVICE_ROLE_KEY: data.serviceRoleKey,
+        USER_JWT: session.access_token,
+        BRAND_ID: currentBrand.id,
+        BRAND_NAME: currentBrand.name,
+      };
+
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `crawler-config-${currentBrand.name.toLowerCase().replace(/\s+/g, "-")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Config downloaded", description: "Your crawler config file has been saved." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to fetch config", variant: "destructive" });
+    } finally {
+      setIsDownloadingConfig(false);
+    }
+  };
 
   // Existing prompts - initialize with defaults to ensure correct disabled state on reset buttons
   const [conceptPrompt, setConceptPrompt] = useState(DEFAULT_CONCEPT_AGENT_PROMPT);
@@ -551,6 +591,32 @@ export default function Settings() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Crawler Config */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Crawler Config</CardTitle>
+            <CardDescription>
+              Download a JSON file with all the credentials your external product crawler needs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={handleDownloadCrawlerConfig}
+              disabled={isDownloadingConfig || !currentBrand}
+            >
+              {isDownloadingConfig ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Download />
+              )}
+              {isDownloadingConfig ? "Fetching…" : "Download crawler-config.json"}
+            </Button>
+            {!currentBrand && (
+              <p className="text-sm text-muted-foreground mt-2">Select a brand first.</p>
+            )}
           </CardContent>
         </Card>
       </main>
