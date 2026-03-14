@@ -427,7 +427,7 @@ export const RemixStep2 = ({
       </Collapsible>
 
       {/* Remix Mode Toggle */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden p-4 space-y-3">
+      <div id="section-ps-remix-mode" className="rounded-2xl border border-border bg-card overflow-hidden p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Shuffle className="w-4 h-4 text-accent" />
           <span className="font-medium text-sm text-foreground">Remix Mode</span>

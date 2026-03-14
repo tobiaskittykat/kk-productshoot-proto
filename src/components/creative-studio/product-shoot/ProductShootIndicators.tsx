@@ -64,7 +64,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
         <IndicatorChip
           label={modeLabel}
           selected={true}
-          onClick={() => scrollToSection('section-ps-remix-options')}
+          onClick={() => scrollToSection('section-ps-remix-mode')}
         />
 
         <span className="text-muted-foreground/30">·</span>
