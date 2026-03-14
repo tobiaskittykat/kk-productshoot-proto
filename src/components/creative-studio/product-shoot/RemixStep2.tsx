@@ -498,7 +498,7 @@ export const RemixStep2 = ({
 
       {/* Section 2: Product Selection (reuses same pattern as ProductShootStep2) */}
       <Collapsible open={openSections.product}>
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div id="section-ps-remix-product" className="rounded-2xl border border-border bg-card overflow-hidden">
           <SectionHeader
             icon={Package}
             title="Swap Product"
