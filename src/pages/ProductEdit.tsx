@@ -41,6 +41,7 @@ export default function ProductEdit() {
   const [deletedAngleIds, setDeletedAngleIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [editedComponents, setEditedComponents] = useState<ComponentsJson | null>(null);
   const [editedDescription, setEditedDescription] = useState<DescriptionJson | null>(null);
   const [originalComponents, setOriginalComponents] = useState<ComponentsJson | null>(null);
