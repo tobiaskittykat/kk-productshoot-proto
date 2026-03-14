@@ -675,6 +675,14 @@ export function SmartUploadModal({ open, onOpenChange }: SmartUploadModalProps) 
             </div>
           )}
 
+          {/* ── Step: Browse Catalog ── */}
+          {step === 'catalog' && (
+            <CatalogBrowser
+              onBack={goBack}
+              onDone={handleClose}
+            />
+          )}
+
           {/* ── Step: Analyzing ── */}
           {step === 'analyzing' && (
             <UploadProgressView
