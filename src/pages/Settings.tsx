@@ -30,7 +30,45 @@ interface AIPrompts {
 export default function Settings() {
   const navigate = useNavigate();
   const { currentBrand, updateBrand, isLoading } = useBrands();
+  const { session } = useAuth();
   const { toast } = useToast();
+  const [isDownloadingConfig, setIsDownloadingConfig] = useState(false);
+
+  const handleDownloadCrawlerConfig = async () => {
+    if (!currentBrand || !session) {
+      toast({ title: "Missing info", description: "You need a brand selected and to be logged in.", variant: "destructive" });
+      return;
+    }
+    setIsDownloadingConfig(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-upload-config");
+      if (error) throw error;
+
+      const config = {
+        SUPABASE_URL: data.supabaseUrl,
+        STORAGE_URL: data.storageUrl,
+        REGISTER_URL: data.registerUrl,
+        SERVICE_ROLE_KEY: data.serviceRoleKey,
+        USER_JWT: session.access_token,
+        BRAND_ID: currentBrand.id,
+        BRAND_NAME: currentBrand.name,
+      };
+
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `crawler-config-${currentBrand.name.toLowerCase().replace(/\s+/g, "-")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Config downloaded", description: "Your crawler config file has been saved." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to fetch config", variant: "destructive" });
+    } finally {
+      setIsDownloadingConfig(false);
+    }
+  };
 
   // Existing prompts - initialize with defaults to ensure correct disabled state on reset buttons
   const [conceptPrompt, setConceptPrompt] = useState(DEFAULT_CONCEPT_AGENT_PROMPT);
