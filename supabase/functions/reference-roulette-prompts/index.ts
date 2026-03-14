@@ -295,7 +295,7 @@ serve(async (req) => {
     }
 
     // ========== PHASE A: Scene Analysis → 3 Natural Language Prompts ==========
-    console.log("[ROULETTE] Phase A — 3 parallel scene analysis calls (natural language)...");
+    console.log("[SceneRemix] Phase A — 3 parallel scene analysis calls (natural language)...");
     
     const sceneContent: Array<{ type: string; image_url?: { url: string }; text?: string }> = [
       { type: "image_url", image_url: { url: body.sceneReferenceUrl } },
