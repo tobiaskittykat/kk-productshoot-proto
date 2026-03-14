@@ -144,8 +144,8 @@ export interface ProductShootState {
   // Remix variation mode (swap = 1:1 shoe swap, variations = reference roulette)
   remixVariationMode: 'swap' | 'variations';
   
-  // Reference Roulette cached prompts (populated at generate time)
-  roulettePrompts: RoulettePrompt[] | null;
+  // Scene Remix cached prompts (populated at generate time)
+  sceneRemixPrompts: SceneRemixPrompt[] | null;
   isAnalyzingScene: boolean;
   
   // Variation tier toggles (UI-facing, persisted in state)
