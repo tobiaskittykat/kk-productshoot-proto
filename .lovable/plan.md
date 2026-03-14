@@ -1,49 +1,99 @@
+Objective
+Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
+## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-# Rename "Reference Roulette" → "Scene Remix"
+### What was done
 
-## Scope
+**Frontend (single-field serialization):**
+- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
+- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
+- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
+- `useQuickCustomization` — AI override responses baked into canonical format before applying
+- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
+- `SetupProductStep2` — removed `colorHex` from merged component creation
+- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
 
-Rename all user-facing and internal references from "Roulette" to "Scene Remix" across the codebase. The edge function URL (`reference-roulette-prompts`) stays as-is since renaming deployed functions is disruptive and it's only called internally.
+**Backend (already had bake logic):**
+- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
+- Build fingerprint: `hex-inline-v1-2026-03-02`
 
-## Changes
+### Verification criteria
+- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
+- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
+- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
+- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
 
-### 1. UI Labels — `RemixStep2.tsx`
-- Change the variation mode button label from "Shoot Variations" to "Scene Remix"
-- Update any description text accordingly
+## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
 
-### 2. Type Names & Comments — `product-shoot/types.ts`
-- Rename `RoulettePrompt` interface → `SceneRemixPrompt`
-- Update all comments from "Reference Roulette" → "Scene Remix"
-- Rename state field `roulettePrompts` → `sceneRemixPrompts` (and update all references)
+## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
 
-### 3. Component File — `RoulettePromptCards.tsx`
-- Rename file conceptually (keep the export name `VariationTierToggles` since that's already clean)
-- No functional changes needed — the component itself doesn't mention "roulette"
+### What was done (v3 — tier rewrite)
 
-### 4. Generation Logic — `useImageGeneration.ts`
-- Rename all `roulette*` local variables to `sceneRemix*` equivalents
-- Update console.log messages from `[Roulette]` → `[SceneRemix]`
-- Update comment blocks
+**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
+- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
+- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
+- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
+- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
+- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
+- Updated descriptions to match new definitions
 
-### 5. Edge Function (internal only) — `reference-roulette-prompts/index.ts`
-- Update comments and console logs from `[ROULETTE]` → `[SceneRemix]`
-- Rename `RouletteRequest` interface → `SceneRemixRequest`
-- Keep the function URL path unchanged (renaming would require redeployment and config changes)
+**Fixed source image framing in `generate-image`:**
+- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
+- Previously attached image with no context — model didn't know how to use it
 
-### 6. Edge Function — `generate-image/index.ts`
-- Update comments referencing "Reference Roulette" → "Scene Remix"
+**Frontend (`RoulettePromptCards`):**
+- Updated tier icons: 🎞️ / 🔄 / 🎬
+- Labels now driven by `tierColors` map with correct names
 
-### 7. State field rename cascade
-All files referencing `roulettePrompts` in state:
-- `types.ts` — field definition + initial state
-- `RemixStep2.tsx` — state reads/writes
-- `useImageGeneration.ts` — state reads
-- `CreativeStudioWizard.tsx` — if any references
-- `ProductShootIndicators.tsx` — if any references
+### Files changed
+- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
+- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
+- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
 
-### 8. Config — `supabase/config.toml`
-- No change (function URL stays `reference-roulette-prompts`)
+## Direct-to-Storage Crawler API
 
-Total: ~5 files modified, mostly comment/variable renames. No functional changes.
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
 
+### What was done
+
+**Edge Function (`register-imported-products`):**
+- Reads `manifest.json` from `product-images` storage bucket
+- Idempotent upserts into `product_skus` and `scraped_products`
+- Auto-sets hero image as SKU composite thumbnail
+- Auth via `apiKey` field (user JWT validated server-side)
+
+**Crawler workflow:**
+1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
+2. Upload `manifest.json` to same folder
+3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
+
+### Files changed
+- `supabase/functions/register-imported-products/index.ts` — new edge function
+- `supabase/config.toml` — added function with `verify_jwt = false`
+
+## Birkenstock Catalog Browser & On-Demand Import
+
+## STATUS: ✅ IMPLEMENTED (2026-03-14)
+
+### What was done
+
+**Static catalog data:**
+- `src/data/birkenstock-catalog.json` — 285 products with model, productName, color, imageUrls
+
+**CatalogBrowser component:**
+- Searchable/filterable grid of all catalog products
+- Model filter chips (Arizona, Boston, Gizeh, etc.)
+- Hero thumbnails loaded directly from Birkenstock CDN
+- Checkbox multi-select with "already imported" detection via SKU codes
+- Lifestyle images auto-filtered from import payload
+- Batch import via `bulk-import-products` edge function with progress UI
+
+**SmartUploadModal integration:**
+- New "Browse Catalog" source option (3-column layout)
+- `catalog` step renders CatalogBrowser inline
+
+### Files changed
+- `src/data/birkenstock-catalog.json` — new static catalog
+- `src/components/creative-studio/product-shoot/CatalogBrowser.tsx` — new component
+- `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — added catalog source + step

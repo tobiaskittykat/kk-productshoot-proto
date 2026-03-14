@@ -217,7 +217,7 @@ interface GenerateImageRequest {
   remixMode?: boolean;
   remixRemoveText?: boolean;
   
-  // Reference Roulette: skip prompt agent, use structured JSON prompt directly
+  // Scene Remix: skip prompt agent, use structured JSON prompt directly
   skipPromptAgent?: boolean;
   structuredPrompt?: Record<string, any>;
 }
@@ -1559,7 +1559,7 @@ async function runBackgroundGeneration(params: {
     // === PROMPT SELECTION: skipPromptAgent > remixMode > normal ===
     let refinedPrompt: string;
     if (body.skipPromptAgent && body.structuredPrompt) {
-      // Reference Roulette mode: use the natural language prompt directly
+      // Scene Remix mode: use the natural language prompt directly
       refinedPrompt = body.structuredPrompt.naturalPrompt || JSON.stringify(body.structuredPrompt, null, 2);
       console.log("[BG] skipPromptAgent mode — using natural language prompt");
     } else if (body.remixMode) {
@@ -1585,7 +1585,7 @@ async function runBackgroundGeneration(params: {
           { type: "text", text: refinedPrompt }
         ];
 
-        // ROULETTE mode: source image as edit target with explicit framing instruction
+        // Scene Remix mode: source image as edit target with explicit framing instruction
         if (body.skipPromptAgent && body.structuredPrompt && body.sourceImageUrl?.startsWith('http')) {
           messageContent.unshift({
             type: "text",

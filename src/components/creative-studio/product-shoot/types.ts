@@ -86,8 +86,8 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
-// Reference Roulette prompt tier
-export interface RoulettePrompt {
+// Scene Remix prompt tier
+export interface SceneRemixPrompt {
   tier: 'faithful' | 'moderate' | 'creative';
   label: string;
   description: string;
@@ -144,8 +144,8 @@ export interface ProductShootState {
   // Remix variation mode (swap = 1:1 shoe swap, variations = reference roulette)
   remixVariationMode: 'swap' | 'variations';
   
-  // Reference Roulette cached prompts (populated at generate time)
-  roulettePrompts: RoulettePrompt[] | null;
+  // Scene Remix cached prompts (populated at generate time)
+  sceneRemixPrompts: SceneRemixPrompt[] | null;
   isAnalyzingScene: boolean;
   
   // Variation tier toggles (UI-facing, persisted in state)
@@ -224,7 +224,7 @@ export const initialProductShootState: ProductShootState = {
   
   // Remix variation mode defaults
   remixVariationMode: 'swap',
-  roulettePrompts: null,
+  sceneRemixPrompts: null,
   isAnalyzingScene: false,
   remixEnabledTiers: { faithful: true, moderate: true, creative: false },
 };

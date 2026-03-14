@@ -435,7 +435,7 @@ export const RemixStep2 = ({
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => {
-              onStateChange({ remixVariationMode: 'swap', roulettePrompts: null });
+              onStateChange({ remixVariationMode: 'swap', sceneRemixPrompts: null });
             }}
             className={cn(
               "rounded-xl border-2 p-3 text-left transition-all",
@@ -449,7 +449,7 @@ export const RemixStep2 = ({
           </button>
           <button
             onClick={() => {
-              onStateChange({ remixVariationMode: 'variations', roulettePrompts: null });
+              onStateChange({ remixVariationMode: 'variations', sceneRemixPrompts: null });
             }}
             className={cn(
               "rounded-xl border-2 p-3 text-left transition-all",
@@ -458,7 +458,7 @@ export const RemixStep2 = ({
                 : "border-transparent bg-muted/50 hover:bg-muted"
             )}
           >
-            <span className="text-sm font-medium text-foreground">Shoot Variations</span>
+            <span className="text-sm font-medium text-foreground">Scene Remix</span>
             <p className="text-[10px] text-muted-foreground mt-0.5">Same shoot, different angles</p>
           </button>
         </div>

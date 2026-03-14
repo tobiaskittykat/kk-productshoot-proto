@@ -49,7 +49,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
   if (isRemix) {
     const sourceCount = state.remixSourceImages?.length || 0;
     const sourceLabel = sourceCount > 0 ? `Source: ${sourceCount} image${sourceCount > 1 ? 's' : ''}` : 'Source';
-    const modeLabel = state.remixVariationMode === 'variations' ? 'Mode: Variations' : 'Mode: Shoe Swap';
+    const modeLabel = state.remixVariationMode === 'variations' ? 'Mode: Scene Remix' : 'Mode: Shoe Swap';
 
     return (
       <div className="flex items-center gap-0.5">

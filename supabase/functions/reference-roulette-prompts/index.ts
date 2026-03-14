@@ -1,5 +1,5 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
-// Reference Roulette — Two-phase scene analysis + asset integration pipeline
+// Scene Remix — Two-phase scene analysis + asset integration pipeline
 // Outputs natural language "Edit this image:" prompts (not JSON)
 
 const corsHeaders = {
@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-interface RouletteRequest {
+interface SceneRemixRequest {
   sceneReferenceUrl: string;
   productReferences: { name: string; imageUrl: string; description?: Record<string, unknown> }[];
   componentOverrides?: Record<string, { material: string; color: string }>;
@@ -117,7 +117,7 @@ OUTPUT: The complete, final "Edit this image:" prompt with the product integrate
 
 // ========== Helper Functions ==========
 
-function buildBrandBlock(body: RouletteRequest): string {
+function buildBrandBlock(body: SceneRemixRequest): string {
   const sections: string[] = [];
   if (body.brandName) sections.push(`Brand: ${body.brandName}`);
   if (body.brandPersonality) sections.push(`Personality: ${body.brandPersonality}`);
@@ -149,7 +149,7 @@ function buildBrandBlock(body: RouletteRequest): string {
   return sections.length > 0 ? sections.join('\n') : 'No brand context provided';
 }
 
-function buildProductBlock(body: RouletteRequest): string {
+function buildProductBlock(body: SceneRemixRequest): string {
   const sections: string[] = [];
 
   // Product identity
@@ -285,8 +285,8 @@ serve(async (req) => {
       });
     }
 
-    const body: RouletteRequest = await req.json();
-    console.log("[ROULETTE] Starting analysis for scene:", body.sceneReferenceUrl?.substring(0, 80));
+    const body: SceneRemixRequest = await req.json();
+    console.log("[SceneRemix] Starting analysis for scene:", body.sceneReferenceUrl?.substring(0, 80));
 
     if (!body.sceneReferenceUrl) {
       return new Response(JSON.stringify({ error: "sceneReferenceUrl is required" }), {
@@ -295,7 +295,7 @@ serve(async (req) => {
     }
 
     // ========== PHASE A: Scene Analysis → 3 Natural Language Prompts ==========
-    console.log("[ROULETTE] Phase A — 3 parallel scene analysis calls (natural language)...");
+    console.log("[SceneRemix] Phase A — 3 parallel scene analysis calls (natural language)...");
     
     const sceneContent: Array<{ type: string; image_url?: { url: string }; text?: string }> = [
       { type: "image_url", image_url: { url: body.sceneReferenceUrl } },
@@ -310,13 +310,13 @@ serve(async (req) => {
       callAI(apiKey, buildCreativePrompt(customPrompts.rouletteCreative), sceneContent),
     ]);
 
-    console.log("[ROULETTE] Phase A complete — got 3 natural language prompts");
-    console.log("[ROULETTE] Faithful preview:", faithfulNL.substring(0, 120));
-    console.log("[ROULETTE] Moderate preview:", moderateNL.substring(0, 120));
-    console.log("[ROULETTE] Creative preview:", creativeNL.substring(0, 120));
+    console.log("[SceneRemix] Phase A complete — got 3 natural language prompts");
+    console.log("[SceneRemix] Faithful preview:", faithfulNL.substring(0, 120));
+    console.log("[SceneRemix] Moderate preview:", moderateNL.substring(0, 120));
+    console.log("[SceneRemix] Creative preview:", creativeNL.substring(0, 120));
 
     // ========== PHASE B: Product Integration → 3 Final Prompts ==========
-    console.log("[ROULETTE] Phase B — 3 parallel product integration calls...");
+    console.log("[SceneRemix] Phase B — 3 parallel product integration calls...");
     
     const brandBlock = buildBrandBlock(body);
     const productBlock = buildProductBlock(body);
@@ -355,7 +355,7 @@ serve(async (req) => {
       })
     );
 
-    console.log("[ROULETTE] Phase B complete — got 3 final prompts with product integrated");
+    console.log("[SceneRemix] Phase B complete — got 3 final prompts with product integrated");
 
     // ========== Assemble Response ==========
     // Generate short descriptions for each tier
@@ -380,7 +380,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("[ROULETTE] Error:", error);
+    console.error("[SceneRemix] Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     const status = message.includes("Payment required") ? 402 : message.includes("Rate limit") ? 429 : 500;
     return new Response(JSON.stringify({ error: message }), {

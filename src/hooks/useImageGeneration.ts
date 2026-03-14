@@ -513,25 +513,25 @@ export function useImageGeneration() {
       // === REMIX MODE ===
       if (state.useCase === 'product' && state.productShoot?.shootMode === 'remix' && state.productShoot.remixSourceImages.length > 0) {
         
-        // === ROULETTE VARIATIONS MODE: one request per enabled tier ===
+        // === SCENE REMIX MODE: one request per enabled tier ===
         if (state.productShoot.remixVariationMode === 'variations') {
           const enabledTiers = state.productShoot.remixEnabledTiers ?? { faithful: true, moderate: true, creative: false };
           const enabledTierNames = Object.entries(enabledTiers).filter(([_, v]) => v).map(([k]) => k);
           
           if (enabledTierNames.length > 0) {
             const sourceImages = state.productShoot.remixSourceImages;
-            console.log(`Roulette on-the-fly: ${sourceImages.length} sources × ${enabledTierNames.length} tiers × ${state.imageCount} each`);
+            console.log(`[SceneRemix] on-the-fly: ${sourceImages.length} sources × ${enabledTierNames.length} tiers × ${state.imageCount} each`);
             
             // Fetch product info once for all sources
             const skuId = state.productShoot.selectedProductId;
             let productRefs: any[] = [];
             let skuComponents: any = undefined;
             let skuProductIdentity: any = undefined;
-            let rouletteBrandName: string | undefined;
-            let rouletteBrandPersonality: string | undefined;
-            let rouletteBrandContext: any;
-            let rouletteBrandBrain: any;
-            let rouletteCustomPrompts: any;
+            let remixBrandName: string | undefined;
+            let remixBrandPersonality: string | undefined;
+            let remixBrandContext: any;
+            let remixBrandBrain: any;
+            let remixCustomPrompts: any;
             
             if (skuId) {
               const { data: sku } = await supabase.from('product_skus').select('name, composite_image_url, description, components').eq('id', skuId).maybeSingle();
@@ -549,13 +549,13 @@ export function useImageGeneration() {
                 : supabase.from('brands').select('name, personality, brand_context').eq('user_id', user!.id).maybeSingle();
               const { data: brand } = await q;
               if (brand) {
-                rouletteBrandName = brand.name;
-                rouletteBrandPersonality = brand.personality || undefined;
-                rouletteBrandContext = brand.brand_context;
-                rouletteBrandBrain = (rouletteBrandContext as any)?.brandBrain;
-                const aiPrompts = (rouletteBrandContext as any)?.aiPrompts;
+                remixBrandName = brand.name;
+                remixBrandPersonality = brand.personality || undefined;
+                remixBrandContext = brand.brand_context;
+                remixBrandBrain = (remixBrandContext as any)?.brandBrain;
+                const aiPrompts = (remixBrandContext as any)?.aiPrompts;
                 if (aiPrompts) {
-                  rouletteCustomPrompts = {
+                  remixCustomPrompts = {
                     rouletteFaithful: aiPrompts.rouletteFaithful,
                     rouletteModerate: aiPrompts.rouletteModerate,
                     rouletteCreative: aiPrompts.rouletteCreative,
@@ -565,10 +565,10 @@ export function useImageGeneration() {
               }
             }
             
-            // Sequential: for each source, call reference-roulette-prompts, then generate per tier
+            // Sequential: for each source, call scene-remix prompts, then generate per tier
             for (let srcIdx = 0; srcIdx < sourceImages.length; srcIdx++) {
               const sourceUrl = sourceImages[srcIdx];
-              console.log(`[Roulette] Analyzing source ${srcIdx + 1}/${sourceImages.length}...`);
+              console.log(`[SceneRemix] Analyzing source ${srcIdx + 1}/${sourceImages.length}...`);
               
               // Generate prompts on-the-fly for this source
               const { data: promptData, error: promptError } = await supabase.functions.invoke('reference-roulette-prompts', {
@@ -578,18 +578,18 @@ export function useImageGeneration() {
                   componentOverrides: state.productShoot.componentOverrides,
                   originalComponents: skuComponents,
                   productIdentity: skuProductIdentity,
-                  brandName: rouletteBrandName,
-                  brandPersonality: rouletteBrandPersonality,
-                  brandContext: rouletteBrandContext,
-                  brandBrain: rouletteBrandBrain,
+                  brandName: remixBrandName,
+                  brandPersonality: remixBrandPersonality,
+                  brandContext: remixBrandContext,
+                  brandBrain: remixBrandBrain,
                   brief: undefined, // brief is in RemixStep2 local state, passed via productShoot if needed
                   remixRemoveText: state.productShoot.remixRemoveText ?? false,
-                  customPrompts: rouletteCustomPrompts,
+                  customPrompts: remixCustomPrompts,
                 },
               });
               
               if (promptError || !promptData?.prompts) {
-                console.error(`[Roulette] Prompt generation failed for source ${srcIdx}:`, promptError);
+                console.error(`[SceneRemix] Prompt generation failed for source ${srcIdx}:`, promptError);
                 continue;
               }
               
@@ -601,22 +601,22 @@ export function useImageGeneration() {
                 if (!tierPrompt) continue;
                 
                 for (let i = 0; i < state.imageCount; i++) {
-                  const rouletteBody = {
+                  const sceneRemixBody = {
                     ...buildRequestBody(null, 1),
                     skipPromptAgent: true,
                     structuredPrompt: { naturalPrompt: tierPrompt.naturalPrompt },
                     editMode: true,
                     sourceImageUrl: sourceUrl,
-                    conceptTitle: `Roulette — ${tierPrompt.label}`,
+                    conceptTitle: `Scene Remix — ${tierPrompt.label}`,
                     prompt: tierPrompt.naturalPrompt,
                     remixRemoveText: state.productShoot.remixRemoveText ?? false,
                   };
                   
-                  const { data: genData, error: genError } = await supabase.functions.invoke('generate-image', { body: rouletteBody });
+                  const { data: genData, error: genError } = await supabase.functions.invoke('generate-image', { body: sceneRemixBody });
                   if (genData?.pendingIds) {
                     allPendingIds.push(...genData.pendingIds);
                   } else if (genError) {
-                    console.error(`[Roulette] Generation failed for ${tierName}:`, genError);
+                    console.error(`[SceneRemix] Generation failed for ${tierName}:`, genError);
                   }
                 }
               }
