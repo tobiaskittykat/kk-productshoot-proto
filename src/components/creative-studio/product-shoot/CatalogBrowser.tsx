@@ -164,6 +164,19 @@ export function CatalogBrowser({ onBack, onDone }: CatalogBrowserProps) {
           });
         } else {
           totalUploaded += data?.summary?.imagesUploaded || 0;
+
+          // Fire-and-forget: trigger AI analysis + composite for each imported SKU
+          const details = data?.details || [];
+          for (const detail of details) {
+            if (detail.skuId) {
+              supabase.functions.invoke('analyze-shoe-components', {
+                body: { skuId: detail.skuId },
+              });
+              supabase.functions.invoke('composite-product-images', {
+                body: { skuId: detail.skuId, imageUrls: [], layout: '2x2' },
+              });
+            }
+          }
         }
       }
 
