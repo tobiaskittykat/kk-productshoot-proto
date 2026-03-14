@@ -32,6 +32,10 @@ interface SKUDescription {
   style_keywords?: string[];
   hardware_finish?: string;
   summary?: string;
+  // Catalog import format
+  model?: string;
+  productName?: string;
+  color?: string;
 }
 
 /**
