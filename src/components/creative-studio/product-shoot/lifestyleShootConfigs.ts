@@ -49,13 +49,14 @@ ALL AESTHETIC CHOICES — ground surface, environmental context, lighting qualit
     name: 'Body & Style',
     description: 'Chin-down crop — outfit, hands, posture, and shoes tell the story',
     icon: '🧍',
-    framingDirective: `MANDATORY FRAMING: Full body shot with the head CROPPED OUT. The frame cuts off ABOVE THE CHIN — the model's face, eyes, and top of head are NEVER visible. This crop must feel INTENTIONAL and compositionally elegant, not accidental.
+    framingDirective: `MANDATORY FRAMING: Full body shot with the head CROPPED OUT. The frame cuts off ABOVE THE CHIN — the model's face, eyes, and top of head are NEVER visible. This crop must feel like a deliberate FRAGMENT — as if the photographer aimed higher but the subject shifted, or the crop was chosen in the edit to isolate gesture over face.
 Show the model from roughly chin level down to feet. The model occupies 50-70% of the frame — environment is always present and contextual.
-OUTFIT & TEXTURE: Clothing is relaxed, layered, and richly textured. Fabrics have visible weave and movement. NEVER formal, corporate, or catalog-stiff. The specific outfit style, colors, and fabrics must reflect the moodboard's aesthetic world.
-HANDS ARE STORYTELLERS: Hands must be visible and doing something natural — holding an object, resting on a surface, tucked into pockets, adjusting clothing. Hands are never hidden or awkwardly cropped. The activity must feel contextual to the moodboard's world.
-BODY LANGUAGE: The model's posture tells the story — leaning, mid-stride, sitting, standing with weight shifted. Always natural, never symmetrical or posed.
+ANTI-GENERIC: NEVER a clean symmetrical outfit shot. NEVER hands hidden or out of frame. NEVER the model standing straight and centered. NEVER catalog-fresh clothing.
+HANDS AS SECOND PROTAGONIST: Hands reveal habit and personality — the unconscious gestures people make when they're absorbed in something. The hands are doing something REAL: fidgeting, gripping, holding, adjusting, resting with weight. What they do must feel contextual to the moodboard's world. Hands are NEVER hidden.
+CLOTHING HAS HISTORY: Clothing is relaxed, layered, and LIVED IN — stretched collars, rolled sleeves that stay rolled, fabrics that have been washed and softened. The outfit belongs to THIS person. Never catalog-styled, never coordinated, never pristine. The specific outfit style, colors, and fabrics must reflect the moodboard's aesthetic world.
+BODY LANGUAGE: The model's posture tells the story — leaning, mid-stride, sitting, weight off-center. Always natural, always asymmetric. The body has found its own arrangement based on comfort and context, not direction.
 ENVIRONMENT: Architectural or natural context frames the model. The setting must match the moodboard's world and have texture, depth, and character.
-FOOTWEAR ANCHOR: The shoes are the compositional anchor — clearly visible, sharp, and grounding the entire image. The eye travels from outfit down to footwear naturally.
+FOOTWEAR — INCIDENTAL ANCHOR: The shoes are visible at the bottom of the frame but are NOT the compositional hero. The eye is drawn to hands, texture, posture FIRST — then travels down to discover the footwear. The shoes look lived-in and belonging. Never the focal point, always contextually present.
 ALL AESTHETIC CHOICES — outfit styling, environment, color palette, lighting — must reflect the moodboard's world. Do NOT default to any specific cultural or geographic look.`,
   },
   {
