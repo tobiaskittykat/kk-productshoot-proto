@@ -139,6 +139,7 @@ export interface LifestyleShootConfig {
   lifestyleShotType: LifestyleShootShotType;
   advancedSettings: LifestyleAdvancedSettings;
   groupCompanions?: GroupCompanion[];
+  region?: LifestyleRegion;
 }
 
 export const initialLifestyleShootConfig: LifestyleShootConfig = {
