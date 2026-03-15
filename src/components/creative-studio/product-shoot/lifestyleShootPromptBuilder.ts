@@ -176,6 +176,36 @@ STYLING: Clothing feels personal, lived-in, never catalog-styled. Colors and tex
 CASTING: Real people — diverse body types, ages, ethnicities. Natural beauty, authentic presence.
 FOOTWEAR — INCIDENTAL: Shoes visible but NEVER the focal point. They look LIVED IN — molded to this person's feet, patina of real wear. Not box-fresh.
 ALL AESTHETIC CHOICES — setting, activity, styling, light, color, atmosphere — defined by the moodboard.`);
+    } else if (config.lifestyleShotType === 'group-scene' && allAuto) {
+      const variation = pickRandomGroupSceneVariation();
+      console.log(`[LifestylePromptBuilder] Random group scene energy: ${variation.id} — ${variation.name}`);
+      sections.push(variation.framingOverride);
+      sections.push('');
+      
+      // Inject companion shoe information
+      const companions = config.groupCompanions || [];
+      const companionCount = companions.length;
+      const totalPeople = companionCount + 1;
+      
+      sections.push(`GROUP COMPOSITION — ${totalPeople} PEOPLE:`);
+      sections.push(`Person 1 (HERO): Wears the selected product — EXACT match to reference images. Locked geometry, materials, color. This is the product being sold.`);
+      companions.forEach((companion, i) => {
+        sections.push(`Person ${i + 2}: Wears Birkenstock ${companion.birkenstockModel} — a different model, naturally worn, lived-in. ${companion.gender !== 'auto' ? `Gender: ${companion.gender}.` : ''} ${companion.ethnicity !== 'auto' ? `Ethnicity: ${companion.ethnicity}.` : ''}`);
+      });
+      if (companions.length === 0) {
+        sections.push(`Person 2: Wears a different Birkenstock model (choose any classic silhouette like Arizona, Boston, or Gizeh) — naturally worn, lived-in.`);
+      }
+      sections.push('');
+      
+      sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
+Candid group moment — 2-3 people in a shared space with genuine ease and connection.
+HERO SHOE RULE: Exactly ONE person wears the selected product. Others wear different named Birkenstock models as specified above.
+ALL shoes (hero + companions) must be VISIBLE in the frame.
+ANTI-GENERIC: NEVER lined up facing camera. NEVER matching outfits. NEVER catalog group shot. NEVER identical body language.
+INDIVIDUAL IDENTITY: Each person has distinct personal style — different silhouettes, textures, color palettes. Clothing is lived-in, personal.
+CASTING: Diverse body types, ages, ethnicities. Natural beauty, authentic presence. Each person looks like themselves.
+FOOTWEAR — INCIDENTAL: All shoes visible but the composition is about the GROUP MOMENT. The hero shoe is not compositionally privileged.
+ALL AESTHETIC CHOICES — setting, styling, light, atmosphere — defined by the moodboard.`);
     } else {
       sections.push(shotType.framingDirective);
     }
