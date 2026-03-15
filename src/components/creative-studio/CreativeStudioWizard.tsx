@@ -178,14 +178,14 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
     fetchSavedConcepts();
   }, [user?.id]);
 
-  // Refetch when new images are generated
+  // Refetch when new images are generated (but NOT while still generating — avoids duplicate pending tiles)
   useEffect(() => {
-    if (state.generatedImages.length > 0) {
+    if (state.generatedImages.length > 0 && !state.isGenerating) {
       // Small delay to allow DB to update
       const timer = setTimeout(fetchPreviousImages, 500);
       return () => clearTimeout(timer);
     }
-  }, [state.generatedImages, fetchPreviousImages]);
+  }, [state.generatedImages, state.isGenerating, fetchPreviousImages]);
 
   const handleUpdate = useCallback((updates: Partial<CreativeStudioState>) => {
     setState(prev => ({ ...prev, ...updates }));
