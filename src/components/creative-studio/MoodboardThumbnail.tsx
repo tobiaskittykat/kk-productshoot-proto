@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Check, Expand, ImageOff, Loader2, RefreshCw } from "lucide-react";
+import { Check, Expand, ImageOff, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { Moodboard } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ interface MoodboardThumbnailProps {
   moodboard: Moodboard;
   isSelected: boolean;
   onSelect: () => void;
+  onRename?: (id: string, newName: string) => void;
   size?: 'default' | 'large';
 }
 
