@@ -355,6 +355,7 @@ export function useImageGeneration() {
             moodboardAnalysis = mb.visual_analysis as Record<string, unknown> | undefined;
             lsMoodboardAnalysis = mb.visual_analysis as Record<string, any> | undefined;
             lsMoodboardName = mb.name;
+            moodboardName = mb.name;
           }
         }
         
