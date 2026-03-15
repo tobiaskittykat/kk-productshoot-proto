@@ -1,7 +1,7 @@
 // ============= PRODUCT SHOOT TYPES =============
 
 // Shoot mode - new shoot vs remix existing
-export type ShootMode = 'new' | 'remix' | 'setup';
+export type ShootMode = 'new' | 'remix' | 'setup' | 'lifestyle-shoot';
 
 // Recolor options
 export type RecolorOption = 'none' | 'pre-generation' | 'during-generation';
