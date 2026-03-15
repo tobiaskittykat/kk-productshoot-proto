@@ -27,6 +27,9 @@ import {
   LifestyleAdvancedSettings,
   initialLifestyleAdvancedSettings,
   initialLifestyleShootConfig,
+  GroupCompanion,
+  companionModelOptions,
+  ethnicityOptions,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
 import { MoodboardModal } from "../MoodboardModal";
