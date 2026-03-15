@@ -98,6 +98,27 @@ export const MoodboardThumbnail = ({
     setIsFullView(true);
   };
 
+  const handleStartRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditName(moodboard.name);
+    setIsEditingName(true);
+    setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
+
+  const handleSaveRename = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== moodboard.name && onRename) {
+      onRename(moodboard.id, trimmed);
+    }
+    setIsEditingName(false);
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') handleSaveRename();
+    if (e.key === 'Escape') setIsEditingName(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
