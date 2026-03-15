@@ -61,7 +61,7 @@ import {
   sampleContextReferences,
   outputFormats
 } from "./types";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { smoothScrollTo } from "@/lib/utils";
 
