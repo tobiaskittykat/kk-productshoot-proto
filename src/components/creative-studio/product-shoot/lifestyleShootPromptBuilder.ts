@@ -2,7 +2,7 @@
 // Merges moodboard analysis + product identity + shot type + advanced settings into a prompt
 
 import type { LifestyleShootConfig, LifestyleAdvancedSettings } from './types';
-import { lifestyleShootTypes, getAdvancedPromptFragments } from './lifestyleShootConfigs';
+import { lifestyleShootTypes, getAdvancedPromptFragments, areAllSettingsAuto, pickRandomStillLifeVariation } from './lifestyleShootConfigs';
 
 interface MoodboardAnalysis {
   title?: string;
