@@ -1690,6 +1690,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
         onClose={() => setShowMoodboardModal(false)}
         selectedMoodboard={state.moodboard}
         onSelect={handleMoodboardSelect}
+        initialTab={moodboardModalTab}
       />
 
       <ProductReferencePicker
