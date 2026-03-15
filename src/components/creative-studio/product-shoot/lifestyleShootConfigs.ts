@@ -16,13 +16,17 @@ export interface LifestyleShootType {
 export const lifestyleShootTypes: LifestyleShootType[] = [
   {
     id: 'product-only',
-    name: 'Product Only',
-    description: 'Close-up hero shot, no model — styled within the moodboard world',
+    name: 'Styled Still Life',
+    description: 'Editorial still life — pair of shoes styled in their world with props and natural light',
     icon: '🎯',
-    framingDirective: `MANDATORY FRAMING: Product-only hero shot. NO model, NO hands, NO feet visible.
-The product sits naturally within the scene — on a surface, ledge, step, or terrain that fits the moodboard's world.
-Camera is close, filling 60-70% of the frame with the product. Shallow depth of field, background softly blurred.
-The product's silhouette, materials, and construction details are the absolute hero.`,
+    framingDirective: `MANDATORY FRAMING: Editorial lifestyle still life. NO model, NO hands, NO feet visible.
+Show a COMPLETE PAIR of shoes (2 shoes). Arrange them casually staggered or slightly overlapping — as if someone just stepped out of them. NEVER perfectly aligned or studio-arranged.
+The shoes occupy roughly 30-40% of the frame. The surrounding environment tells the story — wider framing that establishes the world.
+SURFACE: The shoes sit on a contextual surface that belongs to the moodboard's world — sun-warmed stone steps, weathered wooden floor, terrazzo, sandy terrain, linen fabric, marble counter. Never a flat studio backdrop.
+PROPS: Include 1-2 small contextual objects nearby that suggest a lived moment — a coffee cup, open book, sunglasses, folded towel, dried botanicals, a straw hat, a magazine. These props feel naturally placed, not art-directed.
+CAMERA: Three-quarter overhead (30-45° looking down) is the primary angle, showing the iconic footbed silhouette. Full overhead and low eye-level are secondary options.
+LIGHT: Natural environmental light — dappled sunlight through foliage, window light with real shadows, golden hour warmth across the surface. Never flat or artificially even.
+The background environment extends into soft focus, establishing depth and atmosphere. The overall feeling is effortless, lived-in, Mediterranean warmth.`,
   },
   {
     id: 'feet-focus',
