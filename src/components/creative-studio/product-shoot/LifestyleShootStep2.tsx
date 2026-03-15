@@ -29,6 +29,8 @@ import {
   initialLifestyleShootConfig,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
+import { MoodboardModal } from "../MoodboardModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface LifestyleShootStep2Props {
   state: ProductShootState;
