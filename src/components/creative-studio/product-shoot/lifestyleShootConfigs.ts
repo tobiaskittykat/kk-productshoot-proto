@@ -34,15 +34,15 @@ ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, a
     name: 'On Foot',
     description: 'On-foot, environmental — shoes and the ground they walk on',
     icon: '👟',
-    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee.
-Exactly 2 shoes visible (one pair, worn on feet). The framing is WIDER than typical shoe photography — generous ground/surface area visible, environmental context present. The shoes occupy roughly 40-50% of the frame.
-STANCE: The stance is caught mid-life — mid-shift, mid-scratch, mid-step-back. The feet are doing what feet do when no one's watching. Weight distributed unevenly, naturally. The person is mid-moment, not posing for a shoe photograph.
+    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot. Crop isolates feet and lower legs — exact framing adapts to the pose (standing, seated, dangling, resting). NEVER show above the knee.
+Exactly 2 shoes visible (one pair, worn on feet). The framing is WIDER than typical shoe photography — generous environmental context present. The shoes occupy roughly 40-50% of the frame.
+POSE: The pose is caught mid-life. The person may be standing, seated, dangling feet off a ledge, resting with feet propped, or tucked on the ground. The feet are doing what feet do when no one's watching — weight distributed unevenly, naturally. The person is mid-moment, not posing for a shoe photograph.
 ANTI-GENERIC: NEVER two feet parallel facing camera. NEVER symmetrical framing. NEVER a clean, centered, catalog-style shoe crop.
-GROUND AS CO-CHARACTER: The ground beneath the shoes has its own story, its own texture, its own wear. It's not a backdrop — it's a co-protagonist. The moodboard defines what that surface looks like and what world it belongs to. The camera respects the ground as much as the shoes.
+SURFACE AS CO-CHARACTER: The surface the feet relate to — ground, ledge edge, railing, dashboard, air beneath dangling feet — has its own story, its own texture. It's not a backdrop — it's a co-protagonist. The moodboard defines what that surface looks like and what world it belongs to. The camera respects the surface as much as the shoes.
 SKIN & STYLING: Real skin — visible tan lines, freckles, natural imperfections. For sandals: bare ankles. For closed-toe: rolled-up trousers or raw-hem cuffs. Styling details (fabric, color) must match the moodboard.
-LIGHT: Natural environmental light hits the shoes AND the ground equally. Shadow patterns are part of the composition. The quality of light must match the moodboard's mood.
+LIGHT: Natural environmental light hits the shoes AND the surface equally. Shadow patterns are part of the composition. The quality of light must match the moodboard's mood.
 FOOTWEAR — LIVED IN: The shoes look WORN and BELONGING — molded to this person's feet, bearing the patina of real wear. They are this person's shoes, in this person's life. Not box-fresh. Not pristine.
-ALL AESTHETIC CHOICES — ground surface, environmental context, lighting quality, color palette — come from the moodboard. The shot type defines only the compositional crop and energy.`,
+ALL AESTHETIC CHOICES — surfaces, environmental context, lighting quality, color palette — come from the moodboard. The shot type defines only the compositional crop and energy.`,
   },
   {
     id: 'model-no-head',
@@ -368,6 +368,34 @@ NEVER flat, even lighting. The shadow patterns must be bold and compositionally 
     framingOverride: `ENERGY — Surface Dialogue:
 The GROUND dominates 60%+ of the frame. The feet and shoes are secondary to the surface story — the visual world of the ground (defined entirely by the moodboard) becomes the canvas on which the shoes simply exist. The camera lingers on the surface, giving it space and attention. The shoes are discovered within the landscape of ground-level detail, not spotlighted above it.
 NEVER shoes dominating the frame. The surface IS the subject; the shoes are visitors within it.`,
+  },
+  {
+    id: 'dangling',
+    name: 'Dangling',
+    framingOverride: `ENERGY — Dangling:
+Feet hanging off a LEDGE — a wall, dock, tailgate, table edge, rooftop parapet, bridge railing. Gravity pulls the sandals slightly — straps shift under the shoe's own weight, the sole becomes visible from below. The EDGE they dangle from is the compositional anchor, cutting horizontally across the frame. Below the feet: air, water, ground far below, nothing. The dangle reveals the shoe's relationship to gravity differently than standing ever could. One foot might swing slightly, the other still. The moodboard defines WHAT they're dangling from.
+NEVER feet on solid ground. NEVER standing. The feet must be suspended, gravity-affected.`,
+  },
+  {
+    id: 'feet-up',
+    name: 'Feet Up',
+    framingOverride: `ENERGY — Feet Up:
+Feet PROPPED on something — a railing, a low wall, a dashboard, a chair opposite, a table edge. Casual territorial claiming. The soles become partially visible. The shoe is seen from an ANGLE that standing never provides — from below, from the side, foreshortened. The prop surface comes from the moodboard's world. The energy is leisure, ownership, ease. The person has claimed this space and is using it on their terms.
+NEVER feet on the ground. The feet must be elevated, resting ON something.`,
+  },
+  {
+    id: 'crossed-seated',
+    name: 'Crossed & Seated',
+    framingOverride: `ENERGY — Crossed & Seated:
+Close crop of CROSSED LEGS or ANKLES while seated. One ankle resting on the opposite knee, or ankles crossed and extended, or legs folded with feet tucked beside. The seated position changes shoe geometry — straps pull differently, the foot's arch becomes visible, buckles catch light from unusual angles. The seat surface (bench, step, curb, ground) frames the bottom of the image. The pose is relaxed, habitual — how this person always sits.
+NEVER standing. The crossing or folding of legs must create distinctive shoe angles.`,
+  },
+  {
+    id: 'tucked-grounded',
+    name: 'Tucked & Grounded',
+    framingOverride: `ENERGY — Tucked & Grounded:
+Sitting on the GROUND, feet tucked under or pulled close to the body. Cross-legged with shoes peeking out, knees up with feet flat and close, or one leg extended while the other tucks. The shoes are seen from ABOVE or at GROUND LEVEL in intimate proximity. The ground surface and the body create a contained, domestic composition. The shoes feel personal, close, lived-with. The camera is LOW — nearly at ground level — creating an intimate, private perspective. The moodboard defines the ground surface.
+NEVER standing or elevated. The body and feet must be DOWN on the ground, creating intimacy.`,
   },
 ];
 
