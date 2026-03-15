@@ -344,6 +344,7 @@ export const MoodboardModal = ({
                   moodboard={moodboard}
                   isSelected={selectedMoodboard === moodboard.id}
                   onSelect={() => handleSelect(moodboard.id)}
+                  onRename={handleRenameMoodboard}
                   size="large"
                 />
               ))}
