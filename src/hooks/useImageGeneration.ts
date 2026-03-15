@@ -671,6 +671,12 @@ export function useImageGeneration() {
             for (let i = batchStart; i < batchEnd; i++) {
               const remixBody = {
                 ...buildRequestBody(null, state.imageCount),
+                // Remix uses source image — no moodboard
+                moodboardId: null,
+                moodboardUrl: null,
+                moodboardName: null,
+                moodboardDescription: null,
+                moodboardAnalysis: null,
                 remixMode: true,
                 remixRemoveText: state.productShoot.remixRemoveText ?? false,
                 editMode: true,
