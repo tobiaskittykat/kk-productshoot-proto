@@ -200,3 +200,18 @@ Make component colors truly single-field across the full pipeline so the payload
 ### Design principle
 - All variations describe ENERGY and RELATIONSHIP — never specific surfaces, textures, activities, or aesthetics
 - The moodboard is the sole authority for visual specifics; shot type defines only compositional structure and mood
+
+## Skip Footbed from Lifestyle Worn-Shoe Prompts
+
+## STATUS: ✅ IMPLEMENTED (2026-03-15)
+
+### What was done
+
+**`src/hooks/useImageGeneration.ts`:**
+- Passes `lifestyleShotType` in request body only when `shootMode === 'lifestyle-shoot'`
+
+**`supabase/functions/generate-image/index.ts`:**
+- `isLifestyleWornOnFoot` check for `feet-focus`, `model-no-head`, `full-model`
+- Excludes `'footbed'` from `componentTypes` when worn on foot; lining stays (edges visible)
+- Extended `isHiddenAngle` branding check to include lifestyle worn-shoe shots
+- Product Shoot workflow unaffected (`lifestyleShotType` is `undefined`)
