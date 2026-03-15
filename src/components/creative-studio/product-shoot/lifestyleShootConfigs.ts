@@ -72,59 +72,6 @@ FOOTWEAR PRESENCE: The footwear is visible and identifiable but NEVER the forced
 The entire scene — setting, activity, styling, light, color, atmosphere — is defined by the moodboard. The shot type defines only the compositional structure (full body, face visible, environmental portrait).`,
   },
 ];
-    name: 'Styled Still Life',
-    description: 'Editorial still life — pair of shoes styled in their world with props and natural light',
-    icon: '🎯',
-    framingDirective: `MANDATORY FRAMING: Editorial lifestyle still life. NO model, NO hands, NO feet visible.
-Show a COMPLETE PAIR of shoes (2 shoes). Arrange them casually staggered or slightly overlapping — as if someone just stepped out of them. NEVER perfectly aligned or studio-arranged.
-The shoes occupy roughly 30-40% of the frame. The surrounding environment tells the story — wider framing that establishes the world.
-SURFACE: The shoes sit on a contextual surface that belongs to the moodboard's world — sun-warmed stone steps, weathered wooden floor, terrazzo, sandy terrain, linen fabric, marble counter. Never a flat studio backdrop.
-PROPS: Include 1-2 small contextual objects nearby that suggest a lived moment — a coffee cup, open book, sunglasses, folded towel, dried botanicals, a straw hat, a magazine. These props feel naturally placed, not art-directed.
-CAMERA: Three-quarter overhead (30-45° looking down) is the primary angle, showing the iconic footbed silhouette. Full overhead and low eye-level are secondary options.
-LIGHT: Natural environmental light — dappled sunlight through foliage, window light with real shadows, golden hour warmth across the surface. Never flat or artificially even.
-The background environment extends into soft focus, establishing depth and atmosphere. The overall feeling is effortless, lived-in, Mediterranean warmth.`,
-  },
-  {
-    id: 'feet-focus',
-    name: 'On Foot',
-    description: 'On-foot, environmental — shoes and the ground they walk on',
-    icon: '👟',
-    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee.
-Exactly 2 shoes visible (one pair, worn on feet). But this is NOT a clinical product crop — the framing is WIDER than typical shoe photography. You see generous ground/surface area, the environment, the light. The shoes occupy roughly 40-50% of the frame.
-STANCE: Natural and unstudied — feet slightly apart, one foot casually forward, or ankles loosely crossed. Weight shifted to one side. Never stiff, symmetrical, or posed. The person is mid-moment: standing in conversation, pausing on a walk, waiting at a doorway.
-GROUND SURFACE IS A CHARACTER: The surface beneath the shoes tells its own story — sun-warmed cobblestones, wet sand at the water's edge, worn wooden deck boards, terrazzo tiles, wild grass, cracked stone steps, terracotta tiles, gravel paths. The surface must belong to the moodboard's world and have visible texture and character.
-SKIN & STYLING: Real skin — visible tan lines, freckles, natural imperfections. For sandals: bare ankles are standard. For closed-toe styles: rolled-up linen trousers or raw-hem denim cuffs. Never formal pants or pristine styling.
-LIGHT: Natural environmental light hits the shoes AND the ground equally — dappled sunlight through foliage, long afternoon shadows stretching across stone, window light falling across interior floors. Shadow patterns are part of the composition.
-The shoes look WORN and BELONGING — they are this person's shoes, in this person's life. Not box-fresh, not a product shot. The overall feeling is intimate, grounded, Mediterranean warmth.`,
-  },
-  {
-    id: 'model-no-head',
-    name: 'Body & Style',
-    description: 'Chin-down crop — outfit, hands, posture, and shoes tell the story',
-    icon: '🧍',
-    framingDirective: `MANDATORY FRAMING: Full body shot with the head CROPPED OUT. The frame cuts off ABOVE THE CHIN — the model's face, eyes, and top of head are NEVER visible. This crop must feel INTENTIONAL and compositionally elegant, not accidental.
-Show the model from roughly chin level down to feet. The model occupies 50-70% of the frame — environment is always present and contextual.
-OUTFIT & TEXTURE: Clothing is relaxed, layered, and richly textured — linen shirts, cotton dresses, soft knits, denim, draped scarves, wool coats. Fabrics have visible weave and movement. NEVER formal, corporate, or catalog-stiff. Mediterranean/European sensibility in styling.
-HANDS ARE STORYTELLERS: Hands must be visible and doing something natural — holding a ceramic coffee cup, resting on a weathered railing, tucked into trouser pockets, adjusting a hat brim, carrying a linen tote, touching a stone wall. Hands are never hidden or awkwardly cropped.
-BODY LANGUAGE: The model's posture tells the story — leaning against a sun-warmed doorframe, mid-stride on a narrow European street, sitting on stone steps with legs casually extended, standing at a market stall, resting against a wall with one knee bent. Weight is always shifted naturally, never symmetrical.
-ENVIRONMENT: Architectural or natural context frames the model — doorways, arched passages, staircases, garden walls, café terraces, studio interiors, kitchen counters. The setting has texture, age, and character.
-FOOTWEAR ANCHOR: The shoes are the compositional anchor — clearly visible, sharp, and grounding the entire image. The eye travels from outfit down to footwear naturally. The shoes must be identifiable and precisely rendered.`,
-  },
-  {
-    id: 'full-model',
-    name: 'Portrait in Place',
-    description: 'Full editorial portrait — a person in their world, Birkenstock at their feet',
-    icon: '🧑‍🎨',
-    framingDirective: `MANDATORY FRAMING: Full body editorial portrait. The model's full body INCLUDING face is visible. This is a DOCUMENTARY PORTRAIT, not a fashion advertisement.
-ENVIRONMENTAL DOMINANCE: The model occupies only 30-50% of the frame. The place, the mood, the light — these dominate. Wider framing that establishes a complete world. The viewer should feel they could step into this scene.
-EXPRESSION & PRESENCE: The model's expression is contemplative, genuine, mid-moment — caught in thought, mid-conversation, simply being still. A half-smile, a distant gaze, eyes closed in sunlight. NEVER performative, never "modeling." The person is unaware of or unbothered by the camera.
-AUTHENTIC ACTIVITIES: The model is engaged in real rituals — morning tea on a terrace, reading in a courtyard, walking a coastal path, working at a studio table, arranging flowers, cooking, sitting with friends. These moments feel caught, not staged.
-STYLING AS IDENTITY: Clothing feels personal, eclectic, layered with meaning — a vintage jacket over a simple dress, mismatched textures, lived-in denim, a meaningful accessory. The outfit belongs to THIS person. Never catalog-styled or overly coordinated.
-CASTING DIRECTION: Real people with real personal style — creatives, artisans, thinkers. Diverse body types, ages, ethnicities. Natural beauty, visible character, authentic presence. Never generic commercial models.
-BIRKENSTOCK PRESENCE: The footwear is visible and identifiable but NEVER the forced focal point. The shoes belong to this person as naturally as their favorite sweater. They're part of the story, not the headline.
-The final image should feel like a portrait by Juergen Teller or Talia Chetrit — intimate, warm, slightly imperfect, deeply human. A documentary moment, not a campaign pose.`,
-  },
-];
 
 // ===== ADVANCED SETTINGS OPTIONS =====
 
