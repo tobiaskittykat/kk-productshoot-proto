@@ -74,6 +74,33 @@ CASTING DIRECTION: Real people with real personal style — diverse body types, 
 FOOTWEAR — INCIDENTAL, NEVER FEATURED: The shoes are visible but NEVER the focal point. They look LIVED IN — molded to this person's feet, bearing the patina of real wear. Not box-fresh. The shoes belong to this person as naturally as their watch or their haircut.
 The entire scene — setting, activity, styling, light, color, atmosphere — is defined by the moodboard. The shot type defines only the compositional structure (full body, face visible, environmental portrait).`,
   },
+  {
+    id: 'group-scene',
+    name: 'Group Scene',
+    description: '2-3 people together — your product is the hero shoe',
+    icon: '👥',
+    framingDirective: `MANDATORY FRAMING: Candid editorial group shot with 2-3 people. This is a DOCUMENTARY GROUP MOMENT — caught between interactions, never posed.
+
+HERO SHOE RULE (CRITICAL):
+- Exactly ONE person wears the selected/hero product (EXACT match to reference images — locked geometry, materials, color).
+- The other 1-2 people each wear a DIFFERENT named Birkenstock model (specified in the companion section below). Each companion shoe is a real, recognizable Birkenstock silhouette — naturally worn, lived-in, not box-fresh.
+- ALL shoes (hero + companions) must be VISIBLE in the frame. They are discovered naturally, never spotlighted.
+
+GROUP DYNAMIC: The people are MID-INTERACTION — sharing a surface, overlapping personal spaces, caught in conversation or shared activity. Bodies create asymmetric, layered compositions. Each person occupies space differently — one sits, another stands, one leans. The group has genuine ease and familiarity.
+
+ANTI-GENERIC:
+- NEVER lined up facing camera.
+- NEVER matching outfits or coordinated styling.
+- NEVER catalog group shot with equal spacing.
+- NEVER everyone looking at camera simultaneously.
+- NEVER identical body language or mirrored poses.
+
+INDIVIDUAL IDENTITY: Each person has distinct personal style — different silhouettes, different textures, different color palettes. Clothing is lived-in, personal, eclectic. Age, body type, and ethnicity should feel diverse and authentic. Nobody looks "styled" — they look like themselves.
+
+FOOTWEAR — INCIDENTAL ANCHOR: All shoes are visible but the composition is about the GROUP MOMENT, not the footwear. The eye travels through faces, hands, body language, and then discovers the shoes naturally. The hero shoe is not compositionally privileged — it's just one pair among friends.
+
+ENVIRONMENT: The group exists in a real place defined by the moodboard. They've claimed this space together — their bodies and belongings have shaped it. The environment tells part of the story.`,
+  },
 ];
 
 // ===== ADVANCED SETTINGS OPTIONS =====
