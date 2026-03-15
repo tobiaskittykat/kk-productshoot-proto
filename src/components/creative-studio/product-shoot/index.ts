@@ -16,6 +16,9 @@ export { ComponentOverridePopover } from './ComponentOverridePopover';
 export { ProductIntegrityBadge } from './ProductIntegrityBadge';
 export { ProductAnglePreview } from './ProductAnglePreview';
 export { ProductShootStep2, initialProductShootState } from './ProductShootStep2';
+export { LifestyleShootStep2 } from './LifestyleShootStep2';
+export { LifestyleAdvancedPanel } from './LifestyleAdvancedPanel';
+export { LifestyleShootTypeSelector } from './LifestyleShootTypeSelector';
 
 // Types
 export * from './types';

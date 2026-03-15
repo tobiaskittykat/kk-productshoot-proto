@@ -864,6 +864,16 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                           state={state.productShoot}
                           onStateChange={handleProductShootUpdate}
                         />
+                      ) : state.productShoot.shootMode === 'lifestyle-shoot' ? (
+                        <LifestyleShootStep2
+                          state={state.productShoot}
+                          onStateChange={handleProductShootUpdate}
+                          imageCount={state.imageCount}
+                          resolution={state.resolution}
+                          aspectRatio={state.aspectRatio}
+                          sequentialGeneration={state.sequentialGeneration}
+                          onOutputSettingsChange={(updates) => handleUpdate(updates)}
+                        />
                       ) : (
                         <ProductShootStep2
                           state={state.productShoot}
