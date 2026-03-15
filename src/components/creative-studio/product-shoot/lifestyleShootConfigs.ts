@@ -235,6 +235,61 @@ Strong directional light creates a PATTERN of shadows across the scene — from 
   },
 ];
 
+// ===== PORTRAIT IN PLACE ENERGY VARIATIONS =====
+// Randomly selected when advanced settings are all on "Auto" to inject editorial variety
+// These describe ENERGY and RELATIONSHIP TO ENVIRONMENT — not specific poses
+
+export interface PortraitEnergyVariation {
+  id: string;
+  name: string;
+  framingOverride: string;
+}
+
+export const portraitInPlaceVariations: PortraitEnergyVariation[] = [
+  {
+    id: 'arrived-settling',
+    name: 'Arrived & Settling',
+    framingOverride: `ENERGY — Arrived & Settling:
+The person JUST GOT HERE. The body hasn't found its resting state yet — bag still on shoulder, a hand reaching to set something down, weight still shifting. There's transitional energy: the space is new to them, or they're reclaiming it after being away. Possessions are mid-placement. The environment shows the traces of arrival — a door ajar, shoes not yet fully settled. The camera caught the first 30 seconds.
+NEVER fully settled or comfortable. The body is still negotiating with the space.`,
+  },
+  {
+    id: 'deep-in-place',
+    name: 'Deep in Place',
+    framingOverride: `ENERGY — Deep in Place:
+The person has been here for HOURS. They've completely melted into the environment — body sprawled, limbs heavy, totally absorbed in something (reading, working, staring, dozing). The shoes have been on these feet all day. There's no self-consciousness, no awareness of being watched. Limbs are arranged by gravity, not intention. Objects around them show the accumulation of time spent — a half-empty glass, pages turned, a phone face-down.
+NEVER upright or alert. The body has fully surrendered to the surface beneath it.`,
+  },
+  {
+    id: 'about-to-leave',
+    name: 'About to Leave',
+    framingOverride: `ENERGY — About to Leave:
+The person is gathering energy to GO. One hand on a surface pushing up, or reaching for keys, or mid-stand. Gaze directed elsewhere — toward a door, a horizon, a companion off-frame. Weight shifting forward. The moment is charged with imminent motion. The environment they're leaving still holds their warmth — an impression on a seat, belongings being collected. This is the last frame before the scene empties.
+NEVER fully standing or already walking. Capture the THRESHOLD between staying and going.`,
+  },
+  {
+    id: 'caught-unaware',
+    name: 'Caught Unaware',
+    framingOverride: `ENERGY — Caught Unaware:
+The camera is an INTRUDER. The person hasn't cooperated with this photograph — they're looking away, mid-gesture, face partially obscured by a hand or turned shoulder. Maybe they're calling out to someone, or reacting to something off-frame, or lost in thought with eyes unfocused. There's no fourth-wall awareness. The framing itself might feel slightly off — as if the photographer had to be quick. Raw, unrehearsed, stolen.
+NEVER looking at camera. NEVER posed. The person doesn't know or doesn't care that they're being photographed.`,
+  },
+  {
+    id: 'borrowed-perch',
+    name: 'Borrowed Perch',
+    framingOverride: `ENERGY — Borrowed Perch:
+The person is sitting somewhere NOT DESIGNED FOR SITTING — a wall, a railing, a truck tailgate, a table edge, a staircase landing, a window ledge. The body has claimed an unconventional surface and made it theirs. Legs dangle, tuck, or extend in whatever way the surface demands. There's mild defiance in the choice — ignoring the proper furniture, finding the interesting spot. The perch gives them a different vantage point on their world.
+NEVER on proper furniture. The surface they've claimed should feel specific to the moodboard's environment.`,
+  },
+  {
+    id: 'stillness-with-tension',
+    name: 'Stillness with Tension',
+    framingOverride: `ENERGY — Stillness with Tension:
+The person is STILL but not relaxed. Arms crossed, or one hand gripping a railing, or jaw set while staring at something with intent. There's an inner weather — anticipation, resolve, quiet defiance, or deep focus. The calm is CHARGED. The body is coiled, not collapsed. Even in stillness, there's a sense that this person is about to act, or has just decided something. The environment amplifies the tension — shadows, angles, isolated framing.
+NEVER serene or dreamy. The stillness has an edge, an alertness, an intensity.`,
+  },
+];
+
 /**
  * Returns true if all advanced settings are on "Auto" (no manual overrides).
  */
@@ -255,6 +310,14 @@ export function areAllSettingsAuto(settings: LifestyleAdvancedSettings): boolean
 export function pickRandomStillLifeVariation(): StillLifeVariation {
   const idx = Math.floor(Math.random() * styledStillLifeVariations.length);
   return styledStillLifeVariations[idx];
+}
+
+/**
+ * Randomly select a portrait in place energy variation from the pool.
+ */
+export function pickRandomPortraitVariation(): PortraitEnergyVariation {
+  const idx = Math.floor(Math.random() * portraitInPlaceVariations.length);
+  return portraitInPlaceVariations[idx];
 }
 
 // Get the prompt fragment for a given advanced setting
