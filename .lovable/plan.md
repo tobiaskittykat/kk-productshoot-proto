@@ -145,3 +145,14 @@ Make component colors truly single-field across the full pipeline so the payload
 - `src/components/creative-studio/product-shoot/index.ts` — barrel exports
 - `src/components/creative-studio/CreativeStudioWizard.tsx` — routing
 - `src/hooks/useImageGeneration.ts` — lifestyle-shoot generation path
+
+## Fix: Moodboard Leaking into Scene Remix & Shoe Swap
+
+## STATUS: ✅ IMPLEMENTED (2026-03-15)
+
+### What was done
+
+**`src/hooks/useImageGeneration.ts`:**
+- Scene Remix body: explicitly nulls out moodboardId/Url/Name/Description/Analysis after spreading buildRequestBody, so remix generations never carry the current UI moodboard
+- Shoe Swap body: same treatment — nulls out all moodboard fields
+- Poll result mapping (onRowReady + final map): now reads `row.moodboard_id` from the DB row instead of stamping `state.moodboard`, so images only show a moodboard reference if one was actually used during generation
