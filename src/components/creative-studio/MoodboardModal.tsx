@@ -33,6 +33,7 @@ interface MoodboardModalProps {
   onClose: () => void;
   selectedMoodboard: string | null;
   onSelect: (moodboardId: string, fromGallery: boolean) => void;
+  initialTab?: string;
 }
 
 // CustomMoodboard removed - now using Moodboard type from types.ts for cache consistency
