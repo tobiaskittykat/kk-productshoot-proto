@@ -104,6 +104,17 @@ export const companionModelOptions = [
   'Tokio', 'Bend', 'Zermatt', 'Lutry', 'Naples',
 ];
 
+// Regional localization
+export type LifestyleRegion = 'auto' | 'usa' | 'europe' | 'mea' | 'apac';
+
+export const regionOptions: { value: LifestyleRegion; label: string; hint: string }[] = [
+  { value: 'auto', label: 'Auto', hint: 'No regional constraints' },
+  { value: 'usa', label: 'USA', hint: 'Diverse American casting' },
+  { value: 'europe', label: 'Europe', hint: 'European diversity' },
+  { value: 'mea', label: 'MEA', hint: 'Middle East & Africa — modesty-aware' },
+  { value: 'apac', label: 'APAC', hint: 'Asia-Pacific diversity' },
+];
+
 export interface LifestyleAdvancedSettings {
   cameraAngle: string;
   lighting: string;
@@ -128,6 +139,7 @@ export interface LifestyleShootConfig {
   lifestyleShotType: LifestyleShootShotType;
   advancedSettings: LifestyleAdvancedSettings;
   groupCompanions?: GroupCompanion[];
+  region?: LifestyleRegion;
 }
 
 export const initialLifestyleShootConfig: LifestyleShootConfig = {

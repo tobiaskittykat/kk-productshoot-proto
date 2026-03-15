@@ -122,6 +122,31 @@ When the moodboard and shot type could suggest different aesthetics, the MOODBOA
     sections.push('');
   }
   
+  // 2b. Regional localization (casting + cultural constraints)
+  const region = config.region || 'auto';
+  if (region !== 'auto') {
+    const castingDirections: Record<string, string> = {
+      usa: 'Diverse American casting — include a natural mix of ethnicities reflecting the United States (Black, White, Hispanic, Asian, mixed-race). Relaxed, confident energy.',
+      europe: 'European diversity — Mediterranean, Northern European, Eastern European features. Understated confidence.',
+      mea: 'Middle Eastern and African diversity — warm skin tones, natural beauty, strong features.',
+      apac: 'East Asian, Southeast Asian, and South Asian diversity — varied skin tones, natural beauty.',
+    };
+    sections.push(`REGIONAL CASTING (apply only when model ethnicity is set to "Auto"):
+${castingDirections[region]}`);
+    sections.push('');
+
+    if (region === 'mea') {
+      sections.push(`CULTURAL CONSTRAINTS — NON-NEGOTIABLE (overrides moodboard styling where conflicting):
+- Covered shoulders (no sleeveless tops or tank tops)
+- Longer hemlines (below the knee minimum)
+- No exposed midriffs
+- Lightweight, breathable fabrics appropriate for warm climates
+- Loose silhouettes for women — no body-hugging fits
+These rules apply to ALL people in the scene regardless of gender presentation.`);
+      sections.push('');
+    }
+  }
+
   // 3. Shot type framing (COMPOSITIONAL STRUCTURE)
   // For Styled Still Life with all-auto settings, inject a random compositional variation
   const shotType = lifestyleShootTypes.find(s => s.id === config.lifestyleShotType);

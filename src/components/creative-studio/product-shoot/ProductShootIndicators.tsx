@@ -89,6 +89,8 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
       'group-scene': 'Group Scene',
     };
     const shotLabel = `Shot: ${shotTypeLabels[state.lifestyleShootConfig?.lifestyleShotType || 'product-only'] || 'Select'}`;
+    const region = state.lifestyleShootConfig?.region || 'auto';
+    const regionLabel = region !== 'auto' ? region.toUpperCase() : null;
 
     return (
       <div className="flex items-center gap-0.5">
@@ -109,6 +111,16 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
           selected={true}
           onClick={() => scrollToSection('section-ls-shottype')}
         />
+        {regionLabel && (
+          <>
+            <span className="text-muted-foreground/30">·</span>
+            <IndicatorChip
+              label={`Region: ${regionLabel}`}
+              selected={true}
+              onClick={() => scrollToSection('section-ls-shottype')}
+            />
+          </>
+        )}
       </div>
     );
   }

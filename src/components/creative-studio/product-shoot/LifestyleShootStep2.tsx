@@ -30,6 +30,7 @@ import {
   GroupCompanion,
   companionModelOptions,
   ethnicityOptions,
+  regionOptions,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
 import { MoodboardModal } from "../MoodboardModal";
@@ -527,6 +528,34 @@ export const LifestyleShootStep2 = ({
           </CollapsibleContent>
         </div>
       </Collapsible>
+
+      {/* 4b. Region */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+              <span className="text-sm">🌍</span>
+            </div>
+            <div>
+              <span className="font-medium text-foreground text-sm">Region</span>
+              <p className="text-xs text-muted-foreground">Guides casting diversity and cultural context</p>
+            </div>
+          </div>
+          <Select value={config.region || 'auto'} onValueChange={(v) => updateConfig({ region: v as any })}>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {regionOptions.map(r => (
+                <SelectItem key={r.value} value={r.value}>
+                  <span>{r.label}</span>
+                  <span className="ml-2 text-muted-foreground">— {r.hint}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* 5. Advanced Settings */}
       <Collapsible open={openSections.advanced}>
