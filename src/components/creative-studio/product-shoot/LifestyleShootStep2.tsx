@@ -150,7 +150,7 @@ const GroupCompanionsConfigurator = ({
   );
 };
 
-
+export const LifestyleShootStep2 = ({
   state,
   onStateChange,
   imageCount,
