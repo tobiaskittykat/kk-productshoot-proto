@@ -707,7 +707,16 @@ export function useImageGeneration() {
           const batchEnd = Math.min(batchStart + BATCH_SIZE, state.imageCount);
           const batchPromises: Promise<any>[] = [];
           for (let i = batchStart; i < batchEnd; i++) {
-            const freshShotTypePrompt = buildShotTypePromptForProduct();
+            const isLifestyle = state.productShoot?.shootMode === 'lifestyle-shoot' && state.productShoot.lifestyleShootConfig;
+            const freshShotTypePrompt = isLifestyle
+              ? buildLifestyleShootPrompt({
+                  config: state.productShoot!.lifestyleShootConfig!,
+                  moodboardAnalysis: moodboardAnalysis as any,
+                  moodboardName: lsMoodboardName,
+                  productIdentity,
+                  creativeBrief: state.productShoot!.lifestyleShootConfig!.creativeBrief,
+                })
+              : buildShotTypePromptForProduct();
             batchPromises.push(
               supabase.functions.invoke('generate-image', {
                 body: buildRequestBody(freshShotTypePrompt, 1),
