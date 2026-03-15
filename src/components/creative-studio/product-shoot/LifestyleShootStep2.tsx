@@ -423,8 +423,10 @@ export const LifestyleShootStep2 = ({
       <ProductPickerModal
         open={showProductPickerModal}
         onOpenChange={setShowProductPickerModal}
+        selectedSkuId={state.selectedProductId || null}
         onSelectSku={(sku) => { handleSkuSelect(sku, true); setShowProductPickerModal(false); }}
-        onUploadNew={() => { setShowProductPickerModal(false); setShowSmartUploadModal(true); }}
+        onCreateNew={() => { setShowProductPickerModal(false); }}
+        onSmartUpload={() => { setShowProductPickerModal(false); setShowSmartUploadModal(true); }}
       />
       <SmartUploadModal open={showSmartUploadModal} onOpenChange={setShowSmartUploadModal} />
 
