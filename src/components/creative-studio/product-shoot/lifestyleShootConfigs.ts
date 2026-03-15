@@ -62,13 +62,14 @@ ALL AESTHETIC CHOICES — outfit styling, environment, color palette, lighting �
     name: 'Portrait in Place',
     description: 'Full editorial portrait — a person in their world, footwear at their feet',
     icon: '🧑‍🎨',
-    framingDirective: `MANDATORY FRAMING: Full body editorial portrait. The model's full body INCLUDING face is visible. This is a DOCUMENTARY PORTRAIT, not a fashion advertisement.
+    framingDirective: `MANDATORY FRAMING: Full body editorial portrait. The model's full body INCLUDING face is visible. This is a DOCUMENTARY PORTRAIT — caught, not directed. Think Jack Davison, not catalog.
 ENVIRONMENTAL DOMINANCE: The model occupies only 30-50% of the frame. The place, the mood, the light — these dominate. Wider framing that establishes a complete world.
-EXPRESSION & PRESENCE: The model's expression is contemplative, genuine, mid-moment — caught in thought, mid-conversation, simply being still. NEVER performative, never "modeling." The person is unaware of or unbothered by the camera.
-AUTHENTIC ACTIVITIES: The model is engaged in a real, quiet activity that feels caught rather than staged. The specific activity must be contextual to the moodboard's world.
-STYLING AS IDENTITY: Clothing feels personal, eclectic, layered with meaning. The outfit belongs to THIS person. Never catalog-styled or overly coordinated. Colors and textures must match the moodboard's palette.
+CAUGHT BETWEEN MOMENTS: The model is in a TRANSITIONAL STATE — arriving, leaving, pausing mid-task, turning toward something. There is movement-energy even in stillness. NEVER settled, NEVER performative, NEVER "modeling." The person has somewhere to be, or just came from somewhere. The camera caught them, not the other way around.
+ANTI-GENERIC RULES: NEVER standing straight facing camera. NEVER hands at sides. NEVER centered symmetrically in frame. NEVER a neutral expression looking into lens.
+PHYSICAL EASE: The body has surrendered to gravity — weight given to whatever surface is available. Limbs arranged by comfort, not aesthetics. Slouching, leaning, folding into the environment. The person's posture is a RESPONSE to their specific environment — how you sit on warm stone is different from how you lean against cold metal. The moodboard's world determines the physical vocabulary.
+STYLING AS IDENTITY: Clothing feels personal, eclectic, layered with meaning. The outfit belongs to THIS person — lived-in, not styled. Never catalog-coordinated. Colors and textures must match the moodboard's palette.
 CASTING DIRECTION: Real people with real personal style — diverse body types, ages, ethnicities. Natural beauty, visible character, authentic presence.
-FOOTWEAR PRESENCE: The footwear is visible and identifiable but NEVER the forced focal point. The shoes belong to this person as naturally as their favorite jacket.
+FOOTWEAR — INCIDENTAL, NEVER FEATURED: The shoes are visible but NEVER the focal point. They look LIVED IN — molded to this person's feet, bearing the patina of real wear. Not box-fresh. The shoes belong to this person as naturally as their watch or their haircut.
 The entire scene — setting, activity, styling, light, color, atmosphere — is defined by the moodboard. The shot type defines only the compositional structure (full body, face visible, environmental portrait).`,
   },
 ];
