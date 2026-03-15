@@ -1177,14 +1177,23 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                 )}
               </div>
               
-              {/* View All Moodboards */}
-              <button 
-                onClick={() => setShowMoodboardModal(true)}
-                className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-              >
-                Browse all moodboards
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {/* Actions row */}
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => { setMoodboardModalTab("browse"); setShowMoodboardModal(true); }}
+                  className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                >
+                  Browse all moodboards
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => { setMoodboardModalTab("upload"); setShowMoodboardModal(true); }}
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload
+                </button>
+              </div>
             </div>
           </CustomizationSection>
 
