@@ -452,7 +452,7 @@ export const LifestyleShootStep2 = ({
                   <Select value={aspectRatio} onValueChange={(v) => onOutputSettingsChange({ aspectRatio: v })}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {aspectRatios.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                      {aspectRatios.map(a => <SelectItem key={a} value={a}>{a === 'auto' ? 'Auto' : a}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
