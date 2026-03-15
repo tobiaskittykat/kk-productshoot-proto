@@ -143,12 +143,12 @@ ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, a
       sections.push(variation.framingOverride);
       sections.push('');
       sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
-Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee. Exactly 2 shoes visible.
+Environmental on-foot shot. Crop isolates feet and lower legs — exact framing adapts to the pose (standing, seated, dangling, resting). NEVER show above the knee. Exactly 2 shoes visible.
 ANTI-GENERIC: NEVER two feet parallel facing camera. NEVER symmetrical framing. NEVER a clean, centered, catalog-style shoe crop.
-GROUND AS CO-CHARACTER: The ground has its own story, its own texture. The moodboard defines what that surface looks like.
+SURFACE AS CO-CHARACTER: The surface the feet relate to — ground, ledge edge, air beneath dangling feet — has its own story, its own texture. The moodboard defines what that surface looks like.
 SKIN: Real skin — tan lines, freckles, imperfections. For sandals: bare ankles. For closed-toe: rolled-up trousers or raw-hem cuffs.
 FOOTWEAR — LIVED IN: Shoes look worn and belonging — molded to this person's feet, patina of real wear. Not box-fresh.
-ALL AESTHETIC CHOICES — ground surface, environmental context, lighting quality, color palette — come from the moodboard.`);
+ALL AESTHETIC CHOICES — surfaces, environmental context, lighting quality, color palette — come from the moodboard.`);
     } else if (config.lifestyleShotType === 'model-no-head' && allAuto) {
       const variation = pickRandomBodyStyleVariation();
       console.log(`[LifestylePromptBuilder] Random body & style energy: ${variation.id} — ${variation.name}`);

@@ -369,6 +369,34 @@ NEVER flat, even lighting. The shadow patterns must be bold and compositionally 
 The GROUND dominates 60%+ of the frame. The feet and shoes are secondary to the surface story — the visual world of the ground (defined entirely by the moodboard) becomes the canvas on which the shoes simply exist. The camera lingers on the surface, giving it space and attention. The shoes are discovered within the landscape of ground-level detail, not spotlighted above it.
 NEVER shoes dominating the frame. The surface IS the subject; the shoes are visitors within it.`,
   },
+  {
+    id: 'dangling',
+    name: 'Dangling',
+    framingOverride: `ENERGY — Dangling:
+Feet hanging off a LEDGE — a wall, dock, tailgate, table edge, rooftop parapet, bridge railing. Gravity pulls the sandals slightly — straps shift under the shoe's own weight, the sole becomes visible from below. The EDGE they dangle from is the compositional anchor, cutting horizontally across the frame. Below the feet: air, water, ground far below, nothing. The dangle reveals the shoe's relationship to gravity differently than standing ever could. One foot might swing slightly, the other still. The moodboard defines WHAT they're dangling from.
+NEVER feet on solid ground. NEVER standing. The feet must be suspended, gravity-affected.`,
+  },
+  {
+    id: 'feet-up',
+    name: 'Feet Up',
+    framingOverride: `ENERGY — Feet Up:
+Feet PROPPED on something — a railing, a low wall, a dashboard, a chair opposite, a table edge. Casual territorial claiming. The soles become partially visible. The shoe is seen from an ANGLE that standing never provides — from below, from the side, foreshortened. The prop surface comes from the moodboard's world. The energy is leisure, ownership, ease. The person has claimed this space and is using it on their terms.
+NEVER feet on the ground. The feet must be elevated, resting ON something.`,
+  },
+  {
+    id: 'crossed-seated',
+    name: 'Crossed & Seated',
+    framingOverride: `ENERGY — Crossed & Seated:
+Close crop of CROSSED LEGS or ANKLES while seated. One ankle resting on the opposite knee, or ankles crossed and extended, or legs folded with feet tucked beside. The seated position changes shoe geometry — straps pull differently, the foot's arch becomes visible, buckles catch light from unusual angles. The seat surface (bench, step, curb, ground) frames the bottom of the image. The pose is relaxed, habitual — how this person always sits.
+NEVER standing. The crossing or folding of legs must create distinctive shoe angles.`,
+  },
+  {
+    id: 'tucked-grounded',
+    name: 'Tucked & Grounded',
+    framingOverride: `ENERGY — Tucked & Grounded:
+Sitting on the GROUND, feet tucked under or pulled close to the body. Cross-legged with shoes peeking out, knees up with feet flat and close, or one leg extended while the other tucks. The shoes are seen from ABOVE or at GROUND LEVEL in intimate proximity. The ground surface and the body create a contained, domestic composition. The shoes feel personal, close, lived-with. The camera is LOW — nearly at ground level — creating an intimate, private perspective. The moodboard defines the ground surface.
+NEVER standing or elevated. The body and feet must be DOWN on the ground, creating intimacy.`,
+  },
 ];
 
 // ===== BODY & STYLE ENERGY VARIATIONS =====
