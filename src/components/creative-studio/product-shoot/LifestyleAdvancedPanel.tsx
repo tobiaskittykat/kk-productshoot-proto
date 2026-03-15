@@ -8,6 +8,7 @@ import {
   cameraLensOptions,
   cameraTypeOptions,
   filmStockOptions,
+  depthOfFieldOptions,
 } from "./lifestyleShootConfigs";
 
 interface LifestyleAdvancedPanelProps {
@@ -21,6 +22,15 @@ export const LifestyleAdvancedPanel = ({ settings, onChange }: LifestyleAdvanced
   };
 
   const isDefault = JSON.stringify(settings) === JSON.stringify(initialLifestyleAdvancedSettings);
+
+  const dropdowns: { key: keyof LifestyleAdvancedSettings; label: string; options: typeof cameraAngleOptions }[] = [
+    { key: 'cameraAngle', label: 'Camera Angle', options: cameraAngleOptions },
+    { key: 'lighting', label: 'Lighting', options: lightingOptions },
+    { key: 'cameraLens', label: 'Camera Lens', options: cameraLensOptions },
+    { key: 'cameraType', label: 'Camera Type', options: cameraTypeOptions },
+    { key: 'filmStock', label: 'Film Stock', options: filmStockOptions },
+    { key: 'depthOfField', label: 'Depth of Field', options: depthOfFieldOptions },
+  ];
 
   return (
     <div className="space-y-4">
@@ -40,80 +50,21 @@ export const LifestyleAdvancedPanel = ({ settings, onChange }: LifestyleAdvanced
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {/* Camera Angle */}
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Camera Angle</label>
-          <Select value={settings.cameraAngle} onValueChange={(v) => update('cameraAngle', v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cameraAngleOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Lighting */}
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Lighting</label>
-          <Select value={settings.lighting} onValueChange={(v) => update('lighting', v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {lightingOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Camera Lens */}
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Camera Lens</label>
-          <Select value={settings.cameraLens} onValueChange={(v) => update('cameraLens', v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cameraLensOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Camera Type */}
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Camera Type</label>
-          <Select value={settings.cameraType} onValueChange={(v) => update('cameraType', v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cameraTypeOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Film Stock */}
-        <div className="space-y-1.5 col-span-2">
-          <label className="text-xs text-muted-foreground">Film Stock</label>
-          <Select value={settings.filmStock} onValueChange={(v) => update('filmStock', v)}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {filmStockOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {dropdowns.map(({ key, label, options }) => (
+          <div key={key} className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">{label}</label>
+            <Select value={settings[key]} onValueChange={(v) => update(key, v)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
       </div>
     </div>
   );
