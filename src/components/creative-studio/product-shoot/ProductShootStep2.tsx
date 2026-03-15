@@ -668,7 +668,7 @@ export const ProductShootStep2 = ({
                     </SelectTrigger>
                     <SelectContent>
                       {aspectRatios.map(ar => (
-                        <SelectItem key={ar} value={ar}>{ar}</SelectItem>
+                        <SelectItem key={ar} value={ar}>{ar === 'auto' ? 'Auto' : ar}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
