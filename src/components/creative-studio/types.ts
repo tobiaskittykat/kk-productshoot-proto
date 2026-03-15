@@ -387,8 +387,8 @@ export const outputFormats = [
   { value: 'ecommerce', label: 'E-commerce', aspectRatio: '1:1', description: 'Product listings' },
 ];
 
-// Gemini-native aspect ratios only
-export const aspectRatios = ['1:1', '16:9', '9:16', '4:3', '3:4'];
+// Gemini-native aspect ratios only (auto = let AI choose)
+export const aspectRatios = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4'];
 
 // Gemini-native resolutions only (1K, 2K, 4K)
 export const resolutions = [

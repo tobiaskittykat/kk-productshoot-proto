@@ -1687,8 +1687,15 @@ async function runBackgroundGeneration(params: {
         };
         const imageSize = imageSizeMap[body.resolution || '1024'] || '1K';
         const aspectRatio = body.aspectRatio || '1:1';
+        const isAutoAspect = aspectRatio === 'auto';
 
         console.log(`[BG] Image ${index + 1} config: size=${imageSize}, aspectRatio=${aspectRatio}`);
+
+        // Build image_config — omit aspect_ratio when 'auto' so the model decides
+        const imageConfig: Record<string, string> = { image_size: imageSize };
+        if (!isAutoAspect) {
+          imageConfig.aspect_ratio = aspectRatio;
+        }
 
         // Call AI Gateway for image generation
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1701,7 +1708,7 @@ async function runBackgroundGeneration(params: {
             model: selectedModel,
             messages: [{ role: "user", content: messageContent }],
             modalities: ["image", "text"],
-            image_config: { image_size: imageSize, aspect_ratio: aspectRatio },
+            image_config: imageConfig,
           }),
         });
 
