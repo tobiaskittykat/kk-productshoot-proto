@@ -146,13 +146,14 @@ Make component colors truly single-field across the full pipeline so the payload
 - `src/components/creative-studio/CreativeStudioWizard.tsx` — routing
 - `src/hooks/useImageGeneration.ts` — lifestyle-shoot generation path
 
-## Fix: Moodboard Leaking into Scene Remix & Shoe Swap
+## Fix: Sequential Generation Overrides Lifestyle Shoot Prompt
 
 ## STATUS: ✅ IMPLEMENTED (2026-03-15)
 
 ### What was done
 
 **`src/hooks/useImageGeneration.ts`:**
-- Scene Remix body: explicitly nulls out moodboardId/Url/Name/Description/Analysis after spreading buildRequestBody, so remix generations never carry the current UI moodboard
-- Shoe Swap body: same treatment — nulls out all moodboard fields
-- Poll result mapping (onRowReady + final map): now reads `row.moodboard_id` from the DB row instead of stamping `state.moodboard`, so images only show a moodboard reference if one was actually used during generation
+- Sequential generation branch (~line 709) now checks if `shootMode === 'lifestyle-shoot'`
+- If lifestyle: calls `buildLifestyleShootPrompt()` with the resolved moodboard analysis/name and product identity — each call produces a naturally varied prompt via built-in compositional randomization
+- If not lifestyle: calls `buildShotTypePromptForProduct()` as before
+- Also pipes `moodboardName` from lifestyle branch into outer scope so it's available in the sequential loop
