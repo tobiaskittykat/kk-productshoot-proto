@@ -194,17 +194,39 @@ export const MoodboardThumbnail = ({
         
         {/* Name and description */}
         <div className={cn(
-          "absolute bottom-0 left-0 right-0 pointer-events-none",
+          "absolute bottom-0 left-0 right-0",
           isLarge ? "p-4" : "p-2.5"
         )}>
-          <h4 className={cn(
-            "font-medium text-white leading-tight",
-            isLarge ? "text-sm" : "text-xs"
-          )}>
-            {moodboard.name}
-          </h4>
-          {isLarge && moodboard.description && (
-            <p className="text-xs text-white/70 mt-1 line-clamp-2">
+          {isEditingName ? (
+            <input
+              ref={nameInputRef}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleRenameKeyDown}
+              onBlur={handleSaveRename}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-black/60 text-white text-xs rounded px-2 py-1 border border-white/30 focus:outline-none focus:border-accent"
+            />
+          ) : (
+            <div className="flex items-center gap-1 pointer-events-none">
+              <h4 className={cn(
+                "font-medium text-white leading-tight truncate",
+                isLarge ? "text-sm" : "text-xs"
+              )}>
+                {moodboard.name}
+              </h4>
+              {onRename && (
+                <button
+                  onClick={handleStartRename}
+                  className="pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                >
+                  <Pencil className="w-3 h-3 text-white/70 hover:text-white" />
+                </button>
+              )}
+            </div>
+          )}
+          {!isEditingName && isLarge && moodboard.description && (
+            <p className="text-xs text-white/70 mt-1 line-clamp-2 pointer-events-none">
               {moodboard.description}
             </p>
           )}
