@@ -178,3 +178,25 @@ Make component colors truly single-field across the full pipeline so the payload
 - Jack Davison's "Personality" series for Birkenstock — transitional states, no styling/briefing, worn shoes
 - "Come Back To You" 2025 campaign — environment as co-author, physical ease as philosophy
 - Energy-based variations avoid prescriptive poses that would produce repetitive output
+
+## Editorial Edge: On Foot & Body & Style — Moodboard-First Rewrite
+
+## STATUS: ✅ IMPLEMENTED (2026-03-15)
+
+### What was done
+
+**`src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts`:**
+- Rewrote "On Foot" (`feet-focus`) base directive: replaced 3 named stances with energy language ("mid-shift, mid-scratch, mid-step-back"), added anti-generic rules, pushed ground-as-co-character without naming specific textures (moodboard defines surfaces), added lived-in shoe mandate
+- Rewrote "Body & Style" (`model-no-head`) base directive: replaced "footwear anchor" with "incidental anchor" (eye goes to hands/texture first), added "fragment" energy (crop feels accidental/editorial), hands as second protagonist, clothing-has-history mandate, anti-generic rules
+- Added 6 on-foot energy variations: Paused Mid-Errand, Grounded & Still, One In One Out, Feet Talking, Shadow & Ground, Surface Dialogue
+- Added 6 body & style energy variations: Hands at Work, Mid-Gesture, Leaning Fragment, Pockets & Fidgets, Seated Crop, Walking Fragment
+- Added `pickRandomOnFootVariation()` and `pickRandomBodyStyleVariation()` exports
+
+**`src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts`:**
+- Added `feet-focus` + all-Auto branch: randomly selects on-foot energy variation + appends base rules (anti-generic, ground-as-co-character, lived-in footwear)
+- Added `model-no-head` + all-Auto branch: randomly selects body & style energy variation + appends base rules (fragment crop, hands visible, clothing history, incidental footwear)
+- All 4 shot types now have energy-based variation randomization when advanced settings are Auto
+
+### Design principle
+- All variations describe ENERGY and RELATIONSHIP — never specific surfaces, textures, activities, or aesthetics
+- The moodboard is the sole authority for visual specifics; shot type defines only compositional structure and mood
