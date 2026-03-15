@@ -713,7 +713,7 @@ export function useImageGeneration() {
               ? buildLifestyleShootPrompt({
                   config: state.productShoot!.lifestyleShootConfig!,
                   moodboardAnalysis: moodboardAnalysis as any,
-                  moodboardName: lsMoodboardName,
+                  moodboardName,
                   productIdentity,
                   creativeBrief: state.productShoot!.lifestyleShootConfig!.creativeBrief,
                 })
