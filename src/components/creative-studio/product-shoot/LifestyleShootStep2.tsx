@@ -30,6 +30,7 @@ import {
   GroupCompanion,
   companionModelOptions,
   ethnicityOptions,
+  regionOptions,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
 import { MoodboardModal } from "../MoodboardModal";
