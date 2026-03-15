@@ -12,6 +12,14 @@ import {
 } from '@/components/creative-studio/types';
 import { visualShotTypes } from '@/components/creative-studio/product-shoot/ShotTypeVisualSelector';
 import { buildOnFootPrompt, buildLifestylePrompt, buildProductFocusPrompt, initialOnFootConfig, initialLifestyleConfig, initialProductFocusConfig, BackgroundContext } from '@/components/creative-studio/product-shoot/shotTypeConfigs';
+import { buildLifestyleShootPrompt } from '@/components/creative-studio/product-shoot/lifestyleShootPromptBuilder';
+import { updateSkuLastUsed } from '@/components/creative-studio/product-shoot/ProductSKUPicker';
+import { parseSkuDisplayInfo, type SKUDisplayInfo } from '@/lib/skuDisplayUtils';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuditLog } from '@/hooks/useAuditLog';
+import { triggerIntegrityAnalysis } from '@/hooks/useIntegrityResults';
+import { pollForPendingImages, invokeAndPollGeneration } from '@/lib/imagePolling';
 import { updateSkuLastUsed } from '@/components/creative-studio/product-shoot/ProductSKUPicker';
 import { parseSkuDisplayInfo, type SKUDisplayInfo } from '@/lib/skuDisplayUtils';
 import { useToast } from '@/hooks/use-toast';
