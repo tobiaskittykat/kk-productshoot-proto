@@ -125,7 +125,9 @@ When the moodboard and shot type could suggest different aesthetics, the MOODBOA
   // For Styled Still Life with all-auto settings, inject a random compositional variation
   const shotType = lifestyleShootTypes.find(s => s.id === config.lifestyleShotType);
   if (shotType) {
-    if (config.lifestyleShotType === 'product-only' && areAllSettingsAuto(config.advancedSettings)) {
+    const allAuto = areAllSettingsAuto(config.advancedSettings);
+    
+    if (config.lifestyleShotType === 'product-only' && allAuto) {
       const variation = pickRandomStillLifeVariation();
       console.log(`[LifestylePromptBuilder] Random still life variation: ${variation.id} — ${variation.name}`);
       sections.push(variation.framingOverride);
@@ -135,12 +137,35 @@ NO model, NO hands, NO feet visible. Show a COMPLETE PAIR of shoes (2 shoes).
 SURFACE: The shoes sit on a contextual surface from the moodboard's world with visible texture.
 LIGHT: Natural environmental light with real shadows. Quality must match the moodboard.
 ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, atmosphere — must be derived from the moodboard.`);
-    } else if (config.lifestyleShotType === 'full-model' && areAllSettingsAuto(config.advancedSettings)) {
+    } else if (config.lifestyleShotType === 'feet-focus' && allAuto) {
+      const variation = pickRandomOnFootVariation();
+      console.log(`[LifestylePromptBuilder] Random on-foot energy: ${variation.id} — ${variation.name}`);
+      sections.push(variation.framingOverride);
+      sections.push('');
+      sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
+Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee. Exactly 2 shoes visible.
+ANTI-GENERIC: NEVER two feet parallel facing camera. NEVER symmetrical framing. NEVER a clean, centered, catalog-style shoe crop.
+GROUND AS CO-CHARACTER: The ground has its own story, its own texture. The moodboard defines what that surface looks like.
+SKIN: Real skin — tan lines, freckles, imperfections. For sandals: bare ankles. For closed-toe: rolled-up trousers or raw-hem cuffs.
+FOOTWEAR — LIVED IN: Shoes look worn and belonging — molded to this person's feet, patina of real wear. Not box-fresh.
+ALL AESTHETIC CHOICES — ground surface, environmental context, lighting quality, color palette — come from the moodboard.`);
+    } else if (config.lifestyleShotType === 'model-no-head' && allAuto) {
+      const variation = pickRandomBodyStyleVariation();
+      console.log(`[LifestylePromptBuilder] Random body & style energy: ${variation.id} — ${variation.name}`);
+      sections.push(variation.framingOverride);
+      sections.push('');
+      sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
+Full body shot with head CROPPED OUT — frame cuts above the chin. Face NEVER visible. The crop feels like a deliberate fragment.
+ANTI-GENERIC: NEVER a clean symmetrical outfit shot. NEVER hands hidden. NEVER standing straight and centered.
+HANDS AS SECOND PROTAGONIST: Hands reveal habit and personality through unconscious gestures. NEVER hidden.
+CLOTHING HAS HISTORY: Lived-in, stretched, rolled, softened. Never catalog-fresh, never coordinated.
+FOOTWEAR — INCIDENTAL ANCHOR: Shoes visible but NOT the hero. Eye goes to hands, texture, posture first.
+ALL AESTHETIC CHOICES — outfit styling, environment, color palette, lighting — come from the moodboard.`);
+    } else if (config.lifestyleShotType === 'full-model' && allAuto) {
       const variation = pickRandomPortraitVariation();
       console.log(`[LifestylePromptBuilder] Random portrait energy: ${variation.id} — ${variation.name}`);
       sections.push(variation.framingOverride);
       sections.push('');
-      // Append the base directive's non-compositional rules (casting, styling, footwear)
       sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
 Full body editorial portrait. The model's full body INCLUDING face is visible. Documentary portrait — caught, not directed.
 ENVIRONMENTAL DOMINANCE: The model occupies only 30-50% of the frame. The place dominates.

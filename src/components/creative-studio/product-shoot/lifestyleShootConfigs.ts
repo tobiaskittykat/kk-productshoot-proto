@@ -322,6 +322,120 @@ export function pickRandomPortraitVariation(): PortraitEnergyVariation {
   return portraitInPlaceVariations[idx];
 }
 
+// ===== ON FOOT ENERGY VARIATIONS =====
+// Randomly selected when advanced settings are all on "Auto" to inject editorial variety
+// These describe ENERGY and RELATIONSHIP TO GROUND — never name specific surfaces or textures
+
+export const onFootVariations: PortraitEnergyVariation[] = [
+  {
+    id: 'paused-mid-errand',
+    name: 'Paused Mid-Errand',
+    framingOverride: `ENERGY — Paused Mid-Errand:
+One foot bearing weight, the other lifted slightly or dragging. The person STOPPED for a moment — to check something, glance at something, wait for someone. This is a TRANSITIONAL stance: not settled, not walking, caught between. The weight distribution tells the story of interruption. The ground beneath shows the context of where the errand happens.
+NEVER both feet flat and settled. The body's weight is still deciding where to go.`,
+  },
+  {
+    id: 'grounded-still',
+    name: 'Grounded & Still',
+    framingOverride: `ENERGY — Grounded & Still:
+Weight fully surrendered into BOTH feet. This person has been standing here for a while — watching something, waiting, lost in thought. The feet have SETTLED into the surface beneath them. There's heaviness in the stance, rootedness. The shoes show the compression and wear of sustained standing. The ground and feet have developed a relationship — the stance has shaped itself to the surface.
+NEVER transitional or mid-step. This is stillness with duration.`,
+  },
+  {
+    id: 'one-in-one-out',
+    name: 'One In, One Out',
+    framingOverride: `ENERGY — One In, One Out:
+ASYMMETRIC CROP: one foot sharp and fully in frame, the other PARTIALLY CUT OFF at the edge. The person is entering or leaving the frame — the camera caught a FRAGMENT of their movement. The composition is deliberately unbalanced. The visible foot is grounded and detailed; the exiting foot is in motion or cropped. This framing breaks the "two shoes centered" convention.
+NEVER both feet fully in frame. The crop must feel like the person is passing THROUGH the photograph.`,
+  },
+  {
+    id: 'feet-talking',
+    name: 'Feet Talking',
+    framingOverride: `ENERGY — Feet Talking:
+One foot doing something to the OTHER — scratching an ankle, nudging, resting on top, toe poking at the other shoe's strap. The unconscious choreography of IDLE FEET. People's feet have conversations when the person isn't paying attention — restless micro-movements, self-soothing gestures, playful fidgets. The stance reveals personality through these small involuntary movements.
+NEVER both feet planted flat and still. The feet must be interacting with each other.`,
+  },
+  {
+    id: 'shadow-ground',
+    name: 'Shadow & Ground',
+    framingOverride: `ENERGY — Shadow & Ground:
+The SHADOW is as important as the feet. Strong directional light casts shadow patterns across the ground and shoes — the shadow of the person, or surrounding architecture, or foliage creates GRAPHIC COMPOSITION across the surface. The interplay of light and dark is the co-star. The shadow shapes become abstract design elements. Light direction defines the entire mood.
+NEVER flat, even lighting. The shadow patterns must be bold and compositionally significant.`,
+  },
+  {
+    id: 'surface-dialogue',
+    name: 'Surface Dialogue',
+    framingOverride: `ENERGY — Surface Dialogue:
+The GROUND dominates 60%+ of the frame. The feet and shoes are secondary to the surface story — the visual world of the ground (defined entirely by the moodboard) becomes the canvas on which the shoes simply exist. The camera lingers on the surface, giving it space and attention. The shoes are discovered within the landscape of ground-level detail, not spotlighted above it.
+NEVER shoes dominating the frame. The surface IS the subject; the shoes are visitors within it.`,
+  },
+];
+
+// ===== BODY & STYLE ENERGY VARIATIONS =====
+// Randomly selected when advanced settings are all on "Auto" to inject editorial variety
+// These describe ENERGY and BODY FRAGMENT MOOD — never name specific outfits or activities
+
+export const bodyStyleVariations: PortraitEnergyVariation[] = [
+  {
+    id: 'hands-at-work',
+    name: 'Hands at Work',
+    framingOverride: `ENERGY — Hands at Work:
+The hands are doing something SPECIFIC and absorbing — a real activity that demands attention. The body arranges itself around the task: shoulders hunched or turned, arms active, fingers engaged. The activity is drawn from the moodboard's world. The entire body composition is DICTATED by what the hands are doing. Shoes are incidental ground-level context — visible but discovered, not featured.
+NEVER idle hands. NEVER hands posed for camera. The task must feel genuine and absorbing.`,
+  },
+  {
+    id: 'mid-gesture',
+    name: 'Mid-Gesture',
+    framingOverride: `ENERGY — Mid-Gesture:
+Caught MID-MOVEMENT: reaching up, pulling something, adjusting, turning, mid-laugh with hands rising. The body is IN MOTION and the crop freezes a fragment of it. Nothing is posed — the frame captures a split-second of genuine physical expression. Clothing moves with the body. The gesture is SPECIFIC and contextual to the world the moodboard defines.
+NEVER static or settled. The body must be between positions, caught in transit.`,
+  },
+  {
+    id: 'leaning-fragment',
+    name: 'Leaning Fragment',
+    framingOverride: `ENERGY — Leaning Fragment:
+The model LEANS against something — a wall, a railing, a counter, a vehicle — and the crop captures the body at an ANGLE. The lean creates DIAGONAL ENERGY across the frame. One hip pushed out, arms crossed or braced. Weight is decisively OFF-CENTER, given to the surface behind. The lean feels habitual, not posed — this is how this person always waits, always rests. The surface they lean against comes from the moodboard's world.
+NEVER upright or free-standing. The body must be using something else for support.`,
+  },
+  {
+    id: 'pockets-fidgets',
+    name: 'Pockets & Fidgets',
+    framingOverride: `ENERGY — Pockets & Fidgets:
+Hands in pockets, thumbs hooked in belt loops, fingers worrying a seam, playing with a ring, tugging a sleeve. The SMALL UNCONSCIOUS MOVEMENTS that reveal personality. The outfit reads as armor or comfort — how this person USES clothing, not just wears it. The fidgets are specific and feel involuntary. The body stance is casual, weight shifted, one shoulder dropped. These micro-gestures tell more about the person than any pose could.
+NEVER hands still or deliberately placed. The fidgeting must feel unconscious and habitual.`,
+  },
+  {
+    id: 'seated-crop',
+    name: 'Seated Crop',
+    framingOverride: `ENERGY — Seated Crop:
+Chin-down crop of a SEATED figure. Crossed legs, hands on knees, shoes flat or dangling. The seated position creates interesting CLOTHING GEOMETRY: fabric bunches, pulls, drapes differently than when standing. The crop reveals how someone SITS when they're not performing — the unselfconscious arrangement of limbs and fabric. The seat itself comes from the moodboard's environment.
+NEVER standing. The seated posture must create distinctive fabric and body shapes.`,
+  },
+  {
+    id: 'walking-fragment',
+    name: 'Walking Fragment',
+    framingOverride: `ENERGY — Walking Fragment:
+MID-STRIDE, body in motion, clothing catching air. One arm swinging, fabric responding to movement. The crop is slightly OFF-CENTER or tilted — the photographer is trying to keep up. There's forward momentum in every element: the stride, the fabric flutter, the slight blur at the edges. This is DYNAMIC, not posed — the camera is chasing a moment. The environment blurs or streams in the direction of motion.
+NEVER static or planted. The body must be moving THROUGH the frame with visible momentum.`,
+  },
+];
+
+/**
+ * Randomly select an on-foot energy variation from the pool.
+ */
+export function pickRandomOnFootVariation(): PortraitEnergyVariation {
+  const idx = Math.floor(Math.random() * onFootVariations.length);
+  return onFootVariations[idx];
+}
+
+/**
+ * Randomly select a body & style energy variation from the pool.
+ */
+export function pickRandomBodyStyleVariation(): PortraitEnergyVariation {
+  const idx = Math.floor(Math.random() * bodyStyleVariations.length);
+  return bodyStyleVariations[idx];
+}
+
 // Get the prompt fragment for a given advanced setting
 export function getAdvancedPromptFragments(settings: LifestyleAdvancedSettings): string[] {
   const fragments: string[] = [];
