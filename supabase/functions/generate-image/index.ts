@@ -716,7 +716,14 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
     // === PRODUCT COMPONENTS (merged with overrides) ===
     if (request.originalComponents) {
       const orig = request.originalComponents;
-      const componentTypes = ['upper', 'footbed', 'sole', 'buckles', 'heelstrap', 'lining'];
+      // Skip footbed for lifestyle worn-shoe shots (foot covers it). Lining stays (edges visible).
+      const lifestyleShotType = request.lifestyleShotType;
+      const isLifestyleWornOnFoot = lifestyleShotType === 'feet-focus'
+        || lifestyleShotType === 'model-no-head'
+        || lifestyleShotType === 'full-model';
+      const componentTypes = isLifestyleWornOnFoot
+        ? ['upper', 'sole', 'buckles', 'heelstrap', 'lining']
+        : ['upper', 'footbed', 'sole', 'buckles', 'heelstrap', 'lining'];
       const componentLines: string[] = [];
 
       for (const type of componentTypes) {
@@ -754,6 +761,7 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
         // 2. Partially visible: hero, pair, sole-view — mention branding but instruct NOT to distort
         // 3. Fully visible: top-down — include full branding details
         const isHiddenAngle = visualShotType === 'on-foot' || visualShotType === 'lifestyle'
+            || isLifestyleWornOnFoot
             || (visualShotType === 'product-focus' && (productFocusAngle === 'side-profile' || productFocusAngle === 'detail-closeup'));
         const isFullyVisibleAngle = visualShotType === 'product-focus' && productFocusAngle === 'top-down';
         const isPartiallyVisibleAngle = !isHiddenAngle && !isFullyVisibleAngle && visualShotType === 'product-focus';

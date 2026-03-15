@@ -513,6 +513,11 @@ export function useImageGeneration() {
             : undefined,
         } : undefined,
         
+        // Lifestyle shot type (for footbed filtering — only set in lifestyle-shoot mode)
+        lifestyleShotType: state.productShoot?.shootMode === 'lifestyle-shoot'
+          ? state.productShoot.lifestyleShootConfig?.lifestyleShotType
+          : undefined,
+        
         // Component overrides for shoe customization (e.g., blue suede upper)
         componentOverrides: state.productShoot?.componentOverrides || undefined,
         
