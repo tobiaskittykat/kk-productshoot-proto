@@ -201,17 +201,20 @@ Make component colors truly single-field across the full pipeline so the payload
 - All variations describe ENERGY and RELATIONSHIP — never specific surfaces, textures, activities, or aesthetics
 - The moodboard is the sole authority for visual specifics; shot type defines only compositional structure and mood
 
-## Skip Footbed from Lifestyle Worn-Shoe Prompts
+## On Foot: Beyond Standing — Seated, Dangling, Resting
 
 ## STATUS: ✅ IMPLEMENTED (2026-03-15)
 
 ### What was done
 
-**`src/hooks/useImageGeneration.ts`:**
-- Passes `lifestyleShotType` in request body only when `shootMode === 'lifestyle-shoot'`
+**`src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts`:**
+- Softened base directive: "mid-calf down" → "crop isolates feet and lower legs — exact framing adapts to the pose"; "ground as co-character" → "surface as co-character" (ground, ledge, air, dashboard)
+- Added 4 non-standing variations (6→10): Dangling, Feet Up, Crossed & Seated, Tucked & Grounded
+- All variations describe energy/relationship, never specific surfaces (moodboard defines those)
 
-**`supabase/functions/generate-image/index.ts`:**
-- `isLifestyleWornOnFoot` check for `feet-focus`, `model-no-head`, `full-model`
-- Excludes `'footbed'` from `componentTypes` when worn on foot; lining stays (edges visible)
-- Extended `isHiddenAngle` branding check to include lifestyle worn-shoe shots
-- Product Shoot workflow unaffected (`lifestyleShotType` is `undefined`)
+**`src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts`:**
+- Updated ADDITIONAL RULES block: crop adapts to pose (standing, seated, dangling, resting); "surface as co-character" replaces "ground as co-character"
+
+### Files changed
+- `src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts` — base directive + 4 new variations
+- `src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts` — updated rules
