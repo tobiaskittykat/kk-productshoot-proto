@@ -1,180 +1,67 @@
-Objective
-Make component colors truly single-field across the full pipeline so the payload, backend logic, saved metadata, and prompt assembly all use one canonical field (e.g. `upper.color = "Medium Sea Green (#1DAF64)"`) and never rely on `colorHex`.
 
-## STATUS: ✅ IMPLEMENTED (2026-03-02)
 
-### What was done
+# Editorial Edge for "On Foot" and "Body & Style" — Moodboard-First Revision
 
-**Frontend (single-field serialization):**
-- `ComponentOverride` type in `birkenstockMaterials.ts` — removed `colorHex` field
-- `ComponentOverridePopover` — on Apply, serializes color as `"Name (#HEX)"` for picker colors, plain name for presets. On open, parses hex from existing canonical color string.
-- `ShoeComponentsPanel` — derives swatch hex via `parseHexFromColor()` instead of `.colorHex`
-- `useQuickCustomization` — AI override responses baked into canonical format before applying
-- `useShoeComponents` — removed `colorHex` from sync logic (buckles, heelstrap auto-sync)
-- `SetupProductStep2` — removed `colorHex` from merged component creation
-- Added `parseHexFromColor()` and `stripHexFromColor()` utility exports
+## Your feedback applied
 
-**Backend (already had bake logic):**
-- `generate-image/index.ts` — `bakeHexIntoColors()` serves as legacy fallback, folding any stray `colorHex` into `.color` at ingress
-- Build fingerprint: `hex-inline-v1-2026-03-02`
+You're right: lines like "Cracks, stains, moss, wear patterns" are prescriptive aesthetics that will override the moodboard every time. The fix: describe the **relationship** (the ground matters, it has texture, it's a co-character) but **never name specific textures**. All visual specifics come from the moodboard. This principle is applied throughout.
 
-### Verification criteria
-- Network payload: `upper.color = "Medium Sea Green (#1DAF64)"`, no `upper.colorHex`
-- DB settings: `componentOverrides.upper.color` is canonical, no `colorHex`
-- Prompt: `UPPER: Natural Leather (grained) in Medium Sea Green (#1DAF64)`
-- Backend logs: `[BUILD] hex-inline-v1-2026-03-02` + `[COLOR-BAKED]` traces
+## Changes
 
-## Upgrade "Remix Existing" with Variation Tiers (Reference Roulette)
+### 1. Rewrite "On Foot" base directive (lines 37-44)
 
-## STATUS: ✅ IMPLEMENTED (2026-03-13) — v3: Corrected Tier Definitions + Source Image Framing
+Current problems:
+- Names 3 specific stances ("feet slightly apart, one foot casually forward, ankles loosely crossed") that cycle repetitively
+- "Ground surface is a character" is good but needs more energy
 
-### What was done (v3 — tier rewrite)
+Rewrite keeps: mid-calf crop, 2 shoes, 40-50% frame, worn-shoe mandate, moodboard-defers-all-aesthetics.
+Rewrite changes:
+- Replace named stances with energy: "The stance is caught mid-life — mid-shift, mid-scratch, mid-step-back. The feet are doing what feet do when no one's watching."
+- Push ground relationship without naming materials: "The ground isn't a backdrop — it has its own story, its own texture, its own wear. The moodboard defines what that surface looks like."
+- Add anti-generic: "NEVER two feet parallel facing camera. NEVER symmetrical framing."
 
-**Edge Function (`reference-roulette-prompts`) — tier definitions rewritten:**
-- **Close Recreation (faithful)**: Next frame on the roll — identical everything, micro-variation only (slight weight shift, centimeter of camera movement)
-- **Different Moment (moderate)**: Same set, same session, same wardrobe — but a clearly different pose (turned body, shifted weight, new hand placement)
-- **Same Set, Fresh Take (creative)**: Same physical set and lighting rig — but completely new composition, possibly new model, camera repositioned to show different part of the set
-- All prompts now emphasize preserving "visual DNA" (grain, color grade, film stock, lens characteristics) as NON-NEGOTIABLE
-- Updated labels: `Close Recreation` / `Different Moment` / `Same Set, Fresh Take`
-- Updated descriptions to match new definitions
+### 2. Add 6 On Foot energy variations
 
-**Fixed source image framing in `generate-image`:**
-- Roulette path now includes explicit framing instruction: "This is the reference image from the photo session. Your edit MUST preserve its exact visual DNA..."
-- Previously attached image with no context — model didn't know how to use it
+Same pattern as Portrait in Place — energy/relationship descriptions, zero hardcoded aesthetics:
 
-**Frontend (`RoulettePromptCards`):**
-- Updated tier icons: 🎞️ / 🔄 / 🎬
-- Labels now driven by `tierColors` map with correct names
+- **"Paused Mid-Errand"** — One foot bearing weight, the other lifted or dragging. Transitional stance — the person stopped for a moment. Not settled.
+- **"Grounded & Still"** — Weight surrendered into both feet. Standing in one place for a while. Feet have settled into the surface beneath them.
+- **"One In, One Out"** — Asymmetric crop: one foot sharp and fully in frame, the other partially cut off at the edge. The person is entering or leaving the frame.
+- **"Feet Talking"** — One foot doing something to the other — scratching an ankle, nudging, one on top of the other. The unconscious choreography of idle feet.
+- **"Shadow & Ground"** — The shadow is as important as the feet. Shadow patterns create graphic composition across the ground and shoes. Light direction is the co-star.
+- **"Surface Dialogue"** — The ground dominates 60%+ of the frame. Feet are secondary to the surface story. The shoes exist within a landscape of ground-level detail defined entirely by the moodboard.
 
-### Files changed
-- `supabase/functions/reference-roulette-prompts/index.ts` — all 3 tier prompts rewritten + labels/descriptions updated
-- `supabase/functions/generate-image/index.ts` — added framing instruction before source image in roulette path
-- `src/components/creative-studio/product-shoot/RoulettePromptCards.tsx` — updated tier labels and icons
+### 3. Rewrite "Body & Style" base directive (lines 51-58)
 
-## Direct-to-Storage Crawler API
+Current problems:
+- "FOOTWEAR ANCHOR — clearly visible, sharp, grounding" sounds like catalog/Nordstrom
+- Names 3 hand activities that cycle
+- Missing the "accidental fragment" energy
 
-## STATUS: ✅ IMPLEMENTED (2026-03-14)
+Rewrite keeps: chin-down crop, 50-70% model, moodboard-defers-all-aesthetics.
+Rewrite changes:
+- Replace "footwear anchor" with incidental: "Shoes visible at the bottom of the frame but NOT the compositional anchor. The eye is drawn to hands, texture, posture first."
+- Push fragment energy: "This frame feels like a CROP from a larger moment — the photographer aimed higher but the subject shifted."
+- Replace named hand activities with energy: "Hands reveal habit and personality — the unconscious gestures people make when they're absorbed in something."
+- Add anti-generic: "NEVER a clean symmetrical outfit shot. NEVER hands hidden."
+- Styling: "Clothing has HISTORY — stretched, rolled, worn into shape. Never catalog-fresh."
 
-### What was done
+### 4. Add 6 Body & Style energy variations
 
-**Edge Function (`register-imported-products`):**
-- Reads `manifest.json` from `product-images` storage bucket
-- Idempotent upserts into `product_skus` and `scraped_products`
-- Auto-sets hero image as SKU composite thumbnail
-- Auth via `apiKey` field (user JWT validated server-side)
+- **"Hands at Work"** — Hands doing something specific and absorbing. The activity is real and the body arranges itself around the task. Shoes are incidental ground-level context.
+- **"Mid-Gesture"** — Caught mid-movement: reaching, pulling, adjusting. The body is in motion and the crop freezes a fragment of it.
+- **"Leaning Fragment"** — The model leans against something and the crop captures the body at an angle. The lean creates diagonal energy. Weight is off-center.
+- **"Pockets & Fidgets"** — Hands in pockets, thumbs hooked, fingers worrying a seam. The small unconscious movements that reveal personality.
+- **"Seated Crop"** — Chin-down crop of a seated figure. The seated position creates interesting clothing geometry: fabric bunches, pulls, drapes differently.
+- **"Walking Fragment"** — Mid-stride, body in motion, clothing catching air. The crop is slightly off-center — the photographer is trying to keep up.
 
-**Crawler workflow:**
-1. Upload images to `product-images/imports/{batch_id}/...` using Service Role Key
-2. Upload `manifest.json` to same folder
-3. POST to `/functions/v1/register-imported-products` with `{ apiKey, batchId }`
+### 5. Wire into prompt builder (lines 128-156)
+
+Add two new branches mirroring the existing pattern:
+- `feet-focus` + all Auto → `pickRandomOnFootVariation()` + append base On Foot rules
+- `model-no-head` + all Auto → `pickRandomBodyStyleVariation()` + append base Body & Style rules
 
 ### Files changed
-- `supabase/functions/register-imported-products/index.ts` — new edge function
-- `supabase/config.toml` — added function with `verify_jwt = false`
+- `src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts` — rewrite 2 directives + add 2 variation arrays + 2 picker functions
+- `src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts` — add 2 new variation branches
 
-## Birkenstock Catalog Browser & On-Demand Import
-
-## STATUS: ✅ IMPLEMENTED (2026-03-14)
-
-### What was done
-
-**Static catalog data:**
-- `src/data/birkenstock-catalog.json` — 285 products with model, productName, color, imageUrls
-
-**CatalogBrowser component:**
-- Searchable/filterable grid of all catalog products
-- Model filter chips (Arizona, Boston, Gizeh, etc.)
-- Hero thumbnails loaded directly from Birkenstock CDN
-- Checkbox multi-select with "already imported" detection via SKU codes
-- Lifestyle images auto-filtered from import payload
-- Batch import via `bulk-import-products` edge function with progress UI
-
-**SmartUploadModal integration:**
-- New "Browse Catalog" source option (3-column layout)
-- `catalog` step renders CatalogBrowser inline
-
-### Files changed
-- `src/data/birkenstock-catalog.json` — new static catalog
-- `src/components/creative-studio/product-shoot/CatalogBrowser.tsx` — new component
-- `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — added catalog source + step
-
-## New Lifestyle Shoot Mode
-
-## STATUS: ✅ IMPLEMENTED (2026-03-15)
-
-### What was done
-
-**Types & State (`product-shoot/types.ts`):**
-- Added `'lifestyle-shoot'` to `ShootMode` union
-- Added `LifestyleShootShotType`: `'product-only' | 'feet-focus' | 'model-no-head' | 'full-model'`
-- Added `LifestyleAdvancedSettings` interface (cameraAngle, lighting, cameraLens, cameraType, filmStock)
-- Added `LifestyleShootConfig` interface with moodboard, brief, shot type, advanced settings
-- Added `lifestyleShootConfig` to `ProductShootState`
-
-**Shot Type Definitions (`lifestyleShootConfigs.ts` — new):**
-- 4 shot types with mandatory framing directives (product-only, feet-focus, model-no-head, full-model)
-- 5 advanced settings categories with Birkenstock-optimized defaults (eye-level, natural light, 85mm, digital, no film)
-- `getAdvancedPromptFragments()` helper to extract prompt text from settings
-
-**Prompt Builder (`lifestyleShootPromptBuilder.ts` — new):**
-- Merges moodboard analysis (deep narrative format + legacy flat format) with shot type framing, creative brief, advanced camera settings, and product integrity lock
-- Priority hierarchy: Brand Brain > Moodboard > Shot Type > Advanced Settings > Brief > Product Identity
-
-**UI Components:**
-- `ProductShootSubtypeSelector.tsx` — 2×2 grid with 4th "Lifestyle Shoot" card (Palette icon)
-- `LifestyleShootStep2.tsx` — Full config panel: moodboard picker, product picker with component overrides, creative brief textarea, shot type selector, advanced settings, output settings
-- `LifestyleShootTypeSelector.tsx` — 4-card visual selector with icons and descriptions
-- `LifestyleAdvancedPanel.tsx` — 5 select dropdowns with "Reset defaults" button
-
-**Generation Integration (`useImageGeneration.ts`):**
-- New code path for `shootMode === 'lifestyle-shoot'`: fetches moodboard from DB, builds lifestyle prompt via `buildLifestyleShootPrompt()`, passes moodboard URL + analysis to edge function
-
-**Wizard Integration (`CreativeStudioWizard.tsx`):**
-- Routes `lifestyle-shoot` mode to `LifestyleShootStep2` in Step 2
-- `ProductShootIndicators` shows Moodboard / Product / Shot chips for lifestyle mode
-
-### Files changed
-- `src/components/creative-studio/product-shoot/types.ts` — ShootMode + new interfaces
-- `src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts` — NEW
-- `src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts` — NEW
-- `src/components/creative-studio/product-shoot/LifestyleShootStep2.tsx` — NEW
-- `src/components/creative-studio/product-shoot/LifestyleShootTypeSelector.tsx` — NEW
-- `src/components/creative-studio/product-shoot/LifestyleAdvancedPanel.tsx` — NEW
-- `src/components/creative-studio/product-shoot/ProductShootSubtypeSelector.tsx` — 2×2 grid
-- `src/components/creative-studio/product-shoot/ProductShootIndicators.tsx` — lifestyle chips
-- `src/components/creative-studio/product-shoot/index.ts` — barrel exports
-- `src/components/creative-studio/CreativeStudioWizard.tsx` — routing
-- `src/hooks/useImageGeneration.ts` — lifestyle-shoot generation path
-
-## Fix: Sequential Generation Overrides Lifestyle Shoot Prompt
-
-## STATUS: ✅ IMPLEMENTED (2026-03-15)
-
-### What was done
-
-**`src/hooks/useImageGeneration.ts`:**
-- Sequential generation branch (~line 709) now checks if `shootMode === 'lifestyle-shoot'`
-- If lifestyle: calls `buildLifestyleShootPrompt()` with the resolved moodboard analysis/name and product identity — each call produces a naturally varied prompt via built-in compositional randomization
-- If not lifestyle: calls `buildShotTypePromptForProduct()` as before
-- Also pipes `moodboardName` from lifestyle branch into outer scope so it's available in the sequential loop
-
-## Editorial Edge: Portrait in Place — Birkenstock-Researched Rewrite
-
-## STATUS: ✅ IMPLEMENTED (2026-03-15)
-
-### What was done
-
-**`src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts`:**
-- Rewrote "Portrait in Place" base framing directive with editorial tension: "caught between moments," anti-generic rules (never standing straight, never hands at sides, never centered), physical ease/gravity language, lived-in shoe mandate
-- Added 6 energy-based `portraitInPlaceVariations`: Arrived & Settling, Deep in Place, About to Leave, Caught Unaware, Borrowed Perch, Stillness with Tension
-- Each variation describes mood/energy/relationship-to-space (not specific poses) for creative latitude
-- Added `pickRandomPortraitVariation()` export
-
-**`src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts`:**
-- Added `full-model` + all-Auto branch mirroring the existing Styled Still Life pattern
-- Randomly selects a portrait energy variation and appends base directive's non-compositional rules (casting, styling, footwear incidental)
-
-### Research basis
-- Jack Davison's "Personality" series for Birkenstock — transitional states, no styling/briefing, worn shoes
-- "Come Back To You" 2025 campaign — environment as co-author, physical ease as philosophy
-- Energy-based variations avoid prescriptive poses that would produce repetitive output
