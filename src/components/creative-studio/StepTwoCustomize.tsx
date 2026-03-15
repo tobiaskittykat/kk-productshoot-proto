@@ -1154,6 +1154,19 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                             <Check className="w-4 h-4 text-accent-foreground" />
                           </div>
                         )}
+                        {/* Delete button overlay */}
+                        {moodboard.id.startsWith('custom-') && !isSelected && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMoodboardInline(moodboard);
+                            }}
+                            className="absolute top-2 left-2 w-6 h-6 rounded-full bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive z-20"
+                          >
+                            <Trash2 className="w-3 h-3 text-white" />
+                          </button>
+                        )}
                       </button>
                     );
                   })
