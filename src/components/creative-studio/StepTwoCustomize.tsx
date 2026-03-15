@@ -93,6 +93,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentBrand } = useBrands();
+  const { log: auditLog } = useAuditLog();
   const queryClient = useQueryClient();
 
   const proxyImageUrl = (raw?: string | null) => {
