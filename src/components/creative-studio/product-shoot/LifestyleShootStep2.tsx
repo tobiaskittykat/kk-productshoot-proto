@@ -58,6 +58,8 @@ export const LifestyleShootStep2 = ({
 }: LifestyleShootStep2Props) => {
   const { user } = useAuth();
   const { currentBrand } = useBrands();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const config = state.lifestyleShootConfig || initialLifestyleShootConfig;
   
