@@ -302,8 +302,8 @@ export const ImageDetailModal = ({
                   </div>
                   
                   <div className="space-y-3">
-                    {/* Moodboard Reference */}
-                    {resolvedMoodboardUrl && (
+                    {/* Moodboard Reference - hide for remixes where moodboard wasn't actually used */}
+                    {resolvedMoodboardUrl && !sourceImageUrl && (
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground">Moodboard (Style)</p>
                         <div 

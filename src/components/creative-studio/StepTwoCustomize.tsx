@@ -74,6 +74,7 @@ interface StepTwoCustomizeProps {
 export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: StepTwoCustomizeProps) => {
   const [newKeyword, setNewKeyword] = useState('');
   const [showMoodboardModal, setShowMoodboardModal] = useState(false);
+  const [moodboardModalTab, setMoodboardModalTab] = useState("browse");
   const [showProductRefModal, setShowProductRefModal] = useState(false);
   const [showContextRefModal, setShowContextRefModal] = useState(false);
   const [savingConceptId, setSavingConceptId] = useState<string | null>(null);
