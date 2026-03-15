@@ -96,14 +96,16 @@ export interface LifestyleAdvancedSettings {
   cameraLens: string;
   cameraType: string;
   filmStock: string;
+  depthOfField: string;
 }
 
 export const initialLifestyleAdvancedSettings: LifestyleAdvancedSettings = {
-  cameraAngle: 'eye-level',
-  lighting: 'natural',
-  cameraLens: '85mm',
-  cameraType: 'digital',
-  filmStock: 'none',
+  cameraAngle: 'auto',
+  lighting: 'auto',
+  cameraLens: 'auto',
+  cameraType: 'auto',
+  filmStock: 'auto',
+  depthOfField: 'auto',
 };
 
 export interface LifestyleShootConfig {
