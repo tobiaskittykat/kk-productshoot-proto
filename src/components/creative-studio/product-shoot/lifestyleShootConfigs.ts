@@ -22,6 +22,62 @@ export const lifestyleShootTypes: LifestyleShootType[] = [
     framingDirective: `MANDATORY FRAMING: Editorial lifestyle still life. NO model, NO hands, NO feet visible.
 Show a COMPLETE PAIR of shoes (2 shoes). Arrange them casually staggered or slightly overlapping — as if someone just stepped out of them. NEVER perfectly aligned or studio-arranged.
 The shoes occupy roughly 30-40% of the frame. The surrounding environment tells the story — wider framing that establishes the world.
+SURFACE: The shoes sit on a contextual surface that belongs to the moodboard's world. The surface must have visible texture and character.
+PROPS: Include 1-2 small contextual objects nearby that suggest a lived moment. These props must be drawn from the moodboard's aesthetic — do NOT default to generic items. Props feel naturally placed, not art-directed.
+CAMERA: Three-quarter overhead (30-45° looking down) is the primary angle, showing the iconic footbed silhouette. Full overhead and low eye-level are secondary options.
+LIGHT: Natural environmental light with real shadows and depth. The specific quality of light (warm, cool, hard, soft, dappled, flat) must match the moodboard's world.
+The background environment extends into soft focus, establishing depth and atmosphere.
+ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, atmosphere — must be derived from the moodboard. Do NOT default to any specific geographic or cultural look.`,
+  },
+  {
+    id: 'feet-focus',
+    name: 'On Foot',
+    description: 'On-foot, environmental — shoes and the ground they walk on',
+    icon: '👟',
+    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee.
+Exactly 2 shoes visible (one pair, worn on feet). The framing is WIDER than typical shoe photography — generous ground/surface area visible, environmental context present. The shoes occupy roughly 40-50% of the frame.
+STANCE: Natural and unstudied — feet slightly apart, one foot casually forward, or ankles loosely crossed. Weight shifted to one side. Never stiff, symmetrical, or posed. The person is mid-moment.
+GROUND SURFACE IS A CHARACTER: The surface beneath the shoes tells its own story and must be drawn entirely from the moodboard's world. It must have visible texture and character — never a flat or generic surface.
+SKIN & STYLING: Real skin — visible tan lines, freckles, natural imperfections. For sandals: bare ankles. For closed-toe: rolled-up trousers or raw-hem cuffs. Styling details (fabric, color) must match the moodboard.
+LIGHT: Natural environmental light hits the shoes AND the ground equally. Shadow patterns are part of the composition. The quality of light must match the moodboard's mood.
+The shoes look WORN and BELONGING — they are this person's shoes, in this person's life. Not box-fresh.
+ALL AESTHETIC CHOICES — ground surface, environmental context, lighting quality, color palette — come from the moodboard. The shot type defines only the compositional crop and stance.`,
+  },
+  {
+    id: 'model-no-head',
+    name: 'Body & Style',
+    description: 'Chin-down crop — outfit, hands, posture, and shoes tell the story',
+    icon: '🧍',
+    framingDirective: `MANDATORY FRAMING: Full body shot with the head CROPPED OUT. The frame cuts off ABOVE THE CHIN — the model's face, eyes, and top of head are NEVER visible. This crop must feel INTENTIONAL and compositionally elegant, not accidental.
+Show the model from roughly chin level down to feet. The model occupies 50-70% of the frame — environment is always present and contextual.
+OUTFIT & TEXTURE: Clothing is relaxed, layered, and richly textured. Fabrics have visible weave and movement. NEVER formal, corporate, or catalog-stiff. The specific outfit style, colors, and fabrics must reflect the moodboard's aesthetic world.
+HANDS ARE STORYTELLERS: Hands must be visible and doing something natural — holding an object, resting on a surface, tucked into pockets, adjusting clothing. Hands are never hidden or awkwardly cropped. The activity must feel contextual to the moodboard's world.
+BODY LANGUAGE: The model's posture tells the story — leaning, mid-stride, sitting, standing with weight shifted. Always natural, never symmetrical or posed.
+ENVIRONMENT: Architectural or natural context frames the model. The setting must match the moodboard's world and have texture, depth, and character.
+FOOTWEAR ANCHOR: The shoes are the compositional anchor — clearly visible, sharp, and grounding the entire image. The eye travels from outfit down to footwear naturally.
+ALL AESTHETIC CHOICES — outfit styling, environment, color palette, lighting — must reflect the moodboard's world. Do NOT default to any specific cultural or geographic look.`,
+  },
+  {
+    id: 'full-model',
+    name: 'Portrait in Place',
+    description: 'Full editorial portrait — a person in their world, footwear at their feet',
+    icon: '🧑‍🎨',
+    framingDirective: `MANDATORY FRAMING: Full body editorial portrait. The model's full body INCLUDING face is visible. This is a DOCUMENTARY PORTRAIT, not a fashion advertisement.
+ENVIRONMENTAL DOMINANCE: The model occupies only 30-50% of the frame. The place, the mood, the light — these dominate. Wider framing that establishes a complete world.
+EXPRESSION & PRESENCE: The model's expression is contemplative, genuine, mid-moment — caught in thought, mid-conversation, simply being still. NEVER performative, never "modeling." The person is unaware of or unbothered by the camera.
+AUTHENTIC ACTIVITIES: The model is engaged in a real, quiet activity that feels caught rather than staged. The specific activity must be contextual to the moodboard's world.
+STYLING AS IDENTITY: Clothing feels personal, eclectic, layered with meaning. The outfit belongs to THIS person. Never catalog-styled or overly coordinated. Colors and textures must match the moodboard's palette.
+CASTING DIRECTION: Real people with real personal style — diverse body types, ages, ethnicities. Natural beauty, visible character, authentic presence.
+FOOTWEAR PRESENCE: The footwear is visible and identifiable but NEVER the forced focal point. The shoes belong to this person as naturally as their favorite jacket.
+The entire scene — setting, activity, styling, light, color, atmosphere — is defined by the moodboard. The shot type defines only the compositional structure (full body, face visible, environmental portrait).`,
+  },
+];
+    name: 'Styled Still Life',
+    description: 'Editorial still life — pair of shoes styled in their world with props and natural light',
+    icon: '🎯',
+    framingDirective: `MANDATORY FRAMING: Editorial lifestyle still life. NO model, NO hands, NO feet visible.
+Show a COMPLETE PAIR of shoes (2 shoes). Arrange them casually staggered or slightly overlapping — as if someone just stepped out of them. NEVER perfectly aligned or studio-arranged.
+The shoes occupy roughly 30-40% of the frame. The surrounding environment tells the story — wider framing that establishes the world.
 SURFACE: The shoes sit on a contextual surface that belongs to the moodboard's world — sun-warmed stone steps, weathered wooden floor, terrazzo, sandy terrain, linen fabric, marble counter. Never a flat studio backdrop.
 PROPS: Include 1-2 small contextual objects nearby that suggest a lived moment — a coffee cup, open book, sunglasses, folded towel, dried botanicals, a straw hat, a magazine. These props feel naturally placed, not art-directed.
 CAMERA: Three-quarter overhead (30-45° looking down) is the primary angle, showing the iconic footbed silhouette. Full overhead and low eye-level are secondary options.
