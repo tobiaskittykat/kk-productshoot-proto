@@ -632,6 +632,12 @@ export function useImageGeneration() {
                 for (let i = 0; i < state.imageCount; i++) {
                   const sceneRemixBody = {
                     ...buildRequestBody(null, 1),
+                    // Scene Remix uses source image only — no moodboard
+                    moodboardId: null,
+                    moodboardUrl: null,
+                    moodboardName: null,
+                    moodboardDescription: null,
+                    moodboardAnalysis: null,
                     skipPromptAgent: true,
                     structuredPrompt: { naturalPrompt: tierPrompt.naturalPrompt },
                     editMode: true,
@@ -665,6 +671,12 @@ export function useImageGeneration() {
             for (let i = batchStart; i < batchEnd; i++) {
               const remixBody = {
                 ...buildRequestBody(null, state.imageCount),
+                // Remix uses source image — no moodboard
+                moodboardId: null,
+                moodboardUrl: null,
+                moodboardName: null,
+                moodboardDescription: null,
+                moodboardAnalysis: null,
                 remixMode: true,
                 remixRemoveText: state.productShoot.remixRemoveText ?? false,
                 editMode: true,
@@ -761,8 +773,8 @@ export function useImageGeneration() {
               refinedPrompt: row.refined_prompt,
               conceptTitle: row.concept_title || selectedConcept?.title,
               index: notifiedIds.size - 1,
-              moodboardId: state.moodboard || undefined,
-              moodboardUrl: moodboardUrl || undefined,
+              moodboardId: row.moodboard_id || undefined,
+              moodboardUrl: row.moodboard_id ? moodboardUrl : undefined,
               productReferenceUrls: productReferenceUrls.length > 0 ? productReferenceUrls : undefined,
               productReferenceUrl: productReferenceUrls[0],
               settings: row.settings as Record<string, unknown> || undefined,
@@ -785,8 +797,8 @@ export function useImageGeneration() {
         refinedPrompt: row.refined_prompt,
         conceptTitle: row.concept_title || selectedConcept?.title,
         index: idx,
-        moodboardId: state.moodboard || undefined,
-        moodboardUrl: moodboardUrl || undefined,
+        moodboardId: row.moodboard_id || undefined,
+        moodboardUrl: row.moodboard_id ? moodboardUrl : undefined,
         productReferenceUrls: productReferenceUrls.length > 0 ? productReferenceUrls : undefined,
         productReferenceUrl: productReferenceUrls[0],
         error: row.error_message,
