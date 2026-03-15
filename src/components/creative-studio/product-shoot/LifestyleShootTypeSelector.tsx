@@ -9,7 +9,7 @@ interface LifestyleShootTypeSelectorProps {
 
 export const LifestyleShootTypeSelector = ({ selectedType, onSelect }: LifestyleShootTypeSelectorProps) => {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
       {lifestyleShootTypes.map((shot) => {
         const isSelected = selectedType === shot.id;
         return (

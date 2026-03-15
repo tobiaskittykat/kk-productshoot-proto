@@ -127,6 +127,7 @@ export interface LifestyleShootConfig {
   creativeBrief?: string;
   lifestyleShotType: LifestyleShootShotType;
   advancedSettings: LifestyleAdvancedSettings;
+  groupCompanions?: GroupCompanion[];
 }
 
 export const initialLifestyleShootConfig: LifestyleShootConfig = {
