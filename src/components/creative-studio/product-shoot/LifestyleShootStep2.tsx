@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand, Upload, Trash2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useShoeComponents, useComponentOverrides } from "@/hooks/useShoeComponents";
 import { parseSkuDisplayInfo, formatSkuAttributes } from "@/lib/skuDisplayUtils";
 import { ProductSKU } from "./ProductSKUPicker";
@@ -29,6 +29,8 @@ import {
   initialLifestyleShootConfig,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
+import { MoodboardModal } from "../MoodboardModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface LifestyleShootStep2Props {
   state: ProductShootState;
@@ -56,6 +58,8 @@ export const LifestyleShootStep2 = ({
 }: LifestyleShootStep2Props) => {
   const { user } = useAuth();
   const { currentBrand } = useBrands();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const config = state.lifestyleShootConfig || initialLifestyleShootConfig;
   
@@ -83,6 +87,8 @@ export const LifestyleShootStep2 = ({
   const [activeAngleUrls, setActiveAngleUrls] = useState<Record<string, { thumbnail: string; full: string }>>({});
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; skuName: string } | null>(null);
   const [attachReferenceImages, setAttachReferenceImages] = useState(state.attachReferenceImages ?? true);
+  const [showMoodboardModal, setShowMoodboardModal] = useState(false);
+  const [moodboardModalTab, setMoodboardModalTab] = useState("browse");
 
   // Shoe component hooks
   const { components, isLoading: isLoadingComponents, isAnalyzing, triggerAnalysis } = useShoeComponents({ skuId: state.selectedProductId });
@@ -180,6 +186,28 @@ export const LifestyleShootStep2 = ({
 
   const toggleSection = (s: keyof typeof openSections) => setOpenSections(prev => ({ ...prev, [s]: !prev[s] }));
 
+  const handleDeleteMoodboard = useCallback(async (mb: typeof moodboards[0]) => {
+    try {
+      await supabase.storage.from('moodboards').remove([mb.id ? `${user?.id}/${mb.id}` : ''].filter(Boolean));
+      // The query fetches file_path from custom_moodboards but we only have id/name/thumbnail here
+      // So fetch the record first to get file_path
+      const { data: record } = await supabase.from('custom_moodboards').select('file_path').eq('id', mb.id).maybeSingle();
+      if (record?.file_path) {
+        await supabase.storage.from('moodboards').remove([record.file_path]);
+      }
+      await supabase.from('custom_moodboards').delete().eq('id', mb.id);
+      queryClient.invalidateQueries({ queryKey: ['moodboards-lifestyle'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      if (config.selectedMoodboardId === mb.id) {
+        updateConfig({ selectedMoodboardId: undefined });
+      }
+      toast({ title: 'Moodboard deleted' });
+    } catch (err) {
+      console.error('Delete moodboard error:', err);
+      toast({ title: 'Failed to delete moodboard', variant: 'destructive' });
+    }
+  }, [user?.id, queryClient, toast, config.selectedMoodboardId]);
+
   const selectedMoodboard = moodboards.find(m => m.id === config.selectedMoodboardId);
   const currentProductImage = state.recoloredProductUrl || selectedSku?.composite_image_url || selectedSku?.angles?.[0]?.thumbnail_url;
 
@@ -208,34 +236,62 @@ export const LifestyleShootStep2 = ({
           <CollapsibleContent>
             <div className="px-4 pb-4 space-y-3">
               {moodboards.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No moodboards yet. Upload one from the Brand Brain section.</p>
+                <p className="text-sm text-muted-foreground">No moodboards yet. Upload one below or browse the gallery.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {moodboards.map(mb => {
                     const isSelected = config.selectedMoodboardId === mb.id;
                     return (
-                      <button
-                        key={mb.id}
-                        onClick={() => updateConfig({ selectedMoodboardId: isSelected ? undefined : mb.id })}
-                        className={cn(
-                          "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
-                          isSelected ? "border-accent ring-2 ring-accent/30" : "border-transparent hover:border-muted-foreground/30"
-                        )}
-                      >
-                        <img src={mb.thumbnail_url} alt={mb.name} className="w-full h-full object-cover" />
-                        {isSelected && (
-                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                            <Check className="w-3 h-3 text-accent-foreground" />
+                      <div key={mb.id} className="group relative">
+                        <button
+                          onClick={() => updateConfig({ selectedMoodboardId: isSelected ? undefined : mb.id })}
+                          className={cn(
+                            "relative w-full aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                            isSelected ? "border-accent ring-2 ring-accent/30" : "border-transparent hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <img src={mb.thumbnail_url} alt={mb.name} className="w-full h-full object-cover" />
+                          {isSelected && (
+                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                              <Check className="w-3 h-3 text-accent-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
+                            <span className="text-xs text-white font-medium line-clamp-1">{mb.name}</span>
                           </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
-                          <span className="text-xs text-white font-medium line-clamp-1">{mb.name}</span>
-                        </div>
-                      </button>
+                        </button>
+                        {/* Delete overlay */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteMoodboard(mb); }}
+                          className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive z-20"
+                          title="Delete moodboard"
+                        >
+                          <Trash2 className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
               )}
+
+              {/* Upload + Browse row */}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={() => { setMoodboardModalTab("upload"); setShowMoodboardModal(true); }}
+                  className="flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload
+                </button>
+                <span className="text-muted-foreground/40">·</span>
+                <button
+                  onClick={() => { setMoodboardModalTab("browse"); setShowMoodboardModal(true); }}
+                  className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                >
+                  Browse all moodboards
+                </button>
+              </div>
+
               {/* Show selected moodboard analysis preview */}
               {selectedMoodboard?.visual_analysis && (
                 <div className="mt-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
@@ -429,6 +485,20 @@ export const LifestyleShootStep2 = ({
         onSmartUpload={() => { setShowProductPickerModal(false); setShowSmartUploadModal(true); }}
       />
       <SmartUploadModal open={showSmartUploadModal} onOpenChange={setShowSmartUploadModal} />
+      <MoodboardModal
+        isOpen={showMoodboardModal}
+        onClose={() => {
+          setShowMoodboardModal(false);
+          queryClient.invalidateQueries({ queryKey: ['moodboards-lifestyle'] });
+        }}
+        selectedMoodboard={config.selectedMoodboardId || null}
+        onSelect={(moodboardId) => {
+          // Extract raw ID if it has custom- prefix (from MoodboardModal transform)
+          const rawId = moodboardId.replace(/^custom-/, '');
+          updateConfig({ selectedMoodboardId: rawId });
+        }}
+        initialTab={moodboardModalTab}
+      />
 
       {/* Fullscreen image dialog */}
       <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
