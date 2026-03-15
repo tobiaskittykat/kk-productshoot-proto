@@ -34,15 +34,15 @@ ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, a
     name: 'On Foot',
     description: 'On-foot, environmental — shoes and the ground they walk on',
     icon: '👟',
-    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot, cropped from mid-calf down. NEVER show above the knee.
-Exactly 2 shoes visible (one pair, worn on feet). The framing is WIDER than typical shoe photography — generous ground/surface area visible, environmental context present. The shoes occupy roughly 40-50% of the frame.
-STANCE: The stance is caught mid-life — mid-shift, mid-scratch, mid-step-back. The feet are doing what feet do when no one's watching. Weight distributed unevenly, naturally. The person is mid-moment, not posing for a shoe photograph.
+    framingDirective: `MANDATORY FRAMING: Environmental on-foot shot. Crop isolates feet and lower legs — exact framing adapts to the pose (standing, seated, dangling, resting). NEVER show above the knee.
+Exactly 2 shoes visible (one pair, worn on feet). The framing is WIDER than typical shoe photography — generous environmental context present. The shoes occupy roughly 40-50% of the frame.
+POSE: The pose is caught mid-life. The person may be standing, seated, dangling feet off a ledge, resting with feet propped, or tucked on the ground. The feet are doing what feet do when no one's watching — weight distributed unevenly, naturally. The person is mid-moment, not posing for a shoe photograph.
 ANTI-GENERIC: NEVER two feet parallel facing camera. NEVER symmetrical framing. NEVER a clean, centered, catalog-style shoe crop.
-GROUND AS CO-CHARACTER: The ground beneath the shoes has its own story, its own texture, its own wear. It's not a backdrop — it's a co-protagonist. The moodboard defines what that surface looks like and what world it belongs to. The camera respects the ground as much as the shoes.
+SURFACE AS CO-CHARACTER: The surface the feet relate to — ground, ledge edge, railing, dashboard, air beneath dangling feet — has its own story, its own texture. It's not a backdrop — it's a co-protagonist. The moodboard defines what that surface looks like and what world it belongs to. The camera respects the surface as much as the shoes.
 SKIN & STYLING: Real skin — visible tan lines, freckles, natural imperfections. For sandals: bare ankles. For closed-toe: rolled-up trousers or raw-hem cuffs. Styling details (fabric, color) must match the moodboard.
-LIGHT: Natural environmental light hits the shoes AND the ground equally. Shadow patterns are part of the composition. The quality of light must match the moodboard's mood.
+LIGHT: Natural environmental light hits the shoes AND the surface equally. Shadow patterns are part of the composition. The quality of light must match the moodboard's mood.
 FOOTWEAR — LIVED IN: The shoes look WORN and BELONGING — molded to this person's feet, bearing the patina of real wear. They are this person's shoes, in this person's life. Not box-fresh. Not pristine.
-ALL AESTHETIC CHOICES — ground surface, environmental context, lighting quality, color palette — come from the moodboard. The shot type defines only the compositional crop and energy.`,
+ALL AESTHETIC CHOICES — surfaces, environmental context, lighting quality, color palette — come from the moodboard. The shot type defines only the compositional crop and energy.`,
   },
   {
     id: 'model-no-head',
