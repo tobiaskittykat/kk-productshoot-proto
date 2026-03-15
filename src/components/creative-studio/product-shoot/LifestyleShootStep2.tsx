@@ -307,10 +307,12 @@ export const LifestyleShootStep2 = ({
                 <ShoeComponentsPanel
                   components={components}
                   overrides={overrides}
-                  onSetOverride={setComponentOverride}
+                  onOverrideChange={setComponentOverride}
                   onResetAll={resetOverrides}
+                  attachReferenceImages={attachReferenceImages}
+                  onAttachReferenceImagesChange={setAttachReferenceImages}
                   isAnalyzing={isAnalyzing}
-                  onAnalyze={() => triggerAnalysis()}
+                  onTriggerAnalysis={() => triggerAnalysis()}
                 />
               )}
 
