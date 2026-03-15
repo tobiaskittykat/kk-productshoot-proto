@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand, Upload, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand, Upload, Trash2, Plus, X, Users } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
