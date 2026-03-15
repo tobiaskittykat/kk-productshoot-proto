@@ -214,7 +214,8 @@ export const LifestyleShootStep2 = ({
         .from('custom_moodboards')
         .select('id, name, description, thumbnail_url, visual_analysis')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(8);
       if (currentBrand?.id) {
         query = query.or(`brand_id.eq.${currentBrand.id},brand_id.is.null`);
       }
