@@ -45,6 +45,7 @@ const scrollToSection = (sectionId: string) => {
 export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) => {
   const hasProduct = !!state.selectedProductId;
   const isRemix = state.shootMode === 'remix';
+  const isLifestyleShoot = state.shootMode === 'lifestyle-shoot';
 
   if (isRemix) {
     const sourceCount = state.remixSourceImages?.length || 0;
@@ -73,6 +74,39 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
           label="Product"
           selected={hasProduct}
           onClick={() => scrollToSection('section-ps-remix-product')}
+        />
+      </div>
+    );
+  }
+
+  if (isLifestyleShoot) {
+    const hasMoodboard = !!state.lifestyleShootConfig?.selectedMoodboardId;
+    const shotTypeLabels: Record<string, string> = {
+      'product-only': 'Product Only',
+      'feet-focus': 'Feet Focus',
+      'model-no-head': 'No Head',
+      'full-model': 'Full Model',
+    };
+    const shotLabel = `Shot: ${shotTypeLabels[state.lifestyleShootConfig?.lifestyleShotType || 'product-only'] || 'Select'}`;
+
+    return (
+      <div className="flex items-center gap-0.5">
+        <IndicatorChip
+          label="Moodboard"
+          selected={hasMoodboard}
+          onClick={() => scrollToSection('section-ls-moodboard')}
+        />
+        <span className="text-muted-foreground/30">·</span>
+        <IndicatorChip
+          label="Product"
+          selected={hasProduct}
+          onClick={() => scrollToSection('section-ls-product')}
+        />
+        <span className="text-muted-foreground/30">·</span>
+        <IndicatorChip
+          label={shotLabel}
+          selected={true}
+          onClick={() => scrollToSection('section-ls-shottype')}
         />
       </div>
     );
