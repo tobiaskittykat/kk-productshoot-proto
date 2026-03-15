@@ -290,6 +290,37 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
     }
   };
 
+  // Handle deleting a moodboard inline
+  const handleDeleteMoodboardInline = async (moodboard: Moodboard) => {
+    try {
+      const rawId = moodboard.id.replace(/^custom-/, '');
+      const filePath = moodboard.filePath || '';
+      
+      if (filePath) {
+        await supabase.storage.from('moodboards').remove([filePath]);
+      }
+      await supabase.from('custom_moodboards').delete().eq('id', rawId);
+      
+      // Clear selection if this moodboard was selected
+      if (state.moodboard === moodboard.id) {
+        onUpdate({ moodboard: null });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      toast({ title: 'Moodboard deleted' });
+      
+      auditLog({
+        action: 'delete_moodboard',
+        resourceType: 'custom_moodboards',
+        resourceId: rawId,
+        resourceName: moodboard.name
+      });
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
   // Handle deleting a scraped product
   const handleDeleteScrapedProduct = async (productId: string) => {
     const dbId = productId.replace('scraped-', '');
