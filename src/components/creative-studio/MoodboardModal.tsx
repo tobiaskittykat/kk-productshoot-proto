@@ -49,9 +49,17 @@ export const MoodboardModal = ({
   isOpen, 
   onClose, 
   selectedMoodboard, 
-  onSelect 
+  onSelect,
+  initialTab = "browse"
 }: MoodboardModalProps) => {
-  const [activeTab, setActiveTab] = useState("browse");
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sync activeTab when initialTab or modal open state changes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
