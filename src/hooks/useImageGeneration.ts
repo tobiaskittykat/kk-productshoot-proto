@@ -632,6 +632,12 @@ export function useImageGeneration() {
                 for (let i = 0; i < state.imageCount; i++) {
                   const sceneRemixBody = {
                     ...buildRequestBody(null, 1),
+                    // Scene Remix uses source image only — no moodboard
+                    moodboardId: null,
+                    moodboardUrl: null,
+                    moodboardName: null,
+                    moodboardDescription: null,
+                    moodboardAnalysis: null,
                     skipPromptAgent: true,
                     structuredPrompt: { naturalPrompt: tierPrompt.naturalPrompt },
                     editMode: true,
