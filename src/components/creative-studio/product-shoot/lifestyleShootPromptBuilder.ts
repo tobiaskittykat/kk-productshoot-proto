@@ -2,7 +2,7 @@
 // Merges moodboard analysis + product identity + shot type + advanced settings into a prompt
 
 import type { LifestyleShootConfig, LifestyleAdvancedSettings } from './types';
-import { lifestyleShootTypes, getAdvancedPromptFragments, areAllSettingsAuto, pickRandomStillLifeVariation } from './lifestyleShootConfigs';
+import { lifestyleShootTypes, getAdvancedPromptFragments, areAllSettingsAuto, pickRandomStillLifeVariation, pickRandomPortraitVariation } from './lifestyleShootConfigs';
 
 interface MoodboardAnalysis {
   title?: string;
@@ -128,15 +128,28 @@ When the moodboard and shot type could suggest different aesthetics, the MOODBOA
     if (config.lifestyleShotType === 'product-only' && areAllSettingsAuto(config.advancedSettings)) {
       const variation = pickRandomStillLifeVariation();
       console.log(`[LifestylePromptBuilder] Random still life variation: ${variation.id} — ${variation.name}`);
-      // Use the variation's framing override instead of the static default
       sections.push(variation.framingOverride);
       sections.push('');
-      // Still include the base directive's non-compositional rules (no model, pair of shoes, etc.)
       sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
 NO model, NO hands, NO feet visible. Show a COMPLETE PAIR of shoes (2 shoes).
 SURFACE: The shoes sit on a contextual surface from the moodboard's world with visible texture.
 LIGHT: Natural environmental light with real shadows. Quality must match the moodboard.
 ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, atmosphere — must be derived from the moodboard.`);
+    } else if (config.lifestyleShotType === 'full-model' && areAllSettingsAuto(config.advancedSettings)) {
+      const variation = pickRandomPortraitVariation();
+      console.log(`[LifestylePromptBuilder] Random portrait energy: ${variation.id} — ${variation.name}`);
+      sections.push(variation.framingOverride);
+      sections.push('');
+      // Append the base directive's non-compositional rules (casting, styling, footwear)
+      sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
+Full body editorial portrait. The model's full body INCLUDING face is visible. Documentary portrait — caught, not directed.
+ENVIRONMENTAL DOMINANCE: The model occupies only 30-50% of the frame. The place dominates.
+ANTI-GENERIC: NEVER standing straight facing camera. NEVER hands at sides. NEVER centered symmetrically. NEVER neutral expression into lens.
+PHYSICAL EASE: Body has surrendered to gravity — limbs arranged by comfort, not aesthetics. Posture responds to the specific environment.
+STYLING: Clothing feels personal, lived-in, never catalog-styled. Colors and textures match the moodboard.
+CASTING: Real people — diverse body types, ages, ethnicities. Natural beauty, authentic presence.
+FOOTWEAR — INCIDENTAL: Shoes visible but NEVER the focal point. They look LIVED IN — molded to this person's feet, patina of real wear. Not box-fresh.
+ALL AESTHETIC CHOICES — setting, activity, styling, light, color, atmosphere — defined by the moodboard.`);
     } else {
       sections.push(shotType.framingDirective);
     }
