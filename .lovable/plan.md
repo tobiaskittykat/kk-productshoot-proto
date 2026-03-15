@@ -97,3 +97,51 @@ Make component colors truly single-field across the full pipeline so the payload
 - `src/data/birkenstock-catalog.json` — new static catalog
 - `src/components/creative-studio/product-shoot/CatalogBrowser.tsx` — new component
 - `src/components/creative-studio/product-shoot/SmartUploadModal.tsx` — added catalog source + step
+
+## New Lifestyle Shoot Mode
+
+## STATUS: ✅ IMPLEMENTED (2026-03-15)
+
+### What was done
+
+**Types & State (`product-shoot/types.ts`):**
+- Added `'lifestyle-shoot'` to `ShootMode` union
+- Added `LifestyleShootShotType`: `'product-only' | 'feet-focus' | 'model-no-head' | 'full-model'`
+- Added `LifestyleAdvancedSettings` interface (cameraAngle, lighting, cameraLens, cameraType, filmStock)
+- Added `LifestyleShootConfig` interface with moodboard, brief, shot type, advanced settings
+- Added `lifestyleShootConfig` to `ProductShootState`
+
+**Shot Type Definitions (`lifestyleShootConfigs.ts` — new):**
+- 4 shot types with mandatory framing directives (product-only, feet-focus, model-no-head, full-model)
+- 5 advanced settings categories with Birkenstock-optimized defaults (eye-level, natural light, 85mm, digital, no film)
+- `getAdvancedPromptFragments()` helper to extract prompt text from settings
+
+**Prompt Builder (`lifestyleShootPromptBuilder.ts` — new):**
+- Merges moodboard analysis (deep narrative format + legacy flat format) with shot type framing, creative brief, advanced camera settings, and product integrity lock
+- Priority hierarchy: Brand Brain > Moodboard > Shot Type > Advanced Settings > Brief > Product Identity
+
+**UI Components:**
+- `ProductShootSubtypeSelector.tsx` — 2×2 grid with 4th "Lifestyle Shoot" card (Palette icon)
+- `LifestyleShootStep2.tsx` — Full config panel: moodboard picker, product picker with component overrides, creative brief textarea, shot type selector, advanced settings, output settings
+- `LifestyleShootTypeSelector.tsx` — 4-card visual selector with icons and descriptions
+- `LifestyleAdvancedPanel.tsx` — 5 select dropdowns with "Reset defaults" button
+
+**Generation Integration (`useImageGeneration.ts`):**
+- New code path for `shootMode === 'lifestyle-shoot'`: fetches moodboard from DB, builds lifestyle prompt via `buildLifestyleShootPrompt()`, passes moodboard URL + analysis to edge function
+
+**Wizard Integration (`CreativeStudioWizard.tsx`):**
+- Routes `lifestyle-shoot` mode to `LifestyleShootStep2` in Step 2
+- `ProductShootIndicators` shows Moodboard / Product / Shot chips for lifestyle mode
+
+### Files changed
+- `src/components/creative-studio/product-shoot/types.ts` — ShootMode + new interfaces
+- `src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts` — NEW
+- `src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts` — NEW
+- `src/components/creative-studio/product-shoot/LifestyleShootStep2.tsx` — NEW
+- `src/components/creative-studio/product-shoot/LifestyleShootTypeSelector.tsx` — NEW
+- `src/components/creative-studio/product-shoot/LifestyleAdvancedPanel.tsx` — NEW
+- `src/components/creative-studio/product-shoot/ProductShootSubtypeSelector.tsx` — 2×2 grid
+- `src/components/creative-studio/product-shoot/ProductShootIndicators.tsx` — lifestyle chips
+- `src/components/creative-studio/product-shoot/index.ts` — barrel exports
+- `src/components/creative-studio/CreativeStudioWizard.tsx` — routing
+- `src/hooks/useImageGeneration.ts` — lifestyle-shoot generation path
