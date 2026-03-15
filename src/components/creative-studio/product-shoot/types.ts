@@ -262,6 +262,9 @@ export const initialProductShootState: ProductShootState = {
   sceneRemixPrompts: null,
   isAnalyzingScene: false,
   remixEnabledTiers: { faithful: true, moderate: true, creative: false },
+  
+  // Lifestyle shoot defaults
+  lifestyleShootConfig: undefined,
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)
