@@ -751,11 +751,11 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
   }, [state.step, isOpen]);
 
   // Combine recent generated + previous images for gallery
-  // Latest generation first, then historical images (excluding duplicates)
+  // Latest generation first, then historical images (excluding duplicates and pending DB rows)
   const currentImageIds = new Set(state.generatedImages.map(img => img.id));
   const allImages = [
     ...state.generatedImages,
-    ...previousImages.filter(img => !currentImageIds.has(img.id))
+    ...previousImages.filter(img => !currentImageIds.has(img.id) && img.status !== 'pending')
   ];
 
   return (
