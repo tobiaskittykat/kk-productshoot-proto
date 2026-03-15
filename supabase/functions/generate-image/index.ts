@@ -761,6 +761,7 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
         // 2. Partially visible: hero, pair, sole-view — mention branding but instruct NOT to distort
         // 3. Fully visible: top-down — include full branding details
         const isHiddenAngle = visualShotType === 'on-foot' || visualShotType === 'lifestyle'
+            || isLifestyleWornOnFoot
             || (visualShotType === 'product-focus' && (productFocusAngle === 'side-profile' || productFocusAngle === 'detail-closeup'));
         const isFullyVisibleAngle = visualShotType === 'product-focus' && productFocusAngle === 'top-down';
         const isPartiallyVisibleAngle = !isHiddenAngle && !isFullyVisibleAngle && visualShotType === 'product-focus';
