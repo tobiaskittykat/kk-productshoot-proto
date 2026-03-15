@@ -61,7 +61,7 @@ import {
   sampleContextReferences,
   outputFormats
 } from "./types";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { smoothScrollTo } from "@/lib/utils";
 
@@ -74,6 +74,7 @@ interface StepTwoCustomizeProps {
 export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: StepTwoCustomizeProps) => {
   const [newKeyword, setNewKeyword] = useState('');
   const [showMoodboardModal, setShowMoodboardModal] = useState(false);
+  const [moodboardModalTab, setMoodboardModalTab] = useState("browse");
   const [showProductRefModal, setShowProductRefModal] = useState(false);
   const [showContextRefModal, setShowContextRefModal] = useState(false);
   const [savingConceptId, setSavingConceptId] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
   const { user } = useAuth();
   const { currentBrand } = useBrands();
   const { log: auditLog } = useAuditLog();
+  const queryClient = useQueryClient();
 
   const proxyImageUrl = (raw?: string | null) => {
     if (!raw) return undefined;
@@ -286,6 +288,37 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
     } catch (err) {
       console.error('Failed to clear products:', err);
       toast({ title: 'Failed to clear products', variant: 'destructive' });
+    }
+  };
+
+  // Handle deleting a moodboard inline
+  const handleDeleteMoodboardInline = async (moodboard: Moodboard) => {
+    try {
+      const rawId = moodboard.id.replace(/^custom-/, '');
+      const filePath = moodboard.filePath || '';
+      
+      if (filePath) {
+        await supabase.storage.from('moodboards').remove([filePath]);
+      }
+      await supabase.from('custom_moodboards').delete().eq('id', rawId);
+      
+      // Clear selection if this moodboard was selected
+      if (state.moodboard === moodboard.id) {
+        onUpdate({ moodboard: null });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      toast({ title: 'Moodboard deleted' });
+      
+      auditLog({
+        action: 'delete_moodboard',
+        resourceType: 'custom_moodboards',
+        resourceId: rawId,
+        resourceName: moodboard.name
+      });
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast({ title: 'Failed to delete', variant: 'destructive' });
     }
   };
 
@@ -1153,6 +1186,19 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                             <Check className="w-4 h-4 text-accent-foreground" />
                           </div>
                         )}
+                        {/* Delete button overlay */}
+                        {moodboard.id.startsWith('custom-') && !isSelected && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMoodboardInline(moodboard);
+                            }}
+                            className="absolute top-2 left-2 w-6 h-6 rounded-full bg-destructive/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive z-20"
+                          >
+                            <Trash2 className="w-3 h-3 text-white" />
+                          </button>
+                        )}
                       </button>
                     );
                   })
@@ -1163,14 +1209,23 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                 )}
               </div>
               
-              {/* View All Moodboards */}
-              <button 
-                onClick={() => setShowMoodboardModal(true)}
-                className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-              >
-                Browse all moodboards
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {/* Actions row */}
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => { setMoodboardModalTab("browse"); setShowMoodboardModal(true); }}
+                  className="flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                >
+                  Browse all moodboards
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => { setMoodboardModalTab("upload"); setShowMoodboardModal(true); }}
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload
+                </button>
+              </div>
             </div>
           </CustomizationSection>
 
@@ -1635,6 +1690,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
         onClose={() => setShowMoodboardModal(false)}
         selectedMoodboard={state.moodboard}
         onSelect={handleMoodboardSelect}
+        initialTab={moodboardModalTab}
       />
 
       <ProductReferencePicker

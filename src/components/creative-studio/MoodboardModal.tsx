@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -33,6 +33,7 @@ interface MoodboardModalProps {
   onClose: () => void;
   selectedMoodboard: string | null;
   onSelect: (moodboardId: string, fromGallery: boolean) => void;
+  initialTab?: string;
 }
 
 // CustomMoodboard removed - now using Moodboard type from types.ts for cache consistency
@@ -48,9 +49,17 @@ export const MoodboardModal = ({
   isOpen, 
   onClose, 
   selectedMoodboard, 
-  onSelect 
+  onSelect,
+  initialTab = "browse"
 }: MoodboardModalProps) => {
-  const [activeTab, setActiveTab] = useState("browse");
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sync activeTab when initialTab or modal open state changes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
