@@ -182,6 +182,9 @@ export interface ProductShootState {
   
   // Variation tier toggles (UI-facing, persisted in state)
   remixEnabledTiers: Record<string, boolean>;
+  
+  // Lifestyle shoot config
+  lifestyleShootConfig?: LifestyleShootConfig;
 }
 
 // Background preset for selection
