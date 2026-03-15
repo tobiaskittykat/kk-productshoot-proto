@@ -35,12 +35,16 @@ export const MoodboardThumbnail = ({
   moodboard, 
   isSelected, 
   onSelect,
+  onRename,
   size = 'default'
 }: MoodboardThumbnailProps) => {
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [retryKey, setRetryKey] = useState(0);
   const [isInView, setIsInView] = useState(false);
   const [isFullView, setIsFullView] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(moodboard.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
