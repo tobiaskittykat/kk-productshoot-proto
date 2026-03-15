@@ -624,8 +624,10 @@ async function craftPromptWithAgent(request: GenerateImageRequest, apiKey: strin
       if (request.lightingStyle && request.lightingStyle !== 'auto') sections.push(`Lighting: ${request.lightingStyle}`);
       if (request.cameraAngle && request.cameraAngle !== 'auto') sections.push(`Camera: ${request.cameraAngle}`);
       // Add aspect ratio instruction so AI composes correctly for the format
-      if (request.aspectRatio && request.aspectRatio !== '1:1') {
+      if (request.aspectRatio && request.aspectRatio !== '1:1' && request.aspectRatio !== 'auto') {
         sections.push(`Aspect Ratio: ${request.aspectRatio} format - compose the scene to fill this canvas shape effectively`);
+      } else if (request.aspectRatio === 'auto') {
+        sections.push(`Choose the aspect ratio that best suits this composition — portrait, landscape, or square.`);
       }
       sections.push("");
     }
