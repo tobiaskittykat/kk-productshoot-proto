@@ -53,16 +53,16 @@ export function buildLifestyleShootPrompt(input: PromptBuilderInput): string {
   
   const sections: string[] = [];
   
-  // 1. Shot type framing (MANDATORY)
-  const shotType = lifestyleShootTypes.find(s => s.id === config.lifestyleShotType);
-  if (shotType) {
-    sections.push(shotType.framingDirective);
-    sections.push('');
-  }
+  // 1. PRIORITY HIERARCHY (always first)
+  sections.push(`PROMPT PRIORITY HIERARCHY:
+The MOODBOARD defines the VISUAL WORLD — colors, textures, surfaces, lighting, mood, geography, atmosphere.
+The SHOT TYPE defines only the COMPOSITIONAL STRUCTURE — crop, framing, product visibility, body positioning.
+When the moodboard and shot type could suggest different aesthetics, the MOODBOARD WINS.`);
+  sections.push('');
   
-  // 2. Moodboard aesthetic world (PRIMARY STYLE DRIVER)
+  // 2. Moodboard aesthetic world (PRIMARY STYLE DRIVER — before shot type)
   if (moodboardAnalysis) {
-    sections.push('AESTHETIC WORLD (from moodboard — this defines the visual universe):');
+    sections.push('AESTHETIC WORLD (from moodboard — this is the PRIMARY style authority):');
     
     // Deep analysis format
     if (moodboardAnalysis.overallLookAndFeel) {
@@ -113,18 +113,29 @@ export function buildLifestyleShootPrompt(input: PromptBuilderInput): string {
       sections.push(`Moodboard: "${moodboardName}"`);
     }
     sections.push('');
-    sections.push('Apply this aesthetic as a FILTER over the entire image — colors, lighting, textures, mood, and atmosphere must all be consistent with this world.');
+    sections.push('Every aesthetic decision — surfaces, props, color temperature, atmosphere, styling — MUST be derived from this moodboard. Do NOT introduce elements that contradict or ignore this world.');
+    sections.push('');
+  } else {
+    // No moodboard fallback
+    sections.push('NO MOODBOARD PROVIDED — default to a warm, natural, understated aesthetic with soft natural light. Keep it neutral and let the product and creative brief drive the mood.');
     sections.push('');
   }
   
-  // 3. Creative brief (user direction)
+  // 3. Shot type framing (COMPOSITIONAL STRUCTURE)
+  const shotType = lifestyleShootTypes.find(s => s.id === config.lifestyleShotType);
+  if (shotType) {
+    sections.push(shotType.framingDirective);
+    sections.push('');
+  }
+  
+  // 4. Creative brief (user direction)
   const brief = creativeBrief || config.creativeBrief;
   if (brief?.trim()) {
     sections.push(`CREATIVE DIRECTION: ${brief.trim()}`);
     sections.push('');
   }
   
-  // 4. Advanced camera/lighting/film settings
+  // 5. Advanced camera/lighting/film settings
   const advancedFragments = getAdvancedPromptFragments(config.advancedSettings);
   if (advancedFragments.length > 0) {
     sections.push('TECHNICAL CAMERA DIRECTION:');
@@ -132,7 +143,7 @@ export function buildLifestyleShootPrompt(input: PromptBuilderInput): string {
     sections.push('');
   }
   
-  // 5. Product integrity lock
+  // 6. Product integrity lock
   sections.push(`FOOTWEAR — LOCKED (MUST NOT CHANGE)
 The product shown must be EXACTLY as in the reference images.
 Geometry, construction, silhouette, proportions, stitching, hardware placement,
@@ -140,10 +151,8 @@ and material behavior must remain identical. Do not redesign, stylize, or reinte
 Product identity and materials are provided in the PRODUCT IDENTITY section.`);
   sections.push('');
   
-  // 6. Birkenstock brand DNA reminder
-  sections.push(`BRAND TONE: Authentic, natural, understated luxury. Never flashy or overly styled.
-The image should feel effortless, lived-in, and genuinely aspirational.
-The final image must be indistinguishable from an official Birkenstock editorial campaign photograph.`);
+  // 7. Brand quality (light touch — no prescriptive aesthetics)
+  sections.push(`BRAND QUALITY: The image must feel editorially polished, authentic, and never overly commercial. Maintain the quality standard of a premium lifestyle brand campaign. Never flashy, never generic stock photography.`);
   
   return sections.join('\n');
 }
