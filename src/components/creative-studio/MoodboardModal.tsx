@@ -240,6 +240,22 @@ export const MoodboardModal = ({
     }
   };
 
+  const handleRenameMoodboard = async (id: string, newName: string) => {
+    try {
+      const rawId = id.replace(/^custom-/, '');
+      const { error } = await supabase
+        .from('custom_moodboards')
+        .update({ name: newName })
+        .eq('id', rawId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['custom-moodboards'] });
+      toast({ title: 'Moodboard renamed' });
+    } catch (err) {
+      console.error('Rename error:', err);
+      toast({ title: 'Failed to rename', variant: 'destructive' });
+    }
+  };
+
   // Repair all moodboards batch function
   const handleRepairAllMoodboards = async () => {
     setShowRepairConfirm(false);
