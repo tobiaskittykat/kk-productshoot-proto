@@ -278,6 +278,13 @@ When both brand colors and moodboard colors are provided:
 - When in conflict, brand identity takes priority for product elements
 - Create cohesion by describing how brand colors interact with environmental tones
 
+COMPOSITIONAL BOLDNESS (especially for still life shots):
+- NEVER default to safe, centered, symmetrical compositions
+- Embrace unconventional angles, bold negative space, and editorial risk
+- If the shot direction specifies a compositional recipe, COMMIT to it fully — do not soften it into a generic arrangement
+- The best editorial footwear photography surprises the viewer with unexpected framing, dramatic light, or unusual spatial relationships
+- Think Birkenstock campaign, not stock photography — every composition should feel authored and intentional
+
 QUALITY STANDARDS:
 - High-quality, professional imagery
 - Sharp focus on key elements
