@@ -414,6 +414,14 @@ export const LifestyleShootStep2 = ({
                 selectedType={config.lifestyleShotType}
                 onSelect={(type) => updateConfig({ lifestyleShotType: type })}
               />
+
+              {/* Group Companions Configurator */}
+              {config.lifestyleShotType === 'group-scene' && (
+                <GroupCompanionsConfigurator
+                  companions={config.groupCompanions || [{ birkenstockModel: 'Arizona', gender: 'auto', ethnicity: 'auto' }]}
+                  onChange={(companions) => updateConfig({ groupCompanions: companions })}
+                />
+              )}
             </div>
           </CollapsibleContent>
         </div>

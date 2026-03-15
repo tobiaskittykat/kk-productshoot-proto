@@ -208,6 +208,21 @@ FOOTWEAR — INCIDENTAL: All shoes visible but the composition is about the GROU
 ALL AESTHETIC CHOICES — setting, styling, light, atmosphere — defined by the moodboard.`);
     } else {
       sections.push(shotType.framingDirective);
+      
+      // For group-scene with manual settings, still inject companion info
+      if (config.lifestyleShotType === 'group-scene') {
+        sections.push('');
+        const companions = config.groupCompanions || [];
+        const totalPeople = companions.length + 1;
+        sections.push(`GROUP COMPOSITION — ${totalPeople} PEOPLE:`);
+        sections.push(`Person 1 (HERO): Wears the selected product — EXACT match to reference images.`);
+        companions.forEach((companion, i) => {
+          sections.push(`Person ${i + 2}: Wears Birkenstock ${companion.birkenstockModel} — naturally worn, lived-in. ${companion.gender !== 'auto' ? `Gender: ${companion.gender}.` : ''} ${companion.ethnicity !== 'auto' ? `Ethnicity: ${companion.ethnicity}.` : ''}`);
+        });
+        if (companions.length === 0) {
+          sections.push(`Person 2: Wears a different Birkenstock model (choose any classic silhouette) — naturally worn, lived-in.`);
+        }
+      }
     }
     sections.push('');
   }
