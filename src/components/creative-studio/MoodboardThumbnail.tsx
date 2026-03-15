@@ -277,7 +277,21 @@ export const MoodboardThumbnail = ({
           {/* Content section */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div>
-              <h3 className="font-semibold text-lg">{moodboard.name}</h3>
+              {onRename ? (
+                <input
+                  defaultValue={moodboard.name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== moodboard.name) onRename(moodboard.id, v);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
+                  className="font-semibold text-lg bg-transparent border-b border-transparent hover:border-border focus:border-accent focus:outline-none w-full transition-colors"
+                />
+              ) : (
+                <h3 className="font-semibold text-lg">{moodboard.name}</h3>
+              )}
               {moodboard.description && (
                 <p className="text-sm text-muted-foreground mt-1">
                   {moodboard.description}
