@@ -87,6 +87,8 @@ export const LifestyleShootStep2 = ({
   const [activeAngleUrls, setActiveAngleUrls] = useState<Record<string, { thumbnail: string; full: string }>>({});
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; skuName: string } | null>(null);
   const [attachReferenceImages, setAttachReferenceImages] = useState(state.attachReferenceImages ?? true);
+  const [showMoodboardModal, setShowMoodboardModal] = useState(false);
+  const [moodboardModalTab, setMoodboardModalTab] = useState("browse");
 
   // Shoe component hooks
   const { components, isLoading: isLoadingComponents, isAnalyzing, triggerAnalysis } = useShoeComponents({ skuId: state.selectedProductId });
