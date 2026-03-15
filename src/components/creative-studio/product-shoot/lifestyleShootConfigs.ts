@@ -74,6 +74,33 @@ CASTING DIRECTION: Real people with real personal style — diverse body types, 
 FOOTWEAR — INCIDENTAL, NEVER FEATURED: The shoes are visible but NEVER the focal point. They look LIVED IN — molded to this person's feet, bearing the patina of real wear. Not box-fresh. The shoes belong to this person as naturally as their watch or their haircut.
 The entire scene — setting, activity, styling, light, color, atmosphere — is defined by the moodboard. The shot type defines only the compositional structure (full body, face visible, environmental portrait).`,
   },
+  {
+    id: 'group-scene',
+    name: 'Group Scene',
+    description: '2-3 people together — your product is the hero shoe',
+    icon: '👥',
+    framingDirective: `MANDATORY FRAMING: Candid editorial group shot with 2-3 people. This is a DOCUMENTARY GROUP MOMENT — caught between interactions, never posed.
+
+HERO SHOE RULE (CRITICAL):
+- Exactly ONE person wears the selected/hero product (EXACT match to reference images — locked geometry, materials, color).
+- The other 1-2 people each wear a DIFFERENT named Birkenstock model (specified in the companion section below). Each companion shoe is a real, recognizable Birkenstock silhouette — naturally worn, lived-in, not box-fresh.
+- ALL shoes (hero + companions) must be VISIBLE in the frame. They are discovered naturally, never spotlighted.
+
+GROUP DYNAMIC: The people are MID-INTERACTION — sharing a surface, overlapping personal spaces, caught in conversation or shared activity. Bodies create asymmetric, layered compositions. Each person occupies space differently — one sits, another stands, one leans. The group has genuine ease and familiarity.
+
+ANTI-GENERIC:
+- NEVER lined up facing camera.
+- NEVER matching outfits or coordinated styling.
+- NEVER catalog group shot with equal spacing.
+- NEVER everyone looking at camera simultaneously.
+- NEVER identical body language or mirrored poses.
+
+INDIVIDUAL IDENTITY: Each person has distinct personal style — different silhouettes, different textures, different color palettes. Clothing is lived-in, personal, eclectic. Age, body type, and ethnicity should feel diverse and authentic. Nobody looks "styled" — they look like themselves.
+
+FOOTWEAR — INCIDENTAL ANCHOR: All shoes are visible but the composition is about the GROUP MOMENT, not the footwear. The eye travels through faces, hands, body language, and then discovers the shoes naturally. The hero shoe is not compositionally privileged — it's just one pair among friends.
+
+ENVIRONMENT: The group exists in a real place defined by the moodboard. They've claimed this space together — their bodies and belongings have shaped it. The environment tells part of the story.`,
+  },
 ];
 
 // ===== ADVANCED SETTINGS OPTIONS =====
@@ -448,6 +475,61 @@ NEVER static or planted. The body must be moving THROUGH the frame with visible 
   },
 ];
 
+// ===== GROUP SCENE ENERGY VARIATIONS =====
+// Randomly selected when advanced settings are all on "Auto" to inject editorial variety
+
+export const groupSceneVariations: PortraitEnergyVariation[] = [
+  {
+    id: 'shared-surface',
+    name: 'Shared Surface',
+    framingOverride: `ENERGY — Shared Surface:
+All 2-3 people seated on the SAME SURFACE — a bench, wall, steps, a low wall, a curb. Bodies overlap, lean, crowd together or spread along the surface with uneven spacing. Someone's knee touches someone's elbow. Personal spaces merge. The shared surface creates a horizontal compositional anchor while the bodies break the line at different heights and angles. All shoes visible at ground level.
+NEVER standing. NEVER evenly spaced. The surface creates intimacy through shared territory.`,
+  },
+  {
+    id: 'walking-together',
+    name: 'Walking Together',
+    framingOverride: `ENERGY — Walking Together:
+The group is MID-STRIDE, staggered, slightly out of sync — one half a step ahead, another turning to speak. Walking pace, not marching. The camera catches them from a three-quarter angle as they move through space. Clothing responds to motion. Strides are different lengths — each person's walk is their own. The path they walk on is defined by the moodboard's world.
+NEVER marching in unison. NEVER shoulder-to-shoulder. The stagger and desynchronization create naturalism.`,
+  },
+  {
+    id: 'gathered-around',
+    name: 'Gathered Around',
+    framingOverride: `ENERGY — Gathered Around:
+The group is standing or leaning AROUND something — a table, a railing, a car hood, a doorway, a counter. Each person distributes weight differently: one leans, one stands back with arms crossed, one perches on the edge. The central object creates a gravitational point. Bodies face inward at different angles, creating a LOOSE CIRCLE with gaps and asymmetry. The gathering feels spontaneous, not arranged.
+NEVER a tight circle. NEVER all facing the same direction. The gathering has natural gaps and angles.`,
+  },
+  {
+    id: 'two-and-one',
+    name: 'Two & One',
+    framingOverride: `ENERGY — Two & One:
+Two people are ENGAGED with each other — talking, sharing something, leaning close. The third person is slightly APART — arriving, scrolling a phone, looking elsewhere, or observing the pair from a step away. This creates a compositional TENSION between the pair and the individual. The dynamic tells a micro-story: connection and solitude coexisting. The spatial gap between the pair and the individual creates the narrative.
+NEVER all three equally engaged. The 2+1 split must be clear and create visual storytelling.`,
+  },
+  {
+    id: 'stacked-levels',
+    name: 'Stacked Levels',
+    framingOverride: `ENERGY — Stacked Levels:
+People at DIFFERENT HEIGHTS — one on steps, one on the ground, one on a ledge; or one standing, one sitting, one crouching. The vertical staggering creates LAYERED COMPOSITION — heads, hands, and feet at different levels in the frame. The height differences are determined by the environment's architecture. This creates dynamic visual rhythm and prevents the flatness of everyone at eye level.
+NEVER all at the same height. The environment's surfaces dictate who is where.`,
+  },
+  {
+    id: 'caught-laughing',
+    name: 'Caught Laughing',
+    framingOverride: `ENERGY — Caught Laughing:
+A MID-REACTION MOMENT — someone said something and the group is responding. Bodies TURNING toward each other, shoulders shaking, heads thrown back or ducked forward. The laughter is at different stages: one person mid-laugh, another just starting, the third recovering. Hands fly up or clutch something. The energy is KINETIC and warm. Nothing is posed — this is a stolen moment of genuine human connection.
+NEVER everyone smiling at camera. NEVER controlled expressions. The reaction must feel spontaneous and mid-burst.`,
+  },
+  {
+    id: 'backs-and-profiles',
+    name: 'Backs & Profiles',
+    framingOverride: `ENERGY — Backs & Profiles:
+The camera sees the group from BEHIND or BESIDE — backs, profiles, three-quarter turns. No one faces the camera directly. The group looks outward at something — a view, a street, a sunset, each other. The viewer is an outsider witnessing a private moment. This unconventional angle shows the BACK of clothing, the nape of necks, shoes from behind. The composition is voyeuristic and intimate.
+NEVER anyone facing camera. The group's attention is directed AWAY from the viewer.`,
+  },
+];
+
 /**
  * Randomly select an on-foot energy variation from the pool.
  */
@@ -462,6 +544,14 @@ export function pickRandomOnFootVariation(): PortraitEnergyVariation {
 export function pickRandomBodyStyleVariation(): PortraitEnergyVariation {
   const idx = Math.floor(Math.random() * bodyStyleVariations.length);
   return bodyStyleVariations[idx];
+}
+
+/**
+ * Randomly select a group scene energy variation from the pool.
+ */
+export function pickRandomGroupSceneVariation(): PortraitEnergyVariation {
+  const idx = Math.floor(Math.random() * groupSceneVariations.length);
+  return groupSceneVariations[idx];
 }
 
 // Get the prompt fragment for a given advanced setting

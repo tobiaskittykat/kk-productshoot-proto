@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand, Upload, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, Camera, Palette, Settings2, FileText, Clock, Check, Expand, Upload, Trash2, Plus, X, Users } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -27,6 +27,9 @@ import {
   LifestyleAdvancedSettings,
   initialLifestyleAdvancedSettings,
   initialLifestyleShootConfig,
+  GroupCompanion,
+  companionModelOptions,
+  ethnicityOptions,
 } from "./types";
 import { aspectRatios, resolutions } from "../types";
 import { MoodboardModal } from "../MoodboardModal";
@@ -46,6 +49,106 @@ interface LifestyleShootStep2Props {
     sequentialGeneration?: boolean;
   }) => void;
 }
+// ===== Group Companions Configurator =====
+const GroupCompanionsConfigurator = ({
+  companions,
+  onChange,
+}: {
+  companions: GroupCompanion[];
+  onChange: (companions: GroupCompanion[]) => void;
+}) => {
+  const genderOptions = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'female', label: 'Female' },
+    { value: 'male', label: 'Male' },
+    { value: 'non-binary', label: 'Non-Binary' },
+  ];
+
+  const updateCompanion = (index: number, updates: Partial<GroupCompanion>) => {
+    const updated = companions.map((c, i) => (i === index ? { ...c, ...updates } : c));
+    onChange(updated);
+  };
+
+  const addCompanion = () => {
+    if (companions.length >= 2) return;
+    onChange([...companions, { birkenstockModel: 'Boston', gender: 'auto', ethnicity: 'auto' }]);
+  };
+
+  const removeCompanion = (index: number) => {
+    onChange(companions.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Users className="w-4 h-4 text-accent" />
+        <span className="text-sm font-medium text-foreground">Group Companions</span>
+        <span className="text-xs text-muted-foreground">({companions.length + 1} people total)</span>
+      </div>
+      <p className="text-xs text-muted-foreground">Your selected product is the hero shoe. Choose what the other people wear.</p>
+
+      {companions.map((companion, index) => (
+        <div key={index} className="flex items-start gap-2 p-3 rounded-xl bg-muted/50 border border-border">
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground min-w-[60px]">Person {index + 2}</span>
+              <Select value={companion.birkenstockModel} onValueChange={(v) => updateCompanion(index, { birkenstockModel: v })}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companionModelOptions.map(model => (
+                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Select value={companion.gender} onValueChange={(v) => updateCompanion(index, { gender: v })}>
+                <SelectTrigger className="h-7 text-xs flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {genderOptions.map(g => (
+                    <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={companion.ethnicity} onValueChange={(v) => updateCompanion(index, { ethnicity: v })}>
+                <SelectTrigger className="h-7 text-xs flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ethnicityOptions.map(e => (
+                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {companions.length > 1 && (
+            <button
+              onClick={() => removeCompanion(index)}
+              className="mt-1 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {companions.length < 2 && (
+        <button
+          onClick={addCompanion}
+          className="flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add another person (max 3 total)
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const LifestyleShootStep2 = ({
   state,
@@ -411,6 +514,14 @@ export const LifestyleShootStep2 = ({
                 selectedType={config.lifestyleShotType}
                 onSelect={(type) => updateConfig({ lifestyleShotType: type })}
               />
+
+              {/* Group Companions Configurator */}
+              {config.lifestyleShotType === 'group-scene' && (
+                <GroupCompanionsConfigurator
+                  companions={config.groupCompanions || [{ birkenstockModel: 'Arizona', gender: 'auto', ethnicity: 'auto' }]}
+                  onChange={(companions) => updateConfig({ groupCompanions: companions })}
+                />
+              )}
             </div>
           </CollapsibleContent>
         </div>

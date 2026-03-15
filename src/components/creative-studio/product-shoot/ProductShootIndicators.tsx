@@ -86,6 +86,7 @@ export const ProductShootIndicators = ({ state }: ProductShootIndicatorsProps) =
       'feet-focus': 'Feet Focus',
       'model-no-head': 'No Head',
       'full-model': 'Full Model',
+      'group-scene': 'Group Scene',
     };
     const shotLabel = `Shot: ${shotTypeLabels[state.lifestyleShootConfig?.lifestyleShotType || 'product-only'] || 'Select'}`;
 

@@ -88,7 +88,21 @@ export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials
 
 // ============= LIFESTYLE SHOOT TYPES =============
 
-export type LifestyleShootShotType = 'product-only' | 'feet-focus' | 'model-no-head' | 'full-model';
+export type LifestyleShootShotType = 'product-only' | 'feet-focus' | 'model-no-head' | 'full-model' | 'group-scene';
+
+// Group companion for group-scene shot type
+export interface GroupCompanion {
+  birkenstockModel: string;  // e.g. "Arizona", "Boston", "Gizeh"
+  gender: string;
+  ethnicity: string;
+}
+
+// Popular Birkenstock models for companion selection
+export const companionModelOptions = [
+  'Arizona', 'Boston', 'Gizeh', 'Madrid', 'Zurich',
+  'Kyoto', 'Milano', 'Florida', 'Mayari', 'London',
+  'Tokio', 'Bend', 'Zermatt', 'Lutry', 'Naples',
+];
 
 export interface LifestyleAdvancedSettings {
   cameraAngle: string;
@@ -113,6 +127,7 @@ export interface LifestyleShootConfig {
   creativeBrief?: string;
   lifestyleShotType: LifestyleShootShotType;
   advancedSettings: LifestyleAdvancedSettings;
+  groupCompanions?: GroupCompanion[];
 }
 
 export const initialLifestyleShootConfig: LifestyleShootConfig = {
