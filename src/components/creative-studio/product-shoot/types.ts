@@ -86,6 +86,38 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
+// ============= LIFESTYLE SHOOT TYPES =============
+
+export type LifestyleShootShotType = 'product-only' | 'feet-focus' | 'model-no-head' | 'full-model';
+
+export interface LifestyleAdvancedSettings {
+  cameraAngle: string;
+  lighting: string;
+  cameraLens: string;
+  cameraType: string;
+  filmStock: string;
+}
+
+export const initialLifestyleAdvancedSettings: LifestyleAdvancedSettings = {
+  cameraAngle: 'eye-level',
+  lighting: 'natural',
+  cameraLens: '85mm',
+  cameraType: 'digital',
+  filmStock: 'none',
+};
+
+export interface LifestyleShootConfig {
+  selectedMoodboardId?: string;
+  creativeBrief?: string;
+  lifestyleShotType: LifestyleShootShotType;
+  advancedSettings: LifestyleAdvancedSettings;
+}
+
+export const initialLifestyleShootConfig: LifestyleShootConfig = {
+  lifestyleShotType: 'product-only',
+  advancedSettings: { ...initialLifestyleAdvancedSettings },
+};
+
 // Scene Remix prompt tier
 export interface SceneRemixPrompt {
   tier: 'faithful' | 'moderate' | 'creative';
