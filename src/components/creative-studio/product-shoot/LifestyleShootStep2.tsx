@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBrands } from "@/hooks/useBrands";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useShoeComponents, useComponentOverrides } from "@/hooks/useShoeComponents";
 import { parseSkuDisplayInfo, formatSkuAttributes } from "@/lib/skuDisplayUtils";
 import { ProductSKU } from "./ProductSKUPicker";
