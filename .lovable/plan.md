@@ -157,3 +157,24 @@ Make component colors truly single-field across the full pipeline so the payload
 - If lifestyle: calls `buildLifestyleShootPrompt()` with the resolved moodboard analysis/name and product identity — each call produces a naturally varied prompt via built-in compositional randomization
 - If not lifestyle: calls `buildShotTypePromptForProduct()` as before
 - Also pipes `moodboardName` from lifestyle branch into outer scope so it's available in the sequential loop
+
+## Editorial Edge: Portrait in Place — Birkenstock-Researched Rewrite
+
+## STATUS: ✅ IMPLEMENTED (2026-03-15)
+
+### What was done
+
+**`src/components/creative-studio/product-shoot/lifestyleShootConfigs.ts`:**
+- Rewrote "Portrait in Place" base framing directive with editorial tension: "caught between moments," anti-generic rules (never standing straight, never hands at sides, never centered), physical ease/gravity language, lived-in shoe mandate
+- Added 6 energy-based `portraitInPlaceVariations`: Arrived & Settling, Deep in Place, About to Leave, Caught Unaware, Borrowed Perch, Stillness with Tension
+- Each variation describes mood/energy/relationship-to-space (not specific poses) for creative latitude
+- Added `pickRandomPortraitVariation()` export
+
+**`src/components/creative-studio/product-shoot/lifestyleShootPromptBuilder.ts`:**
+- Added `full-model` + all-Auto branch mirroring the existing Styled Still Life pattern
+- Randomly selects a portrait energy variation and appends base directive's non-compositional rules (casting, styling, footwear incidental)
+
+### Research basis
+- Jack Davison's "Personality" series for Birkenstock — transitional states, no styling/briefing, worn shoes
+- "Come Back To You" 2025 campaign — environment as co-author, physical ease as philosophy
+- Energy-based variations avoid prescriptive poses that would produce repetitive output
