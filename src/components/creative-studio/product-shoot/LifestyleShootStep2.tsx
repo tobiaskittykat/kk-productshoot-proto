@@ -485,6 +485,20 @@ export const LifestyleShootStep2 = ({
         onSmartUpload={() => { setShowProductPickerModal(false); setShowSmartUploadModal(true); }}
       />
       <SmartUploadModal open={showSmartUploadModal} onOpenChange={setShowSmartUploadModal} />
+      <MoodboardModal
+        isOpen={showMoodboardModal}
+        onClose={() => {
+          setShowMoodboardModal(false);
+          queryClient.invalidateQueries({ queryKey: ['moodboards-lifestyle'] });
+        }}
+        selectedMoodboard={config.selectedMoodboardId || null}
+        onSelect={(moodboardId) => {
+          // Extract raw ID if it has custom- prefix (from MoodboardModal transform)
+          const rawId = moodboardId.replace(/^custom-/, '');
+          updateConfig({ selectedMoodboardId: rawId });
+        }}
+        initialTab={moodboardModalTab}
+      />
 
       {/* Fullscreen image dialog */}
       <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
