@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { smoothScrollTo } from "@/lib/utils";
-import { ProductShootSubtypeSelector, ProductShootStep2, ProductShootIndicators, RemixStep2, SetupProductStep2 } from "./product-shoot";
+import { ProductShootSubtypeSelector, ProductShootStep2, ProductShootIndicators, RemixStep2, SetupProductStep2, LifestyleShootStep2 } from "./product-shoot";
 
 interface CreativeStudioWizardProps {
   isOpen: boolean;
@@ -863,6 +863,16 @@ export const CreativeStudioWizard = ({ isOpen, onOpenChange }: CreativeStudioWiz
                         <SetupProductStep2
                           state={state.productShoot}
                           onStateChange={handleProductShootUpdate}
+                        />
+                      ) : state.productShoot.shootMode === 'lifestyle-shoot' ? (
+                        <LifestyleShootStep2
+                          state={state.productShoot}
+                          onStateChange={handleProductShootUpdate}
+                          imageCount={state.imageCount}
+                          resolution={state.resolution}
+                          aspectRatio={state.aspectRatio}
+                          sequentialGeneration={state.sequentialGeneration}
+                          onOutputSettingsChange={(updates) => handleUpdate(updates)}
                         />
                       ) : (
                         <ProductShootStep2

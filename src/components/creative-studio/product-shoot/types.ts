@@ -1,7 +1,7 @@
 // ============= PRODUCT SHOOT TYPES =============
 
 // Shoot mode - new shoot vs remix existing
-export type ShootMode = 'new' | 'remix' | 'setup';
+export type ShootMode = 'new' | 'remix' | 'setup' | 'lifestyle-shoot';
 
 // Recolor options
 export type RecolorOption = 'none' | 'pre-generation' | 'during-generation';
@@ -86,6 +86,38 @@ import type { OnFootShotConfig, LifestyleShotConfig, ProductFocusShotConfig } fr
 export type { ShoeComponents, ComponentOverrides, ComponentType, ShoeComponent, ComponentOverride } from '@/lib/birkenstockMaterials';
 export { parseHexFromColor, stripHexFromColor } from '@/lib/birkenstockMaterials';
 
+// ============= LIFESTYLE SHOOT TYPES =============
+
+export type LifestyleShootShotType = 'product-only' | 'feet-focus' | 'model-no-head' | 'full-model';
+
+export interface LifestyleAdvancedSettings {
+  cameraAngle: string;
+  lighting: string;
+  cameraLens: string;
+  cameraType: string;
+  filmStock: string;
+}
+
+export const initialLifestyleAdvancedSettings: LifestyleAdvancedSettings = {
+  cameraAngle: 'eye-level',
+  lighting: 'natural',
+  cameraLens: '85mm',
+  cameraType: 'digital',
+  filmStock: 'none',
+};
+
+export interface LifestyleShootConfig {
+  selectedMoodboardId?: string;
+  creativeBrief?: string;
+  lifestyleShotType: LifestyleShootShotType;
+  advancedSettings: LifestyleAdvancedSettings;
+}
+
+export const initialLifestyleShootConfig: LifestyleShootConfig = {
+  lifestyleShotType: 'product-only',
+  advancedSettings: { ...initialLifestyleAdvancedSettings },
+};
+
 // Scene Remix prompt tier
 export interface SceneRemixPrompt {
   tier: 'faithful' | 'moderate' | 'creative';
@@ -150,6 +182,9 @@ export interface ProductShootState {
   
   // Variation tier toggles (UI-facing, persisted in state)
   remixEnabledTiers: Record<string, boolean>;
+  
+  // Lifestyle shoot config
+  lifestyleShootConfig?: LifestyleShootConfig;
 }
 
 // Background preset for selection
@@ -227,6 +262,9 @@ export const initialProductShootState: ProductShootState = {
   sceneRemixPrompts: null,
   isAnalyzingScene: false,
   remixEnabledTiers: { faithful: true, moderate: true, creative: false },
+  
+  // Lifestyle shoot defaults
+  lifestyleShootConfig: undefined,
 };
 
 // LEGACY: Old shot types with emojis (kept for reference)

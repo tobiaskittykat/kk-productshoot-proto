@@ -12,6 +12,7 @@ import {
 } from '@/components/creative-studio/types';
 import { visualShotTypes } from '@/components/creative-studio/product-shoot/ShotTypeVisualSelector';
 import { buildOnFootPrompt, buildLifestylePrompt, buildProductFocusPrompt, initialOnFootConfig, initialLifestyleConfig, initialProductFocusConfig, BackgroundContext } from '@/components/creative-studio/product-shoot/shotTypeConfigs';
+import { buildLifestyleShootPrompt } from '@/components/creative-studio/product-shoot/lifestyleShootPromptBuilder';
 import { updateSkuLastUsed } from '@/components/creative-studio/product-shoot/ProductSKUPicker';
 import { parseSkuDisplayInfo, type SKUDisplayInfo } from '@/lib/skuDisplayUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -336,7 +337,35 @@ export function useImageGeneration() {
       
       let shotTypePrompt: string | null = null;
       
-      if (state.useCase === 'product' && state.productShoot?.productShotType) {
+      // === LIFESTYLE SHOOT MODE: build moodboard-driven prompt ===
+      if (state.useCase === 'product' && state.productShoot?.shootMode === 'lifestyle-shoot' && state.productShoot.lifestyleShootConfig) {
+        const lsConfig = state.productShoot.lifestyleShootConfig;
+        
+        // Fetch moodboard analysis if selected
+        let lsMoodboardAnalysis: Record<string, any> | undefined;
+        let lsMoodboardName: string | undefined;
+        if (lsConfig.selectedMoodboardId) {
+          const { data: mb } = await supabase
+            .from('custom_moodboards')
+            .select('name, thumbnail_url, visual_analysis')
+            .eq('id', lsConfig.selectedMoodboardId)
+            .maybeSingle();
+          if (mb) {
+            moodboardUrl = mb.thumbnail_url;
+            moodboardAnalysis = mb.visual_analysis as Record<string, unknown> | undefined;
+            lsMoodboardAnalysis = mb.visual_analysis as Record<string, any> | undefined;
+            lsMoodboardName = mb.name;
+          }
+        }
+        
+        shotTypePrompt = buildLifestyleShootPrompt({
+          config: lsConfig,
+          moodboardAnalysis: lsMoodboardAnalysis || undefined,
+          moodboardName: lsMoodboardName,
+          productIdentity,
+          creativeBrief: lsConfig.creativeBrief,
+        });
+      } else if (state.useCase === 'product' && state.productShoot?.productShotType) {
         shotTypePrompt = buildShotTypePromptForProduct();
       } else if (state.contextReference) {
         // Lifestyle flow - use context reference's shot prompt
