@@ -1466,7 +1466,7 @@ export const StepTwoCustomize = ({ state, onUpdate, onMatchingStateChange }: Ste
                     </SelectTrigger>
                     <SelectContent>
                       {aspectRatios.map((ar) => (
-                        <SelectItem key={ar} value={ar}>{ar}</SelectItem>
+                        <SelectItem key={ar} value={ar}>{ar === 'auto' ? 'Auto' : ar}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

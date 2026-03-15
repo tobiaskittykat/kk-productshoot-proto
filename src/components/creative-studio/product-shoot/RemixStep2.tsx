@@ -665,7 +665,7 @@ export const RemixStep2 = ({
                     <SelectTrigger className="bg-muted/50 border-0"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {aspectRatios.map(ar => (
-                        <SelectItem key={ar} value={ar}>{ar}</SelectItem>
+                        <SelectItem key={ar} value={ar}>{ar === 'auto' ? 'Auto' : ar}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
