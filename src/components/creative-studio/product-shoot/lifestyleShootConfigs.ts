@@ -162,6 +162,100 @@ export const depthOfFieldOptions: AdvancedOption[] = [
   { value: 'maximum', label: 'Maximum (f/16–22)', promptFragment: 'maximum depth of field at f/16-22, everything tack-sharp from near to infinity, architectural precision' },
 ];
 
+// ===== STYLED STILL LIFE COMPOSITIONAL VARIATIONS =====
+// Randomly selected when advanced settings are all on "Auto" to inject editorial variety
+
+export interface StillLifeVariation {
+  id: string;
+  name: string;
+  framingOverride: string;
+}
+
+export const styledStillLifeVariations: StillLifeVariation[] = [
+  {
+    id: 'ground-level-hero',
+    name: 'Ground-Level Hero',
+    framingOverride: `COMPOSITIONAL RECIPE — Ground-Level Hero:
+Camera at GROUND LEVEL, lens nearly touching the surface. One shoe razor-sharp in the foreground, the second shoe behind it in soft focus. Ultra-shallow depth of field (f/1.4–2.0). The perspective is intimate and voyeuristic — as if discovered rather than arranged. The surface texture dominates the lower third of the frame. Light rakes across the ground, catching material texture and buckle hardware.`,
+  },
+  {
+    id: 'steep-overhead-flat-lay',
+    name: 'Steep Overhead Flat Lay',
+    framingOverride: `COMPOSITIONAL RECIPE — Steep Overhead Flat Lay:
+Camera DIRECTLY ABOVE, near-vertical bird's-eye view. Shoes arranged ASYMMETRICALLY — one rotated 30°, the other at 90° — with bold negative space between them. Deep focus (f/8–11) so everything reads as a graphic composition. The arrangement feels like an editorial flat lay in a design magazine — deliberate but not fussy. Surface pattern and texture become the background. Props (if any) placed with graphic intent.`,
+  },
+  {
+    id: 'environmental-wide',
+    name: 'Environmental Wide',
+    framingOverride: `COMPOSITIONAL RECIPE — Environmental Wide:
+The shoes are SMALL in the frame — occupying only 15–20% of the image. The ENVIRONMENT is the hero. Shot on a wide lens (28–35mm feel), the scene stretches out to reveal the full world the shoes inhabit. Deep focus. The shoes sit naturally within a larger landscape or interior — on a step, beside a doorway, at the edge of a path. The viewer's eye finds them within the scene. This is storytelling through place.`,
+  },
+  {
+    id: 'footbed-reveal',
+    name: 'Footbed Reveal',
+    framingOverride: `COMPOSITIONAL RECIPE — Footbed Reveal:
+One shoe is deliberately placed ON ITS SIDE, exposing the iconic cork-latex anatomical footbed. The other shoe sits upright beside or behind it. Three-quarter angle (40–50°). The focus is on MATERIAL TEXTURE — the grain of the cork, the suede nap, the stitching detail. Moderate depth of field (f/4–5.6). This is a material study: the craft and construction are the story. Light falls to emphasize surface relief and depth.`,
+  },
+  {
+    id: 'edge-composition',
+    name: 'Edge Composition',
+    framingOverride: `COMPOSITIONAL RECIPE — Edge Composition:
+The shoes are placed at the EXTREME EDGE or CORNER of the frame — 70%+ of the image is environment and negative space. This is unconventional, fashion-forward framing. The shoes anchor one edge while the moodboard's world fills the rest. Eye-level or slightly low angle. The tension between subject and space creates editorial energy. The composition would feel at home in a gallery or an avant-garde fashion spread.`,
+  },
+  {
+    id: 'morning-light-drama',
+    name: 'Morning Light Drama',
+    framingOverride: `COMPOSITIONAL RECIPE — Morning Light Drama:
+Low RAKING LIGHT streams in from the side, casting LONG dramatic shadows that become compositional elements in their own right. The shadows of the shoes stretch across the surface, creating abstract shapes. The light catches buckle hardware, creating small bright highlights. Three-quarter angle. The interplay of light and shadow is the co-star — the shoes exist in a moment of specific, transient light. Early morning or late afternoon quality.`,
+  },
+  {
+    id: 'macro-detail-in-context',
+    name: 'Macro Detail in Context',
+    framingOverride: `COMPOSITIONAL RECIPE — Macro Detail in Context:
+TIGHT CROP on one shoe's details — the buckle mechanism, stitching pattern, suede texture, or the branded logo stamp. Ultra-shallow depth of field (f/1.4–2.0). The second shoe and surrounding environment exist as soft bokeh shapes in the background, providing context without competing for attention. Shot on a macro or 85mm+ lens. This is the editorial insert shot — the detail that makes the viewer lean in. The texture must be tactile and almost touchable.`,
+  },
+  {
+    id: 'deconstructed-pair',
+    name: 'Deconstructed Pair',
+    framingOverride: `COMPOSITIONAL RECIPE — Deconstructed Pair:
+One shoe is casually TIPPED ON ITS SIDE or FALLEN — straps relaxed, buckle unlatched. The other sits upright but at an angle, as if both were just kicked off mid-moment. The arrangement is deliberately ANTI-CATALOG — messy, human, real. Moderate depth of field. The energy is "end of day" or "just arrived" — the shoes tell the story of someone who was just here. Nothing is art-directed; everything looks naturally abandoned.`,
+  },
+  {
+    id: 'layered-depth',
+    name: 'Layered Depth',
+    framingOverride: `COMPOSITIONAL RECIPE — Layered Depth:
+Three distinct DEPTH PLANES: a foreground element (prop, surface edge, fabric fold) slightly out of focus, the shoes tack-sharp in the mid-ground, and the environment falling away into soft bokeh in the background. Shot on 85–135mm lens feel, compressing the planes together. The layered depth creates dimensionality and atmosphere. The shoes are sandwiched between context layers — embedded in their world, not isolated from it.`,
+  },
+  {
+    id: 'shadow-play',
+    name: 'Shadow Play',
+    framingOverride: `COMPOSITIONAL RECIPE — Shadow Play:
+Strong directional light creates a PATTERN of shadows across the scene — from window blinds, foliage, architectural elements, or fabric. The shadow pattern falls across both the shoes and the surface, unifying them into a single graphic composition. The shadows become a design element as important as the shoes themselves. High contrast. The interplay of light and dark creates visual rhythm and editorial sophistication.`,
+  },
+];
+
+/**
+ * Returns true if all advanced settings are on "Auto" (no manual overrides).
+ */
+export function areAllSettingsAuto(settings: LifestyleAdvancedSettings): boolean {
+  return (
+    settings.cameraAngle === 'auto' &&
+    settings.lighting === 'auto' &&
+    settings.cameraLens === 'auto' &&
+    settings.cameraType === 'auto' &&
+    settings.filmStock === 'auto' &&
+    settings.depthOfField === 'auto'
+  );
+}
+
+/**
+ * Randomly select a still life variation from the pool.
+ */
+export function pickRandomStillLifeVariation(): StillLifeVariation {
+  const idx = Math.floor(Math.random() * styledStillLifeVariations.length);
+  return styledStillLifeVariations[idx];
+}
+
 // Get the prompt fragment for a given advanced setting
 export function getAdvancedPromptFragments(settings: LifestyleAdvancedSettings): string[] {
   const fragments: string[] = [];

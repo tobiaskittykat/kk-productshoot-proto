@@ -2,7 +2,7 @@
 // Merges moodboard analysis + product identity + shot type + advanced settings into a prompt
 
 import type { LifestyleShootConfig, LifestyleAdvancedSettings } from './types';
-import { lifestyleShootTypes, getAdvancedPromptFragments } from './lifestyleShootConfigs';
+import { lifestyleShootTypes, getAdvancedPromptFragments, areAllSettingsAuto, pickRandomStillLifeVariation } from './lifestyleShootConfigs';
 
 interface MoodboardAnalysis {
   title?: string;
@@ -122,9 +122,24 @@ When the moodboard and shot type could suggest different aesthetics, the MOODBOA
   }
   
   // 3. Shot type framing (COMPOSITIONAL STRUCTURE)
+  // For Styled Still Life with all-auto settings, inject a random compositional variation
   const shotType = lifestyleShootTypes.find(s => s.id === config.lifestyleShotType);
   if (shotType) {
-    sections.push(shotType.framingDirective);
+    if (config.lifestyleShotType === 'product-only' && areAllSettingsAuto(config.advancedSettings)) {
+      const variation = pickRandomStillLifeVariation();
+      console.log(`[LifestylePromptBuilder] Random still life variation: ${variation.id} — ${variation.name}`);
+      // Use the variation's framing override instead of the static default
+      sections.push(variation.framingOverride);
+      sections.push('');
+      // Still include the base directive's non-compositional rules (no model, pair of shoes, etc.)
+      sections.push(`ADDITIONAL RULES FROM SHOT TYPE:
+NO model, NO hands, NO feet visible. Show a COMPLETE PAIR of shoes (2 shoes).
+SURFACE: The shoes sit on a contextual surface from the moodboard's world with visible texture.
+LIGHT: Natural environmental light with real shadows. Quality must match the moodboard.
+ALL AESTHETIC CHOICES — surface material, prop selection, color temperature, atmosphere — must be derived from the moodboard.`);
+    } else {
+      sections.push(shotType.framingDirective);
+    }
     sections.push('');
   }
   
