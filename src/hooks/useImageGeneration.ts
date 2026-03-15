@@ -20,13 +20,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { triggerIntegrityAnalysis } from '@/hooks/useIntegrityResults';
 import { pollForPendingImages, invokeAndPollGeneration } from '@/lib/imagePolling';
-import { updateSkuLastUsed } from '@/components/creative-studio/product-shoot/ProductSKUPicker';
-import { parseSkuDisplayInfo, type SKUDisplayInfo } from '@/lib/skuDisplayUtils';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { useAuditLog } from '@/hooks/useAuditLog';
-import { triggerIntegrityAnalysis } from '@/hooks/useIntegrityResults';
-import { pollForPendingImages, invokeAndPollGeneration } from '@/lib/imagePolling';
 
 export function useImageGeneration() {
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
