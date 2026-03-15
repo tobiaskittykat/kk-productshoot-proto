@@ -493,7 +493,7 @@ export function useImageGeneration() {
         } : null,
         
         // Product Shoot configuration (for product use case)
-        productShootConfig: state.useCase === 'product' && state.productShoot ? {
+        productShootConfig: state.useCase === 'product' && state.productShoot && state.productShoot.shootMode !== 'lifestyle-shoot' ? {
           shotType: state.productShoot.productShotType,
           settingType: state.productShoot.settingType,
           backgroundId: state.productShoot.backgroundId,
